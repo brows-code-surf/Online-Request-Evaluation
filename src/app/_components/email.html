@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>{{title}}</title>
+	<style>
+		/* Mobile responsive adjustments (some email clients support this) */
+		@media only screen and (max-width:600px) {
+			.container { width:100% !important; padding:16px !important; }
+			.stack { display:block !important; width:100% !important; }
+			.hide-mobile { display:none !important; }
+			.mobile-center { text-align:center !important; }
+		}
+	</style>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#333333;">
+	<!-- Wrapper / full width -->
+	<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+		<tr>
+			<td align="center" style="padding:24px;">
+				<!-- Container -->
+				<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" class="container" style="width:600px;max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(16,24,40,0.08);">
+					<!-- Header / Brand -->
+					<tr>
+						<td style="padding:24px 28px 12px;background:linear-gradient(90deg,#ffffff,#ffffff);">
+							<table role="presentation" width="100%" style="border-collapse:collapse;">
+								<tr>
+									<td style="vertical-align:middle;">
+										<!-- Company logo or text -->
+										<img src="../../../public/SANTEH LOGO/SFC.png" alt="{{company_name}}" width="160" style="display:block;border:0;outline:none;text-decoration:none;">
+									</td>
+									<td style="text-align:right;vertical-align:middle;font-size:13px;color:#8b95a1;" class="hide-mobile">
+										{{company_name}}
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<!-- Header Image -->
+					<tr>
+						<td style="padding:0;overflow:hidden;">
+							<img src="../../../public/SANTEH LOGO/SFC.png" alt="{{title}}" width="600" style="display:block;width:100%;height:auto;border:0;outline:none;">
+						</td>
+					</tr>
+
+					<!-- Hero / Greeting -->
+					<tr>
+						<td style="padding:24px 28px 8px;">
+							<h1 style="margin:0;font-size:20px;color:#102a43;font-weight:600;line-height:1.25;">
+								{{greeting}} {{name}},
+							</h1>
+						</td>
+					</tr>
+
+					<!-- Body Content -->
+					<tr>
+						<td style="padding:8px 28px 20px;color:#475569;font-size:15px;line-height:1.6;">
+							<!-- Replace {{body}} with the main message (account confirmation, notification, update, etc.) -->
+							{{body}}
+						</td>
+					</tr>
+
+					<!-- Optional CTA Button (render only if {{button_text}} provided) -->
+					<tr>
+						<td style="padding:0 28px 28px;">
+							<!--[if mso]>
+							<table role="presentation" border="0" cellpadding="0" cellspacing="0">
+								<tr>
+									<td align="left">
+										<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{button_url}}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="6%" strokecolor="#2563eb" fillcolor="#2563eb">
+											<w:anchorlock/>
+											<center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;">
+												{{button_text}}
+											</center>
+										</v:roundrect>
+									</td>
+								</tr>
+							</table>
+							<![endif]-->
+
+							<!-- Web and non-Outlook button -->
+							<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+								<tr>
+									<td align="left">
+										<!-- If no button required, remove this <a> block. -->
+										<a href="{{button_url}}" target="_blank" style="display:inline-block;padding:12px 22px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;">
+											{{button_text}}
+										</a>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<!-- Divider -->
+					<tr>
+						<td style="padding:0 28px;">
+							<hr style="border:none;border-top:1px solid #e6eef6;margin:0;">
+						</td>
+					</tr>
+
+					<!-- Footer -->
+					<tr>
+						<td style="padding:16px 28px 28px;color:#98a6b3;font-size:13px;line-height:1.4;">
+							<p style="margin:0 0 8px 0;">
+								<strong style="color:#102a43;">{{company_name}}</strong><br>
+								Contact: <a href="mailto:{{company_email}}" style="color:#2563eb;text-decoration:none;">{{company_email}}</a> | {{company_phone}}
+							</p>
+							<p style="margin:0;font-size:12px;color:#9aa7b6;">
+								Visit us <br>
+								<a href="https://tateh.com" style="color:#9aa7b6;text-decoration:underline;">TATEH</a> 
+							</p>
+						</td>
+					</tr>
+
+				</table>
+				<!-- End container -->
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
