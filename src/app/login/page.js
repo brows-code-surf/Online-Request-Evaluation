@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../_components/authContext'
+import { useAuth } from '../../utils/authContext'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Loader from '../_components/loader';
 import Link from 'next/link';
@@ -45,7 +45,7 @@ export default function Login() {
             <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
-                        <img src="/SANTEH LOGO/SFC.png" alt="SANTEH Logo" className="" />
+                        <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="" />
                         </div>
                     <h3 className="text-gray-600 text-sm mt-2">Online Requests Evaluation System</h3>
                 </div>

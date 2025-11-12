@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from './authContext';
+import { useAuth } from '../../utils/authContext';
 import { logoutUser } from '../login/_actions';
 
 export default function HeaderNavBar() {
   const router = useRouter();
-  const { logout, user } = useAuth();
+  const { logout, user, loading } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([
@@ -48,35 +48,32 @@ export default function HeaderNavBar() {
     ));
   };
 
+  const isUserAdmin = user && user.department === "MIS";
+  console.log("User is admin:", isUserAdmin);
+  console.log("User department:", user?.department);
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 border-b-[3px] border-blue-600">
       <div className="flex items-center justify-between px-6 py-1 max-w-full">
-    
+
         <div className="flex items-center">
           <Link href="/request-evaluation" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">SF</span>
-            </div>
-            <span className="text-xl font-bold text-gray-800 hidden sm:block">SANTEH</span>
+            <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="w-30 h-10" />
           </Link>
         </div>
 
         {/* Center Navigation - Hidden on mobile */}
-        <nav className="hidden md:flex items-center gap-8">
-          <Link href="/dashboard" className="text-gray-600 hover:text-blue-600 transition font-medium">
-            Dashboard
-          </Link>
-          <Link href="/employees" className="text-gray-600 hover:text-blue-600 transition font-medium">
-            Employees
-          </Link>
-          <Link href="/reports" className="text-gray-600 hover:text-blue-600 transition font-medium">
-            Reports
-          </Link>
+        <nav className="hidden md:flex gap-8">
+          {isUserAdmin && (
+            <Link href="/user-approval" className="text-gray-600 text-sm hover:text-blue-600 transition font-medium">
+              User Account Approvals
+            </Link>
+          )}
         </nav>
 
         {/* Right Section - Notifications & Profile */}
         <div className="flex items-center gap-4">
-          
+
           {/* Notification Bell */}
           <div className="relative">
             <button
@@ -118,14 +115,12 @@ export default function HeaderNavBar() {
                       <div
                         key={notification.id}
                         onClick={() => markAsRead(notification.id)}
-                        className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${
-                          !notification.read ? 'bg-blue-50' : ''
-                        }`}
+                        className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${!notification.read ? 'bg-blue-50' : ''
+                          }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${
-                            !notification.read ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}></div>
+                          <div className={`w-2 h-2 rounded-full mt-2 ${!notification.read ? 'bg-blue-600' : 'bg-gray-300'
+                            }`}></div>
                           <div className="flex-1">
                             <p className="text-sm text-gray-800 font-medium">
                               {notification.message}
@@ -185,7 +180,7 @@ export default function HeaderNavBar() {
             {/* Profile Dropdown Menu */}
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
-                
+
                 {/* User Info Section */}
                 <div className="px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-600">
                   <p className="text-white font-semibold text-lg">{user?.empName || 'User'}</p>

@@ -1,109 +1,66 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-
-// Mock data for approvals
-const mockApprovals = [
-    {
-        id: 1,
-        title: 'Account Creation Request',
-        requester: 'Jairus Valencia',
-        email: 'j.valencia@santehfeeds.com',
-        status: 'pending',
-        requestDate: '2024-01-15',
-        department: 'IT',
-        jobTitle: 'System Administrator',
-        location: 'Manila',
-        description: 'Request for new employee account creation for IT department.',
-        attachments: [
-            { id: 1, name: 'employment_contract.pdf', size: '2.5 MB' },
-            { id: 2, name: 'id_verification.pdf', size: '1.8 MB' }
-        ]
-    },
-    {
-        id: 2,
-        title: 'Department Transfer Request',
-        requester: 'Maria Santos',
-        email: 'm.santos@santehfeeds.com',
-        status: 'pending',
-        requestDate: '2024-01-14',
-        department: 'HR',
-        jobTitle: 'HR Manager',
-        location: 'Cebu',
-        description: 'Transfer request from Sales to Human Resources department.',
-        attachments: [
-            { id: 1, name: 'transfer_approval.pdf', size: '0.9 MB' }
-        ]
-    },
-    {
-        id: 3,
-        title: 'Leave of Absence Request',
-        requester: 'John Doe',
-        email: 'j.doe@santehfeeds.com',
-        status: 'approved',
-        requestDate: '2024-01-13',
-        department: 'Finance',
-        jobTitle: 'Finance Officer',
-        location: 'Manila',
-        description: 'Request for 2 weeks leave starting January 20, 2024.',
-        attachments: []
-    },
-    {
-        id: 4,
-        title: 'Salary Review Request',
-        requester: 'Jane Smith',
-        email: 'j.smith@santehfeeds.com',
-        status: 'rejected',
-        requestDate: '2024-01-12',
-        department: 'Operations',
-        jobTitle: 'Operations Lead',
-        location: 'Davao',
-        description: 'Annual salary review request for performance evaluation period.',
-        attachments: [
-            { id: 1, name: 'performance_review.pdf', size: '1.2 MB' }
-        ]
-    },
-    {
-        id: 5,
-        title: 'Equipment Request',
-        requester: 'Robert Johnson',
-        email: 'r.johnson@santehfeeds.com',
-        status: 'pending',
-        requestDate: '2024-01-11',
-        department: 'IT',
-        jobTitle: 'IT Support',
-        location: 'Manila',
-        description: 'Request for new laptop and monitor for enhanced productivity.',
-        attachments: [
-            { id: 1, name: 'equipment_specs.pdf', size: '0.7 MB' }
-        ]
-    },
-];
+import { useAuth } from '../../../utils/authContext';
+import ContentLeftPanel from '../_components/contentLeftPanel';
+import RejectRequestModal from '../_components/rejectRequestModal';
+import ConfirmModal from '../_components/confirmModal';
+import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
 
 function RequestEvaluationContent() {
+    const router = useRouter();
+    const { user, isAdmin, loading } = useAuth();
     const [selectedApproval, setSelectedApproval] = useState(null);
-    const [approvals, setApprovals] = useState(mockApprovals);
-    const [loading, setLoading] = useState(false);
+    const [approvals, setApprovals] = useState([]);
+    const [pageLoading, setPageLoading] = useState(true);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectRemarks, setRejectRemarks] = useState('');
+    const [rejectingId, setRejectingId] = useState(null);
+    const [isRejectingLoading, setIsRejectingLoading] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [approvingId, setApprovingId] = useState(null);
+    const [isApprovingLoading, setIsApprovingLoading] = useState(false);
 
     useEffect(() => {
-        // Set first approval as selected by default
-        if (approvals.length > 0 && !selectedApproval) {
-            setSelectedApproval(approvals[0]);
+        if (loading) return;
+
+        if (!isAdmin()) {
+            router.push('/request-evaluation');
+            return;
         }
-    }, []);
+        
+        fetchApprovals();
+    }, [loading]);
+
+    const fetchApprovals = async () => {
+        setPageLoading(true);
+        try {
+            const result = await getPendingApprovals();
+            if (result.success) {
+                setApprovals(result.data);
+                if (result.data.length > 0) {
+                    setSelectedApproval(result.data[0]);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching approvals:', error);
+        } finally {
+            setPageLoading(false);
+        }
+    };
 
     // Handle approval selection
     const handleSelectApproval = (approval) => {
         setDetailsLoading(true);
-        // Simulate API call delay
         setTimeout(() => {
             setSelectedApproval(approval);
             setDetailsLoading(false);
@@ -128,26 +85,70 @@ function RequestEvaluationContent() {
             }
             return 0;
         });
+    
+
+    const handleApproveClick = (id) => {
+        setApprovingId(id);
+        setShowConfirmModal(true);
+    }
 
     // Handle approve/reject actions
-    const handleApprove = (id) => {
-        setApprovals(approvals.map(a =>
-            a.id === id ? { ...a, status: 'approved' } : a
-        ));
-        const updated = approvals.find(a => a.id === id);
-        if (updated) {
-            setSelectedApproval({ ...updated, status: 'approved' });
+    const handleApprove = async () => {
+        setIsApprovingLoading(true);
+        const approval = approvals.find(a => a.id === approvingId);
+        if (approval) {
+            const result = await approveUserAccount(approvingId, approval.email, approval.requester, user?.empName || 'Admin');
+            if (result.success) {
+                setApprovals(approvals.map(a =>
+                    a.id === approvingId ? { ...a, status: 'approved', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' } : a
+                ));
+                const updated = approvals.find(a => a.id === approvingId);
+                if (updated) {
+                    setSelectedApproval({ ...updated, status: 'approved', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' });
+                }
+                setShowConfirmModal(false);
+                setApprovingId(null);
+            }
         }
+        setIsApprovingLoading(false);
     };
 
-    const handleReject = (id) => {
-        setApprovals(approvals.map(a =>
-            a.id === id ? { ...a, status: 'rejected' } : a
-        ));
-        const updated = approvals.find(a => a.id === id);
-        if (updated) {
-            setSelectedApproval({ ...updated, status: 'rejected' });
+    const handleRejectClick = (id) => {
+        setRejectingId(id);
+        setRejectRemarks('');
+        setShowRejectModal(true);
+    };
+
+    const handleConfirmReject = async () => {
+        if (!rejectRemarks.trim()) {
+            alert('Please provide remarks for rejection');
+            return;
         }
+
+        setIsRejectingLoading(true);
+        const approval = approvals.find(a => a.id === rejectingId);
+        if (approval) {
+            const result = await rejectUserAccount(rejectingId, approval.email, approval.requester, user?.empName || 'Admin', rejectRemarks);
+            if (result.success) {
+                setApprovals(approvals.map(a =>
+                    a.id === rejectingId ? { ...a, status: 'rejected', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName } : a
+                ));
+                const updated = approvals.find(a => a.id === rejectingId);
+                if (updated) {
+                    setSelectedApproval({ ...updated, status: 'rejected', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName });
+                }
+                setShowRejectModal(false);
+                setRejectRemarks('');
+                setRejectingId(null);
+            }
+        }
+        setIsRejectingLoading(false);
+    };
+
+    const handleCancelReject = () => {
+        setShowRejectModal(false);
+        setRejectRemarks('');
+        setRejectingId(null);
     };
 
     const getStatusColor = (status) => {
@@ -163,10 +164,14 @@ function RequestEvaluationContent() {
         }
     };
 
-    const getStatusBadge = (status) => {
-        const baseClass = 'inline-block px-3 py-1 rounded-full text-xs font-semibold border';
-        return baseClass + ' ' + getStatusColor(status);
-    };
+    if (loading || pageLoading) {
+        return (
+            <div className="flex flex-col h-screen bg-gray-50">
+                <Loader />
+                <HeaderNavBar />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
@@ -176,108 +181,20 @@ function RequestEvaluationContent() {
             <div className="flex flex-1 overflow-hidden pt-14">
 
                 {/* Left Panel - Approvals List */}
-                <div className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden`}>
-
-                    {/* Header */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-white">Requests</h2>
-                            <button
-                                onClick={() => setSidebarOpen(false)}
-                                className="md:hidden text-white hover:bg-blue-700 p-1 rounded"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {/* Search */}
-                        <div className="relative">
-                            <svg className="absolute left-3 top-3 w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="Search requests..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 bg-blue-400 text-white placeholder-blue-200 rounded-lg focus:outline-none focus:bg-blue-300"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="date">Sort by Date</option>
-                            <option value="requester">Sort by Name</option>
-                            <option value="status">Sort by Status</option>
-                        </select>
-                    </div>
-
-                    {/* Approvals List */}
-                    <div className="flex-1 overflow-y-auto">
-                        {filteredApprovals.length > 0 ? (
-                            filteredApprovals.map(approval => (
-                                <div
-                                    key={approval.id}
-                                    onClick={() => handleSelectApproval(approval)}
-                                    className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${selectedApproval?.id === approval.id
-                                        ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                                        : 'hover:bg-gray-50'
-                                        }`}
-                                >
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight flex-1">
-                                            {approval.title}
-                                        </h3>
-                                        <span className={`ml-2 text-xs ${getStatusColor(approval.status).replace('bg-', 'bg-').replace('text-', 'text-')}`}>
-                                            {approval.status.charAt(0).toUpperCase() + approval.status.slice(1)}
-                                        </span>
-                                    </div>
-
-                                    <p className="text-xs text-gray-600 mb-2">
-                                        {approval.requester}
-                                    </p>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-gray-500">
-                                            {new Date(approval.requestDate).toLocaleDateString()}
-                                        </span>
-                                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                                            {approval.department}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                <div className="text-center">
-                                    <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                    </svg>
-                                    <p className="text-sm">No requests found</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <ContentLeftPanel
+                    sidebarOpen={sidebarOpen}
+                    onSidebarClose={() => setSidebarOpen(false)}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    filterStatus={filterStatus}
+                    onFilterStatusChange={setFilterStatus}
+                    sortBy={sortBy}
+                    onSortByChange={setSortBy}
+                    approvals={filteredApprovals}
+                    selectedApprovalId={selectedApproval?.id}
+                    onApprovalSelect={handleSelectApproval}
+                    getStatusColor={getStatusColor}
+                />
 
                 {/* Right Panel - Details */}
                 <div className="flex-1 flex flex-col overflow-hidden">
@@ -295,7 +212,7 @@ function RequestEvaluationContent() {
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {detailsLoading ? (
-                                <Loader/>
+                                <Loader />
                             ) : (
                                 <div className="p-6">
                                     <div className="mb-6">
@@ -329,21 +246,47 @@ function RequestEvaluationContent() {
                                                 <p className="text-sm text-gray-900">{selectedApproval.requester}</p>
                                             </div>
                                             <div>
+                                                <p className="text-xs text-gray-600 font-medium mb-1">Employee ID</p>
+                                                <p className="text-sm text-gray-900 font-bold">{selectedApproval.employeeID}</p>
+                                            </div>
+                                            <div>
                                                 <p className="text-xs text-gray-600 font-medium mb-1">Email</p>
                                                 <p className="text-sm text-blue-600">{selectedApproval.email}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Department</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.department}</p>
+                                                <p className="text-xs text-gray-600 font-medium mb-1">Location</p>
+                                                <p className="text-sm text-gray-900">{selectedApproval.location}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600 font-medium mb-1">Job Title</p>
                                                 <p className="text-sm text-gray-900">{selectedApproval.jobTitle}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Location</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.location}</p>
+                                                <p className="text-xs text-gray-600 font-medium mb-1">Department</p>
+                                                <p className="text-sm text-gray-900">{selectedApproval.department}</p>
                                             </div>
+                                            <div>
+                                                <p className="text-xs text-gray-600 font-medium mb-1">Request Date</p>
+                                                <p className="text-sm text-gray-900">{new Date(selectedApproval.requestDate).toLocaleDateString()}</p>
+                                            </div>
+                                            {selectedApproval.dateProcessed && (
+                                                <>
+                                                    <div>
+                                                        <p className="text-xs text-gray-600 font-medium mb-1">Processed Date</p>
+                                                        <p className="text-sm text-gray-900">{new Date(selectedApproval.dateProcessed).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-600 font-medium mb-1">Processed By</p>
+                                                        <p className="text-sm text-gray-900">{selectedApproval.processedBy}</p>
+                                                    </div>
+                                                    {selectedApproval.remarks && (
+                                                        <div>
+                                                            <p className="text-xs text-gray-600 font-medium mb-1">Remarks</p>
+                                                            <p className="text-sm text-gray-900">{selectedApproval.remarks}</p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
@@ -391,7 +334,7 @@ function RequestEvaluationContent() {
                                     {selectedApproval.status === 'pending' && (
                                         <div className="flex gap-3 pt-6 border-t border-gray-200">
                                             <button
-                                                onClick={() => handleApprove(selectedApproval.id)}
+                                                onClick={() => handleApproveClick(selectedApproval.id)}
                                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
                                             >
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,7 +343,7 @@ function RequestEvaluationContent() {
                                                 Approve
                                             </button>
                                             <button
-                                                onClick={() => handleReject(selectedApproval.id)}
+                                                onClick={() => handleRejectClick(selectedApproval.id)}
                                                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
                                             >
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,14 +376,35 @@ function RequestEvaluationContent() {
                     )}
                 </div>
             </div>
+
+            {/* Reject Modal */}
+            <RejectRequestModal
+                isOpen={showRejectModal}
+                remarks={rejectRemarks}
+                onRemarksChange={setRejectRemarks}
+                onConfirm={handleConfirmReject}
+                onCancel={handleCancelReject}
+                isLoading={isRejectingLoading}
+            />
+
+            <ConfirmModal
+                isOpen={showConfirmModal}
+                onConfirm={handleApprove}
+                onCancel={() => {
+                    setShowConfirmModal(false);
+                    setApprovingId(null);
+                }}
+                isLoading={isApprovingLoading}
+            />
+
         </div>
     );
 }
 
 export default function RequestEvaluationPage() {
-  return (
-    <ProtectedRoute>
-      <RequestEvaluationContent />
-    </ProtectedRoute>
-  );
+    return (
+        <ProtectedRoute>
+            <RequestEvaluationContent />
+        </ProtectedRoute>
+    );
 }

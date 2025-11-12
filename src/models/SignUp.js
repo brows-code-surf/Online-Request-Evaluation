@@ -2,6 +2,28 @@ import connectToDatabase from "../lib/db.js";
 import bcrypt from "bcryptjs";
 
 export const UserAccount = {
+  async checkEmailExists(email) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT COUNT(*) as count
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE EMAIL = @email AND IS_APPROVED IN ('APPROVED', 'PENDING')
+      `;
+
+      const result = await connection.request()
+        .input('email', email)
+        .query(query);
+
+      return result.recordset[0].count > 0;
+    } catch (error) {
+      console.error("Check email error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
   async createUser(formData) {
     let connection;
     try {
@@ -59,7 +81,7 @@ export const UserAccount = {
 
   async emailUserConfirmation(email, title, companyName, greeting, name, body, buttonText, buttonUrl, companyEmail, companyPhone, unsubscribeUrl, preferencesUrl){
     try{
-      const { sendEmailWithTemplate } = await import('../lib/emailService.js');
+      const { sendEmailWithTemplate } = await import('../utils/emailService.js');
       
       const result = await sendEmailWithTemplate({
         email,

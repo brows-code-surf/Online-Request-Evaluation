@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '../_components/authContext'
+import { useAuth } from '../../utils/authContext'
 import Loader from '../_components/loader';
 import Link from 'next/link';
 import { verifyOTP, resendOTP } from './_actions';
@@ -98,7 +98,7 @@ export default function OTP() {
             <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
-                        <img src="/SANTEH LOGO/SFC.png" alt="SANTEH Logo" className="" />
+                        <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="" />
                     </div>
                     <h3 className="text-gray-600 text-sm mt-2">Verify Your Identity</h3>
                     <p className="text-gray-500 text-xs mt-2">Enter the OTP sent to your email</p>

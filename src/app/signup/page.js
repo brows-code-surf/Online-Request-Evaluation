@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Loader from '../_components/loader';
 import { calculateAge } from '../../utils/calculateAge';
-import { createUser, sendConfirmationEmail } from './_actions';
+import { createUser, sendConfirmationEmail, checkEmailExists } from './_actions';
 import { ToastContainer, toast } from 'react-toastify';
 import LoaderButton from '../_components/loaderButton'
 import { JobTitles, Departments } from './_components/jobConstants';
@@ -13,6 +13,8 @@ import { generatePassword } from '../../utils/generatePassword';
 export default function Signup() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [emailChecking, setEmailChecking] = useState(false);
 
     const allowedDomains = ["santehfeeds.com", "gmail.com"];
 
@@ -46,15 +48,34 @@ export default function Signup() {
         employeeid: ''
     });
 
-    const handleChange = (e) => {
+    const handleChange = async (e) => {
         const { name, value } = e.target;
-        if (name === 'birthday') {
-            const age = calculateAge(value);
+        
+        if (name === 'email') {
             setFormData(prev => ({
                 ...prev,
                 [name]: value,
-                age,
             }));
+
+            // Check if email exists when user stops typing
+            if (value) {
+                setEmailChecking(true);
+                try {
+                    const result = await checkEmailExists(value);
+                    if (result.success) {
+                        if (result.exists) {
+                            setEmailError('This email is already registered');
+                        } else {
+                            setEmailError('');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Email check error:', error);
+                }
+                setEmailChecking(false);
+            } else {
+                setEmailError('');
+            }
         } else {
             setFormData(prev => ({
                 ...prev,
@@ -68,7 +89,15 @@ export default function Signup() {
         setLoading(true);
         
         try {
+            // Final email check before submission
             if (formData.email) {
+                const emailCheckResult = await checkEmailExists(formData.email);
+                if (emailCheckResult.success && emailCheckResult.exists) {
+                    toast.error('This email is already registered!');
+                    setLoading(false);
+                    return;
+                }
+
                 const emailDomain = formData.email.split('@')[1];
                 if (!allowedDomains.includes(emailDomain)) {
                     toast.error('Email domain is not allowed!');
@@ -99,7 +128,7 @@ export default function Signup() {
                       companyPhone: '+63 2 8584 4572'
                     });
                     
-                    toast.success(`Account request submitted! Your temporary password is: ${autoPassword}`);
+                    toast.success(`Account request submitted! An email has been sent to ${formData.email}`);
                     setTimeout(() => {
                         router.push('/login');
                     }, 4500);
@@ -114,7 +143,7 @@ export default function Signup() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
             <Loader />
             <ToastContainer
                 position="top-center"
@@ -257,15 +286,27 @@ export default function Signup() {
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                             Email
                         </label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
-                        />
+                        <div className="relative">
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                required
+                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${
+                                    emailError ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                            />
+                            {emailChecking && (
+                                <span className="absolute right-3 top-3 text-gray-500 text-sm">
+                                    Checking...
+                                </span>
+                            )}
+                        </div>
+                        {emailError && (
+                            <p className="mt-1 text-xs text-red-600">{emailError}</p>
+                        )}
                     </div>
                     <div>
                         {loading ? (
@@ -275,7 +316,8 @@ export default function Signup() {
                         ) : (
                             <button
                                 type="submit"
-                                className="w-full flex justify-center py-2 px-4 border border-blue-500 rounded-md shadow-sm text-sm font-medium text-blue-700 hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700"
+                                disabled={emailError !== ''}
+                                className="w-full flex justify-center py-2 px-4 border border-blue-500 rounded-md shadow-sm text-sm font-medium text-blue-700 hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Sign up
                             </button>

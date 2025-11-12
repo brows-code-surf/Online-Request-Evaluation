@@ -12,6 +12,7 @@ export class LoginModel {
           EMPLOYEENAME as empName,
           EMAIL as email,
           PASSWORDHASH,
+          DEPARTMENT as department,
           IS_APPROVED as isApproved
         FROM [SYSTEM.USERACCOUNT.1]
         WHERE EMAIL = @email
@@ -37,6 +38,7 @@ export class LoginModel {
         return {
           email: user.email,
           empName: user.empName,
+          department: user.department,
           isApproved: user.isApproved,
           authenticated: false
         };
@@ -45,8 +47,9 @@ export class LoginModel {
       return {
         email: user.email,
         empName: user.empName,
+        department: user.department,
         isApproved: user.isApproved,
-        authenticated: false
+        authenticated: true
       };
 
     } catch (error) {

@@ -2,7 +2,7 @@
 
 import LoginModel from '@/models/Login.js';
 import OTPModel from '@/models/OTP.js';
-import { sendEmailWithTemplate } from '@/lib/emailService.js';
+import { sendEmailWithTemplate } from '@/utils/emailService.js';
 
 export async function loginUser(email, password) {
   try {
@@ -51,6 +51,8 @@ export async function loginUser(email, password) {
     return {
       success: true,
       email: user.email,
+      empName: user.empName,
+      department: user.department,
       message: 'OTP sent to your email. Please verify to continue.'
     };
 

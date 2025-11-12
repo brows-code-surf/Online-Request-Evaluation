@@ -12,7 +12,7 @@ export async function sendEmailWithTemplate(emailData) {
     }
 
     const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@santehfeeds.com';
-    
+
     if (!fromEmail) {
       throw new Error('SENDGRID_FROM_EMAIL is not set in environment variables');
     }
@@ -33,7 +33,12 @@ export async function sendEmailWithTemplate(emailData) {
       .replace(/{{company_email}}/g, emailData.companyEmail)
       .replace(/{{company_phone}}/g, emailData.companyPhone)
       .replace(/{{unsubscribe_url}}/g, emailData.unsubscribeUrl)
-      .replace(/{{preferences_url}}/g, emailData.preferencesUrl);
+      .replace(/{{preferences_url}}/g, emailData.preferencesUrl)
+      .replace(
+        /{{logo_url}}/g,
+        'https://drive.google.com/uc?export=view&id=1nhzsbYGquTzZlBFJ7F1q9OpisQAU14QT'
+      );
+
 
     const msg = {
       to: emailData.email,

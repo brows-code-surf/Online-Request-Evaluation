@@ -2,6 +2,22 @@
 
 import UserAccount from '../../../models/SignUp';
 
+export async function checkEmailExists(email) {
+  try {
+    const exists = await UserAccount.checkEmailExists(email);
+    return {
+      success: true,
+      exists: exists
+    };
+  } catch (error) {
+    console.error('Action error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to check email'
+    };
+  }
+}
+
 export async function createUser(formData) {
   try {
     const result = await UserAccount.createUser(formData);
