@@ -34,22 +34,12 @@ export class LoginModel {
         return null;
       }
 
-      if (user.isApproved !== 'APPROVED') {
-        return {
-          email: user.email,
-          empName: user.empName,
-          department: user.department,
-          isApproved: user.isApproved,
-          authenticated: false
-        };
-      }
-
       return {
         email: user.email,
         empName: user.empName,
-        department: user.department,
+        department: user.department || '',
         isApproved: user.isApproved,
-        authenticated: true
+        authenticated: user.isApproved === 'APPROVED'
       };
 
     } catch (error) {

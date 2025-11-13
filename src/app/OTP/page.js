@@ -89,12 +89,13 @@ export default function OTP() {
         setResendTimer(60)
         setExpirationTimer(600)
         setOtp('')
+        setError('')
         await resendOTP(email)
     }
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
-            <Loader />
+            <Loader loading = {loading}/>
             <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
@@ -142,18 +143,18 @@ export default function OTP() {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center space-y-3">
                     <p className="text-sm text-gray-600">
                         Didn't receive the code?{' '}
                         <button
                             onClick={handleResend}
-                            disabled={resendTimer > 0}
+                            disabled={resendTimer > 0 || loading}
                             className="text-blue-600 hover:text-blue-700 font-medium disabled:text-gray-400"
                         >
                             {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                         </button>
                     </p>
-                    <Link href="/login" className="text-sm text-gray-600 hover:text-gray-700 mt-2 block">
+                    <Link href="/login" className="text-sm text-gray-600 hover:text-gray-700 block">
                         Back to Login
                     </Link>
                 </div>

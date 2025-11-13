@@ -3,6 +3,7 @@
 export default function ContentLeftPanel({
     sidebarOpen,
     onSidebarClose,
+    headerTitle,
     searchQuery,
     onSearchChange,
     filterStatus,
@@ -20,7 +21,7 @@ export default function ContentLeftPanel({
             {/* Header */}
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-white">Requests</h2>
+                    <h2 className="text-lg font-bold text-white">{headerTitle}</h2>
                     <button
                         onClick={onSidebarClose}
                         className="md:hidden text-white hover:bg-blue-700 p-1 rounded"

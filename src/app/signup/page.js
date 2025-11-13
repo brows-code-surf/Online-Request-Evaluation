@@ -2,12 +2,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Loader from '../_components/loader';
-import { calculateAge } from '../../utils/calculateAge';
-import { createUser, sendConfirmationEmail, checkEmailExists } from './_actions';
+import { createUser, sendConfirmationEmail, checkEmailExists, checkEmployeeIDExists } from './_actions';
 import { ToastContainer, toast } from 'react-toastify';
 import LoaderButton from '../_components/loaderButton'
-import { JobTitles, Departments } from './_components/jobConstants';
-import { Location } from './_components/locationConstants';
+import { JobTitles, Departments } from '../../utils/jobConstants';
+import { Location } from '../../utils/locationConstants';
 import { generatePassword } from '../../utils/generatePassword';
 
 export default function Signup() {
@@ -15,6 +14,8 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const [emailError, setEmailError] = useState('');
     const [emailChecking, setEmailChecking] = useState(false);
+    const [employeeIdChecking, setEmployeeIdChecking] = useState(false);
+    const [employeeIdError, setEmployeeIdError] = useState('');
 
     const allowedDomains = ["santehfeeds.com", "gmail.com"];
 
@@ -50,7 +51,7 @@ export default function Signup() {
 
     const handleChange = async (e) => {
         const { name, value } = e.target;
-        
+
         if (name === 'email') {
             setFormData(prev => ({
                 ...prev,
@@ -76,7 +77,33 @@ export default function Signup() {
             } else {
                 setEmailError('');
             }
-        } else {
+        } else if (name === 'employeeid') {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value,
+            }));
+
+            if (value) {
+                setEmployeeIdChecking(true);
+                try {
+                    const result = await checkEmployeeIDExists(value);
+                    if (result.success) {
+                        if (result.exists) {
+                            setEmployeeIdError('This Employee ID is already registered');
+                        } else {
+                            setEmployeeIdError('');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Employee ID check error:', error);
+                }
+                setEmployeeIdChecking(false);
+            } else {
+                setEmployeeIdError('');
+            }
+        }
+
+        else {
             setFormData(prev => ({
                 ...prev,
                 [name]: value,
@@ -87,7 +114,7 @@ export default function Signup() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        
+
         try {
             // Final email check before submission
             if (formData.email) {
@@ -98,12 +125,20 @@ export default function Signup() {
                     return;
                 }
 
+                
                 const emailDomain = formData.email.split('@')[1];
                 if (!allowedDomains.includes(emailDomain)) {
                     toast.error('Email domain is not allowed!');
                     setLoading(false);
                     return;
                 }
+
+                const employeeIdCheckResult = await checkEmployeeIDExists(formData.employeeid);
+                if (employeeIdCheckResult.success && employeeIdCheckResult.exists) {
+                    toast.error('This employee ID is already registered!');
+                    setLoading(false);
+                    return;
+                } 
 
                 const autoPassword = generatePassword();
                 const submitData = {
@@ -112,22 +147,22 @@ export default function Signup() {
                     jobTitle: formData.jobTitle,
                     department: selectedDepartment
                 };
-                
+
                 const res = await createUser(submitData);
                 if (res.success) {
                     await sendConfirmationEmail({
-                      email: formData.email,
-                      title: 'Account Created',
-                      companyName: 'SANTEH FEEDS CORPORATION',
-                      greeting: 'Good Day!',
-                      name: formData.fullName,
-                      body: 'Your account has been successfully created and is pending approval. You will be notified once it is approved.',
-                      buttonText: 'View Dashboard',
-                      buttonUrl: 'http://localhost:3000/login',
-                      companyEmail: 'j.valencia@santehfeeds.com',
-                      companyPhone: '+63 2 8584 4572'
+                        email: formData.email,
+                        title: 'Account Created',
+                        companyName: 'SANTEH FEEDS CORPORATION',
+                        greeting: 'Good Day!',
+                        name: formData.fullName,
+                        body: 'Your account has been successfully created and is pending approval. You will be notified once it is approved.',
+                        buttonText: 'View Dashboard',
+                        buttonUrl: 'http://localhost:3000/login',
+                        companyEmail: 'j.valencia@santehfeeds.com',
+                        companyPhone: '+63 2 8584 4572'
                     });
-                    
+
                     toast.success(`Account request submitted! An email has been sent to ${formData.email}`);
                     setTimeout(() => {
                         router.push('/login');
@@ -144,7 +179,7 @@ export default function Signup() {
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
-            <Loader />
+            <Loader loading={loading} />
             <ToastContainer
                 position="top-center"
                 autoClose={3000}
@@ -265,22 +300,29 @@ export default function Signup() {
                         </div>
                     </div>
                     <div>
-                        <div className='flex space-x-4'>
-                            <div className="flex-2">
-                                <label htmlFor='employeeid' className="block text-sm font-medium text-gray-700">
-                                    Employee ID
-                                </label>
-                                <input
-                                    id="employeeid"
-                                    name="employeeid"
-                                    type="text"
-                                    value={formData.employeeid}
-                                    onChange={handleChange}
-                                    required
-                                    className="mt-1 text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
-                                />
-                            </div>
+                        <label htmlFor='employeeid' className="block text-sm font-medium text-gray-700">
+                            Employee ID
+                        </label>
+                        <div className="relative">
+                            <input
+                                id="employeeid"
+                                name="employeeid"
+                                type="text"
+                                value={formData.employeeid}
+                                onChange={handleChange}
+                                required
+                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${employeeIdError ? 'border-red-500' : 'border-gray-300'
+                                    }`}
+                            />
+                            {employeeIdChecking && (
+                                <span className="absolute right-3 top-3 text-gray-500 text-sm">
+                                    Checking...
+                                </span>
+                            )}
                         </div>
+                        {employeeIdError && (
+                            <p className="mt-1 text-xs text-red-600">{employeeIdError}</p>
+                        )}
                     </div>
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -294,9 +336,8 @@ export default function Signup() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${
-                                    emailError ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${emailError ? 'border-red-500' : 'border-gray-300'
+                                    }`}
                             />
                             {emailChecking && (
                                 <span className="absolute right-3 top-3 text-gray-500 text-sm">
@@ -316,7 +357,7 @@ export default function Signup() {
                         ) : (
                             <button
                                 type="submit"
-                                disabled={emailError !== ''}
+                                disabled={emailError !== '' || employeeIdError !== ''}
                                 className="w-full flex justify-center py-2 px-4 border border-blue-500 rounded-md shadow-sm text-sm font-medium text-blue-700 hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Sign up

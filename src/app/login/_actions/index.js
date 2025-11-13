@@ -15,17 +15,10 @@ export async function loginUser(email, password) {
 
     const user = await LoginModel.authenticate(email, password);
 
-    if (!user) {
+    if (!user || !user.authenticated) {
       return {
         success: false,
-        message: 'Invalid email or password'
-      };
-    }
-
-    if (user.isApproved !== 'APPROVED') {
-      return {
-        success: false,
-        message: 'Your account is not approved yet'
+        message: 'Your email or password is incorrect. Also check if your account is approved.'
       };
     }
 
@@ -53,6 +46,7 @@ export async function loginUser(email, password) {
       email: user.email,
       empName: user.empName,
       department: user.department,
+      isApproved: user.isApproved,
       message: 'OTP sent to your email. Please verify to continue.'
     };
 

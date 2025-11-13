@@ -94,10 +94,11 @@ function RequestEvaluationContent() {
     const [filterStatus, setFilterStatus] = useState('all');
 
     useEffect(() => {
-        // Set first approval as selected by default
+        setLoading(true);
         if (approvals.length > 0 && !selectedApproval) {
             setSelectedApproval(approvals[0]);
         }
+        setLoading(false);
     }, []);
 
     // Handle approval selection
@@ -170,9 +171,8 @@ function RequestEvaluationContent() {
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
-            <Loader />
+            <Loader loading={loading}/>
             <HeaderNavBar />
-
             <div className="flex flex-1 overflow-hidden pt-14">
 
                 {/* Left Panel - Approvals List */}
@@ -295,7 +295,7 @@ function RequestEvaluationContent() {
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {detailsLoading ? (
-                                <Loader/>
+                                <Loader />
                             ) : (
                                 <div className="p-6">
                                     <div className="mb-6">
@@ -438,9 +438,9 @@ function RequestEvaluationContent() {
 }
 
 export default function RequestEvaluationPage() {
-  return (
-    <ProtectedRoute>
-      <RequestEvaluationContent />
-    </ProtectedRoute>
-  );
+    return (
+        <ProtectedRoute>
+            <RequestEvaluationContent />
+        </ProtectedRoute>
+    );
 }

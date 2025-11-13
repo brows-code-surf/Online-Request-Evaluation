@@ -167,7 +167,7 @@ function RequestEvaluationContent() {
     if (loading || pageLoading) {
         return (
             <div className="flex flex-col h-screen bg-gray-50">
-                <Loader />
+                <Loader loading={true} />
                 <HeaderNavBar />
             </div>
         );
@@ -175,7 +175,7 @@ function RequestEvaluationContent() {
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
-            <Loader />
+            <Loader loading={pageLoading} />
             <HeaderNavBar />
 
             <div className="flex flex-1 overflow-hidden pt-14">
@@ -183,6 +183,7 @@ function RequestEvaluationContent() {
                 {/* Left Panel - Approvals List */}
                 <ContentLeftPanel
                     sidebarOpen={sidebarOpen}
+                    headerTitle="User Account Approvals"
                     onSidebarClose={() => setSidebarOpen(false)}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}

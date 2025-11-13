@@ -41,7 +41,7 @@ export default function Login() {
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
-            <Loader/>
+            <Loader loading ={loading}/>
             <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">

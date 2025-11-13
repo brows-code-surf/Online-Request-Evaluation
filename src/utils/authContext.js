@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
+        console.log('Restored user from localStorage:', storedUser);
         setUser(JSON.parse(storedUser));
       } catch (error) {
         localStorage.removeItem('user');
@@ -32,8 +33,8 @@ export function AuthProvider({ children }) {
   };
 
   const isAdmin = () => {
-    return user?.department === "MIS";
-    
+    const isAdminUser = user?.department?.trim().toUpperCase() === "MIS";
+    return isAdminUser;
   };
 
   return (

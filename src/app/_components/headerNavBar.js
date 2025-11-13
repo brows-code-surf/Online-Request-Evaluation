@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../utils/authContext';
 import { logoutUser } from '../login/_actions';
 
 export default function HeaderNavBar() {
   const router = useRouter();
-  const { logout, user, loading } = useAuth();
+  const pathname = usePathname();
+  const { logout, user, loading, isAdmin } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([
@@ -48,9 +49,7 @@ export default function HeaderNavBar() {
     ));
   };
 
-  const isUserAdmin = user && user.department === "MIS";
-  console.log("User is admin:", isUserAdmin);
-  console.log("User department:", user?.department);
+  const isUserAdmin = user && isAdmin();
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 border-b-[3px] border-blue-600">
@@ -62,17 +61,24 @@ export default function HeaderNavBar() {
           </Link>
         </div>
 
-        {/* Center Navigation - Hidden on mobile */}
-        <nav className="hidden md:flex gap-8">
-          {isUserAdmin && (
-            <Link href="/user-approval" className="text-gray-600 text-sm hover:text-blue-600 transition font-medium">
-              User Account Approvals
-            </Link>
-          )}
-        </nav>
+        {/* Right Section - Navigation, Notifications & Profile */}
+        <div className="flex items-center gap-6">
 
-        {/* Right Section - Notifications & Profile */}
-        <div className="flex items-center gap-4">
+          {/* Navigation */}
+          <nav className="hidden md:flex gap-6">
+            {isUserAdmin && (
+              <Link
+                href="/user-approval"
+                className={`text-sm font-medium transition ${
+                  pathname === '/user-approval'
+                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                User Account Approvals
+              </Link>
+            )}
+          </nav>
 
           {/* Notification Bell */}
           <div className="relative">
@@ -159,7 +165,7 @@ export default function HeaderNavBar() {
               }}
               className="flex items-center gap-2 p-2 text-gray-700 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300">
                 {getInitials()}
               </div>
               <svg
@@ -190,7 +196,7 @@ export default function HeaderNavBar() {
                 {/* Menu Items */}
                 <div className="py-2">
                   <Link
-                    href="/profile"
+                    href="/user-profile"
                     className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition text-sm font-medium"
                   >
                     <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

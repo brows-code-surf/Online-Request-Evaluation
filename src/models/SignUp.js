@@ -1,4 +1,4 @@
-import connectToDatabase from "../lib/db.js"; 
+import connectToDatabase from "../lib/db.js";
 import bcrypt from "bcryptjs";
 
 export const UserAccount = {
@@ -20,6 +20,25 @@ export const UserAccount = {
       return result.recordset[0].count > 0;
     } catch (error) {
       console.error("Check email error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  async checkEmployeeIDExists(employeeid) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+      const query = `
+        SELECT COUNT(*) as count
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE EMPLOYEEIDNO = @employeeid
+      `;
+      const result = await connection.request()
+        .input('employeeid', employeeid)
+        .query(query);
+      return result.recordset[0].count > 0;
+    } catch (error) {
+      console.error("Check employee ID error:", error);
       throw new Error('Database error: ' + error.message);
     }
   },
@@ -68,21 +87,21 @@ export const UserAccount = {
         };
       }
       throw new Error("Database insert failed");
-      
+
     } catch (error) {
       console.error("Detailed error:", error);
       throw new Error(
-        error.message.includes('duplicate') ? 
-        'Email already exists' : 
-        'Database error: ' + error.message
+        error.message.includes('duplicate') ?
+          'Email already exists' :
+          'Database error: ' + error.message
       );
     }
   },
 
-  async emailUserConfirmation(email, title, companyName, greeting, name, body, buttonText, buttonUrl, companyEmail, companyPhone, unsubscribeUrl, preferencesUrl){
-    try{
+  async emailUserConfirmation(email, title, companyName, greeting, name, body, buttonText, buttonUrl, companyEmail, companyPhone, unsubscribeUrl, preferencesUrl) {
+    try {
       const { sendEmailWithTemplate } = await import('../utils/emailService.js');
-      
+
       const result = await sendEmailWithTemplate({
         email,
         title,
@@ -98,9 +117,9 @@ export const UserAccount = {
         preferencesUrl,
         subject: 'Account Creation Confirmation'
       });
-      
+
       return result;
-    }catch(error){
+    } catch (error) {
       console.log('Email sending error:', error);
       throw new Error('Failed to send confirmation email: ' + error.message);
     }

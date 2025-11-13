@@ -18,6 +18,22 @@ export async function checkEmailExists(email) {
   }
 }
 
+export async function checkEmployeeIDExists(empId) {
+  try {
+    const exists = await UserAccount.checkEmployeeIDExists(empId);
+    return {
+      success: true,
+      exists: exists
+    };
+  } catch (error) {
+    console.error('Action error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to check employee ID'
+    };
+  }
+}
+
 export async function createUser(formData) {
   try {
     const result = await UserAccount.createUser(formData);
