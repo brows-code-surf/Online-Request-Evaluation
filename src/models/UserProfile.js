@@ -34,7 +34,7 @@ class UserProfile {
         }
     }
 
-    static async getUserById(employeeID) {
+    static async getUserByEmployeeID(employeeID) {
         let connection;
         try {
             connection = await connectToDatabase();
@@ -48,7 +48,7 @@ class UserProfile {
           JOBTITLE as jobTitle,
           LOCATION as location
         FROM [SYSTEM.USERACCOUNT.1]
-        WHERE EMPLOYEEID = @employeeID
+        WHERE EMPLOYEEIDNO = @employeeID
       `;
 
             const result = await connection.request()
@@ -61,7 +61,7 @@ class UserProfile {
 
             return result.recordset[0];
         } catch (error) {
-            console.error('Error fetching user by ID:', error);
+            console.error('Error fetching user by employee ID:', error);
             throw error;
         }
     }
@@ -75,11 +75,13 @@ class UserProfile {
         SELECT
           EMPLOYEENAME as empName,
           EMAIL as email,
-          EMPLOYEEID as employeeID,
+          EMPLOYEEIDNO as employeeID,
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
-          LOCATION as location
+          LOCATION as location,
+          STATUS as status
         FROM [SYSTEM.USERACCOUNT.1]
+        WHERE IS_APPROVED = 'APPROVED'
       `;
 
             const result = await connection.request().query(query);
@@ -90,7 +92,7 @@ class UserProfile {
         }
     }
 
-    static async updateUserProfile(email, profileData) {
+    static async updateUserProfile(employeeID, profileData, modifiedByEmployeeID) {
         let connection;
         try {
             connection = await connectToDatabase();
@@ -99,21 +101,23 @@ class UserProfile {
                 UPDATE [SYSTEM.USERACCOUNT.1]
                 SET
                 EMPLOYEENAME = @employeeName,
+                EMAIL = @email,
                 JOBTITLE = @jobTitle,
                 DEPARTMENT = @department,
                 LOCATION = @location,
                 MODIFIEDBY = @modifiedBy,
                 MODIFIEDDATE = GETDATE()
-                WHERE EMAIL = @email
+                WHERE EMPLOYEEIDNO = @employeeID
             `;
 
             const result = await connection.request()
-                .input('email', email)
+                .input('employeeID', employeeID)
                 .input('employeeName', profileData.empName || null)
+                .input('email', profileData.email || null)
                 .input('jobTitle', profileData.jobTitle || null)
                 .input('department', profileData.department || null)
                 .input('location', profileData.location || null)
-                .input('modifiedBy', profileData.empName || null)
+                .input('modifiedBy', modifiedByEmployeeID || null)
                 .query(query);
 
             return result.rowsAffected[0] > 0;
@@ -123,7 +127,7 @@ class UserProfile {
         }
     }
 
-    static async changePassword(email, newPassword) {
+    static async changePassword(employeeID, newPassword) {
         let connection;
         try {
             connection = await connectToDatabase();
@@ -134,12 +138,12 @@ class UserProfile {
                 PASSWORDHASH = @newPassword,
                 MODIFIEDBY = @modifiedBy,
                 MODIFIEDDATE = GETDATE()
-                WHERE EMAIL = @email
+                WHERE EMPLOYEEIDNO = @employeeID
             `;
             const result = await connection.request()
-                .input('email', email)
+                .input('employeeID', employeeID)
                 .input('newPassword', hashedPassword)
-                .input('modifiedBy', email)
+                .input('modifiedBy', employeeID)
                 .query(query);
             return result.rowsAffected[0] > 0;
         } catch (error) {
@@ -148,17 +152,17 @@ class UserProfile {
         }
     }
 
-    static async verifyPassword(email, password) {
+    static async verifyPassword(employeeID, password) {
         let connection;
         try {
             connection = await connectToDatabase();
             const query = `
                 SELECT PASSWORDHASH
                 FROM [SYSTEM.USERACCOUNT.1]
-                WHERE EMAIL = @email
+                WHERE EMPLOYEEIDNO = @employeeID
             `;
             const result = await connection.request()
-                .input('email', email)
+                .input('employeeID', employeeID)
                 .query(query);
 
             if (result.recordset.length === 0) {
@@ -169,6 +173,54 @@ class UserProfile {
             return await bcrypt.compare(password, storedHash);
         } catch (error) {
             console.error('Error verifying password:', error);
+            throw error;
+        }
+    }
+
+    static async setUserInactive(employeeID) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                UPDATE [SYSTEM.USERACCOUNT.1]
+                SET
+                STATUS = 'INACTIVE',
+                MODIFIEDDATE = GETDATE()
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .query(query);
+
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error setting user inactive:', error);
+            throw error;
+        }
+    }
+
+    static async setUserActive(employeeID) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                UPDATE [SYSTEM.USERACCOUNT.1]
+                SET
+                STATUS = 'ACTIVE',
+                MODIFIEDDATE = GETDATE()
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .query(query);
+
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error setting user active:', error);
             throw error;
         }
     }

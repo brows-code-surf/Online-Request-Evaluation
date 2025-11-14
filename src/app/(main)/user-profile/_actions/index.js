@@ -17,8 +17,9 @@ export async function getUserProfile(email) {
 
 export async function updateUserProfile(profileData) {
     try {
-        const { employeeID, ...dataToUpdate } = profileData;
-        const success = await UserProfile.updateUserProfile(dataToUpdate.email, dataToUpdate);
+        // Get the current user's employee ID from the context or pass it separately
+        // For now, we'll use the employee ID from profileData as the modifier
+        const success = await UserProfile.updateUserProfile(profileData.employeeID, profileData, profileData.employeeID);
         if (success) {
             return { success: true, message: 'Profile updated successfully' };
         }
@@ -28,20 +29,19 @@ export async function updateUserProfile(profileData) {
     }
 }
 
-export async function changePassword({ email, currentPassword, newPassword }) {
+export async function changePassword({ employeeID, currentPassword, newPassword }) {
     try {
-        // Verify current password first
-        const user = await UserProfile.getUserByEmail(email);
+        const user = await UserProfile.getUserByEmployeeID(employeeID);
         if (!user) {
             return { success: false, message: 'User not found' };
         }
 
-        const passwordMatch = await UserProfile.verifyPassword(email, currentPassword);
+        const passwordMatch = await UserProfile.verifyPassword(employeeID, currentPassword);
         if (!passwordMatch) {
             return { success: false, message: 'Current password is incorrect' };
         }
 
-        const success = await UserProfile.changePassword(email, newPassword);
+        const success = await UserProfile.changePassword(employeeID, newPassword);
         if (!success) {
             return { success: false, message: 'Failed to change password' };
         }

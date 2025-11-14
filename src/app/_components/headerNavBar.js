@@ -76,7 +76,21 @@ export default function HeaderNavBar() {
                 }`}
               >
                 User Account Approvals
-              </Link>
+              </Link>              
+            )}
+          </nav>
+          <nav className="hidden md:flex gap-6">
+            {isUserAdmin && (
+              <Link
+                href="/user-accounts"
+                className={`text-sm font-medium transition ${
+                  pathname === '/user-accounts'
+                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                User Accounts
+              </Link>              
             )}
           </nav>
 

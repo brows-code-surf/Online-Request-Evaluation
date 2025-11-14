@@ -3,6 +3,7 @@
 import LoginModel from '@/models/Login.js';
 import OTPModel from '@/models/OTP.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
+import { checkRateLimit, recordLoginAttempt, resetLoginAttempts } from '@/utils/rateLimiter.js';
 
 export async function loginUser(email, password) {
   try {
@@ -13,14 +14,27 @@ export async function loginUser(email, password) {
       };
     }
 
+    // Check rate limit
+    const rateLimit = checkRateLimit(email);
+    if (!rateLimit.allowed) {
+      return {
+        success: false,
+        message: `Too many login attempts. Please try again in ${rateLimit.minutesRemaining} minute(s).`
+      };
+    }
+
     const user = await LoginModel.authenticate(email, password);
 
     if (!user || !user.authenticated) {
+      recordLoginAttempt(email);
       return {
         success: false,
         message: 'Your email or password is incorrect. Also check if your account is approved.'
       };
     }
+
+    // Reset attempts on successful authentication
+    resetLoginAttempts(email);
 
     // Generate and save OTP
     const otp = OTPModel.generateOTP();

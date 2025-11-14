@@ -16,7 +16,9 @@ export default function UserPassword({
     showConfirmPassword,
     onToggleCurrentPassword,
     onToggleNewPassword,
-    onToggleConfirmPassword
+    onToggleConfirmPassword,
+    showConfirmPasswordField = true,
+    showCurrentPasswordField = true
 }) {
     const passwordValidation = validatePassword(passwordData.newPassword);
 
@@ -33,36 +35,38 @@ export default function UserPassword({
                 {isChangingPassword ? (
                     <div className="space-y-4">
 
-                        {/* Current Password */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Current Password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={showCurrentPassword ? "text" : "password"}
-                                    name="currentPassword"
-                                    value={passwordData.currentPassword}
-                                    onChange={onPasswordChange}
-                                    className={`w-full text-black px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'}`}
-                                    placeholder="Enter your current password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={onToggleCurrentPassword}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                                >
-                                    {showCurrentPassword ? (
-                                        <EyeSlashIcon className="h-5 w-5" />
-                                    ) : (
-                                        <EyeIcon className="h-5 w-5" />
-                                    )}
-                                </button>
+                        {/* Current Password - Conditionally Rendered */}
+                        {showCurrentPasswordField && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Current Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        name="currentPassword"
+                                        value={passwordData.currentPassword}
+                                        onChange={onPasswordChange}
+                                        className={`w-full text-black px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'}`}
+                                        placeholder="Enter your current password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={onToggleCurrentPassword}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeSlashIcon className="h-5 w-5" />
+                                        ) : (
+                                            <EyeIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
+                                {passwordErrors.currentPassword && (
+                                    <p className="text-red-600 text-xs mt-1">{passwordErrors.currentPassword}</p>
+                                )}
                             </div>
-                            {passwordErrors.currentPassword && (
-                                <p className="text-red-600 text-xs mt-1">{passwordErrors.currentPassword}</p>
-                            )}
-                        </div>
+                        )}
 
                         {/* New Password */}
                         <div>
@@ -116,36 +120,38 @@ export default function UserPassword({
                             )}
                         </div>
 
-                        {/* Confirm Password */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Confirm Password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    name="confirmPassword"
-                                    value={passwordData.confirmPassword}
-                                    onChange={onPasswordChange}
-                                    className={`w-full text-black px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'}`}
-                                    placeholder="Confirm your new password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={onToggleConfirmPassword}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                                >
-                                    {showConfirmPassword ? (
-                                        <EyeSlashIcon className="h-5 w-5" />
-                                    ) : (
-                                        <EyeIcon className="h-5 w-5" />
-                                    )}
-                                </button>
+                        {/* Confirm Password - Conditionally Rendered */}
+                        {showConfirmPasswordField && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Confirm Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={passwordData.confirmPassword}
+                                        onChange={onPasswordChange}
+                                        className={`w-full text-black px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'}`}
+                                        placeholder="Confirm your new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={onToggleConfirmPassword}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeSlashIcon className="h-5 w-5" />
+                                        ) : (
+                                            <EyeIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
+                                {passwordErrors.confirmPassword && (
+                                    <p className="text-red-600 text-xs mt-1">{passwordErrors.confirmPassword}</p>
+                                )}
                             </div>
-                            {passwordErrors.confirmPassword && (
-                                <p className="text-red-600 text-xs mt-1">{passwordErrors.confirmPassword}</p>
-                            )}
-                        </div>
+                        )}
 
                         {/* Action Buttons */}
                         <div className="flex gap-3 pt-4">

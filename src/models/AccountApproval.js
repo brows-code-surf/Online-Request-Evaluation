@@ -59,7 +59,7 @@ export class AccountApprovalModel {
       const query = `
         UPDATE [SYSTEM.USERACCOUNT.1]
         SET IS_APPROVED = 'APPROVED', DATEPROCESSED = GETDATE(), PROCESSEDBY = @processedBy, REMARKS = 'Validated and Approved',
-        PASSWORDHASH = @password
+        PASSWORDHASH = @password, STATUS = 'ACTIVE'
         WHERE ROWID = @userId
       `;
 

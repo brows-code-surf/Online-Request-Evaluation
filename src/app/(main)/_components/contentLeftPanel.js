@@ -13,7 +13,8 @@ export default function ContentLeftPanel({
     approvals,
     selectedApprovalId,
     onApprovalSelect,
-    getStatusColor
+    getStatusColor,
+    filterType = 'approval'
 }) {
     return (
         <div className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden`}>
@@ -49,26 +50,56 @@ export default function ContentLeftPanel({
 
             {/* Filters */}
             <div className="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
-                <select
-                    value={filterStatus}
-                    onChange={(e) => onFilterStatusChange(e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                </select>
+                {/* User Accounts Filters */}
+                {filterType === 'accounts' && (
+                    <>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => onFilterStatusChange(e.target.value)}
+                            className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
 
-                <select
-                    value={sortBy}
-                    onChange={(e) => onSortByChange(e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                    <option value="date">Sort by Date</option>
-                    <option value="requester">Sort by Name</option>
-                    <option value="status">Sort by Status</option>
-                </select>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => onSortByChange(e.target.value)}
+                            className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="date">Sort by Date</option>
+                            <option value="requester">Sort by Name</option>
+                            <option value="status">Sort by Status</option>
+                        </select>
+                    </>
+                )}
+
+                {/* Approval Filters */}
+                {filterType === 'approval' && (
+                    <>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => onFilterStatusChange(e.target.value)}
+                            className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+
+                        <select
+                            value={sortBy}
+                            onChange={(e) => onSortByChange(e.target.value)}
+                            className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="date">Sort by Date</option>
+                            <option value="requester">Sort by Name</option>
+                            <option value="status">Sort by Status</option>
+                        </select>
+                    </>
+                )}
             </div>
 
             {/* Approvals List */}
@@ -87,8 +118,8 @@ export default function ContentLeftPanel({
                                 <h3 className="font-semibold text-gray-900 text-sm leading-tight flex-1">
                                     {approval.title}
                                 </h3>
-                                <span className={`ml-2 text-xs ${getStatusColor(approval.status).replace('bg-', 'bg-').replace('text-', 'text-')}`}>
-                                    {approval.status.charAt(0).toUpperCase() + approval.status.slice(1)}
+                                <span className={`ml-2 text-xs px-2 py-1 rounded ${getStatusColor(approval.status)}`}>
+                                    {approval.status}
                                 </span>
                             </div>
 
@@ -112,7 +143,7 @@ export default function ContentLeftPanel({
                             <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
-                            <p className="text-sm">No requests found</p>
+                            <p className="text-sm">No users found</p>
                         </div>
                     </div>
                 )}

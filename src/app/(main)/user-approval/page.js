@@ -195,6 +195,7 @@ function RequestEvaluationContent() {
                     selectedApprovalId={selectedApproval?.id}
                     onApprovalSelect={handleSelectApproval}
                     getStatusColor={getStatusColor}
+                    filterType="approval"
                 />
 
                 {/* Right Panel - Details */}

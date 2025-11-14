@@ -30,10 +30,7 @@ function UserProfileContent() {
         employeeID: '',
         jobTitle: '',
         department: '',
-        location: '',
-        phone: '',
-        dateOfBirth: '',
-        address: '',
+        location: ''
     });
 
     const [passwordData, setPasswordData] = useState({
@@ -163,8 +160,7 @@ function UserProfileContent() {
         setSuccessMessage('');
         setErrorMessage('');
         try {
-            const { employeeID, ...profileDataToUpdate } = profileData;
-            const result = await updateUserProfile(profileDataToUpdate);
+            const result = await updateUserProfile(profileData);
             if (result.success) {
                 setSuccessMessage('Profile updated successfully!');
                 setIsEditing(false);
@@ -210,7 +206,7 @@ function UserProfileContent() {
         setErrorMessage('');
         try {
             const result = await changePassword({
-                email: user.email,
+                employeeID: user.employeeID,
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword,
             });

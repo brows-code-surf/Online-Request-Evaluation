@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import Loader from '../_components/loader';
@@ -138,7 +138,7 @@ export default function ForgotPasswordPage() {
     };
 
     // Timer effect for resend countdown
-    React.useEffect(() => {
+    useEffect(() => {
         let interval;
         if (resendTimer > 0 && step === 'otp') {
             interval = setInterval(() => {
