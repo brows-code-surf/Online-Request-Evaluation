@@ -76,7 +76,7 @@ export class LoginModel {
           JOBTITLE as jobTitle,
           EMPLOYEEIDNO as employeeId
         FROM [SYSTEM.USERACCOUNT.1]
-        WHERE ID = @id
+        WHERE ROWID = @id AND IS_APPROVED = 'APPROVED' AND STATUS = 'ACTIVE'
       `;
 
       const result = await connection.request()

@@ -79,14 +79,16 @@ export default function ContentLeftPanel({
                 {filterType === 'approval' && (
                     <>
                         <select
-                            value={filterStatus}
+                            value={filterStatus || ''}
                             onChange={(e) => onFilterStatusChange(e.target.value)}
                             className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
-                            <option value="all">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="">Select Status</option>
+                            <option value="FOR CONFIRMATION">For Confirmation</option>
+                            <option value="FOR REQUEST APPROVAL">For Request Approval</option>
+                            <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="REJECTED">Rejected</option>
                         </select>
 
                         <select
@@ -115,23 +117,39 @@ export default function ContentLeftPanel({
                                 }`}
                         >
                             <div className="flex items-start justify-between mb-2">
-                                <h3 className="font-semibold text-gray-900 text-sm leading-tight flex-1">
-                                    {approval.title}
-                                </h3>
-                                <span className={`ml-2 text-xs px-2 py-1 rounded ${getStatusColor(approval.status)}`}>
-                                    {approval.status}
-                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+                                        {approval.title}
+                                    </h3>
+                                </div>
+                                <div className="ml-2 flex items-center gap-1">
+                                    {approval.isRush && (
+                                        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
+                                            RUSH
+                                        </span>
+                                    )}
+                                    <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${getStatusColor(approval.status)}`}>
+                                        {approval.status}
+                                    </span>
+                                </div>
                             </div>
 
-                            <p className="text-xs text-gray-600 mb-2">
-                                {approval.requester}
-                            </p>
+                            <div className="flex item-start justify-between mb-2">
+                                <p className="text-xs text-gray-600 mb-2">
+                                    {approval.requester}
+                                </p>
+                                {approval.id && (
+                                    <p className="text-xs text-gray-600 mb-2 font-semibold">
+                                        {approval.id}
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-500">
                                     {new Date(approval.requestDate).toLocaleDateString()}
                                 </span>
-                                <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                                <span className="text-xs bg-blue-300 text-gray-700 px-2 py-1 font-semibold rounded">
                                     {approval.department}
                                 </span>
                             </div>
@@ -143,7 +161,7 @@ export default function ContentLeftPanel({
                             <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
-                            <p className="text-sm">No users found</p>
+                            <p className="text-sm">No requests found</p>
                         </div>
                     </div>
                 )}
