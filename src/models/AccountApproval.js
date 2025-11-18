@@ -32,7 +32,7 @@ export class AccountApprovalModel {
         requester: record.requester,
         employeeID: record.employeeID,
         email: record.email,
-        status: record.isApproved === 'REJECTED' ? 'rejected' : record.isApproved === 'APPROVED' ? 'approved' : 'pending',
+        status: record.isApproved === 'REJECTED' ? 'rejected' : record.isApproved === 'APPROVED' ? 'APPROVED' : 'PENDING',
         requestDate: record.requestDate.toISOString().split('T')[0],
         dateProcessed: record.dateProcessed ? record.dateProcessed.toISOString().split('T')[0] : null,
         processedBy: record.processedBy,

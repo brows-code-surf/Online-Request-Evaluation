@@ -1,12 +1,15 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../../utils/authContext'
 import Loader from '../_components/loader';
 import Link from 'next/link';
 import { verifyOTP, resendOTP } from './_actions';
 
-export default function OTP() {
+// Ensure this page is treated as dynamic to avoid prerendering issues
+export const dynamic = 'force-dynamic';
+
+function OTPContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { login } = useAuth()
@@ -160,5 +163,13 @@ export default function OTP() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function OTPPage() {
+    return (
+        <Suspense fallback={null}>
+            <OTPContent />
+        </Suspense>
     )
 }

@@ -1,5 +1,6 @@
 import connectToDatabase from "../lib/db.js";
 import bcrypt from "bcryptjs";
+import { broadcastUserApprovalUpdate } from "../app/_actions/pusher.js";
 
 export const UserAccount = {
   async checkEmailExists(email) {
@@ -81,6 +82,31 @@ export const UserAccount = {
         .query(query);
 
       if (result.rowsAffected[0] > 0) {
+        // Broadcast new signup to user-approval page
+        await broadcastUserApprovalUpdate('new-account-signup', {
+          email: params.email,
+          name: params.name,
+          employeeID: params.empid,
+          location: params.loc,
+          department: params.dept,
+          jobTitle: params.job,
+          timestamp: new Date().toISOString()
+        });
+
+        // Notify MIS department about new pending user
+        try {
+          await this.notifyMisNewUserApproval(
+            params.email,
+            params.name,
+            params.dept,
+            params.empid
+          );
+          console.log('MIS department notified about new user pending approval');
+        } catch (notifyError) {
+          console.error('Failed to notify MIS department:', notifyError.message);
+          // Don't fail the creation if notification fails
+        }
+
         return {
           success: true,
           message: "User created successfully"
@@ -95,6 +121,82 @@ export const UserAccount = {
           'Email already exists' :
           'Database error: ' + error.message
       );
+    }
+  },
+
+  async getApprovedUsersByDepartment(department) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT EMPLOYEENAME, EMAIL, LOCATION, DEPARTMENT, JOBTITLE
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE DEPARTMENT = @department AND IS_APPROVED = 'APPROVED'
+      `;
+
+      const result = await connection.request()
+        .input('department', department)
+        .query(query);
+
+      return result.recordset;
+    } catch (error) {
+      console.error("Get approved users by department error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  async notifyMisNewUserApproval(email, name, department, employeeId) {
+    try {
+      const { sendEmailWithTemplate } = await import('../utils/emailService.js');
+
+      // Default company details for MIS notification
+      const companyDetails = {
+        title: 'New User Account Pending Approval',
+        companyName: 'Santeh Feeds Corporation',
+        greeting: 'MIS Department',
+        body: `A new user account request requires your approval. Please review and process the account in the system.
+
+        <b>Details:</b><br>
+        Name: ${name}<br>
+        Email: ${email}<br>
+        Department: ${department}<br>
+        Employee ID: ${employeeId}<br>
+        Request Date: ${new Date().toLocaleDateString()}
+
+        Please log into the system to approve or reject this account request.`,
+        companyEmail: 'mis@santehfeeds.com',
+        companyPhone: '(+63) 123-456-7890',
+        unsubscribeUrl: 'https://tateh.com/unsubscribe',
+        preferencesUrl: 'https://tateh.com/preferences',
+        subject: 'New Pending Account for Approval'
+      };
+
+      // Get all approved MIS users to send notification
+      const misUsers = await this.getApprovedUsersByDepartment('MIS');
+
+      if (misUsers.length === 0) {
+        console.log('No MIS users found to notify');
+        return { success: true, message: 'No MIS users to notify' };
+      }
+
+      for (const user of misUsers) {
+        try {
+          await sendEmailWithTemplate({
+            email: user.EMAIL,
+            name: user.EMPLOYEENAME,
+            ...companyDetails
+          });
+        } catch (emailError) {
+          console.error(`Failed to send notification to ${user.EMAIL}:`, emailError.message);
+          // Continue with other users
+        }
+      }
+
+      return { success: true, message: `Notification sent to ${misUsers.length} MIS users` };
+    } catch (error) {
+      console.error('MIS notification error:', error);
+      throw new Error('Failed to send MIS notification: ' + error.message);
     }
   },
 

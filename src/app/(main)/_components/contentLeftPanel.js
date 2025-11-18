@@ -14,7 +14,7 @@ export default function ContentLeftPanel({
     selectedApprovalId,
     onApprovalSelect,
     getStatusColor,
-    filterType = 'approval'
+    filterType
 }) {
     return (
         <div className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden`}>
@@ -138,9 +138,9 @@ export default function ContentLeftPanel({
                                 <p className="text-xs text-gray-600 mb-2">
                                     {approval.requester}
                                 </p>
-                                {approval.id && (
+                                {approval.employeeID && (
                                     <p className="text-xs text-gray-600 mb-2 font-semibold">
-                                        {approval.id}
+                                        {approval.employeeID}
                                     </p>
                                 )}
                             </div>

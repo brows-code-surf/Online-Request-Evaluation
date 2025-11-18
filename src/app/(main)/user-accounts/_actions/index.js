@@ -1,24 +1,34 @@
 'use server';
 
 import UserProfile from '@/models/UserProfile.js';
+import { broadcastUserAccountUpdate } from '@/app/_actions/pusher';
 
 export async function getAllUsers() {
   try {
     const users = await UserProfile.getAllUsers();
+    const formattedUsers = users.map(user => ({
+      id: user.employeeID,
+      title: user.empName,
+      requester: user.empName,
+      email: user.email,
+      employeeID: user.employeeID,
+      department: user.department,
+      jobTitle: user.jobTitle,
+      location: user.location,
+      requestDate: new Date().toISOString(),
+      status: user.status
+    }));
+
+    // Broadcast event to notify all connected clients that user list has been fetched/refreshed
+    await broadcastUserAccountUpdate('users-list-refreshed', {
+      totalUsers: formattedUsers.length,
+      users: formattedUsers,
+      timestamp: new Date().toISOString()
+    });
+
     return {
       success: true,
-      data: users.map(user => ({
-        id: user.employeeID,
-        title: user.empName,
-        requester: user.empName,
-        email: user.email,
-        employeeID: user.employeeID,
-        department: user.department,
-        jobTitle: user.jobTitle,
-        location: user.location,
-        requestDate: new Date().toISOString(),
-        status: user.status
-      }))
+      data: formattedUsers
     };
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -54,6 +64,19 @@ export async function getUserProfile(employeeID) {
 export async function updateUserProfile(profileData, modifiedByEmployeeID) {
   try {
     await UserProfile.updateUserProfile(profileData.employeeID, profileData, modifiedByEmployeeID);
+    
+    // Trigger Pusher event to notify all users of the profile update
+    await broadcastUserAccountUpdate('user-profile-updated', {
+      employeeID: profileData.employeeID,
+      empName: profileData.empName,
+      email: profileData.email,
+      jobTitle: profileData.jobTitle,
+      department: profileData.department,
+      location: profileData.location,
+      modifiedBy: modifiedByEmployeeID,
+      timestamp: new Date().toISOString()
+    });
+    
     return {
       success: true,
       message: 'Profile updated successfully'
@@ -86,6 +109,14 @@ export async function changePassword(data) {
 export async function setUserInactive(employeeID) {
   try {
     await UserProfile.setUserInactive(employeeID);
+    
+    // Trigger Pusher event to notify all users of the status change
+    await broadcastUserAccountUpdate('user-status-changed', {
+      employeeID,
+      newStatus: 'INACTIVE',
+      timestamp: new Date().toISOString()
+    });
+    
     return {
       success: true,
       message: 'User account set to inactive successfully'
@@ -102,6 +133,14 @@ export async function setUserInactive(employeeID) {
 export async function setUserActive(employeeID) {
   try {
     await UserProfile.setUserActive(employeeID);
+    
+    // Trigger Pusher event to notify all users of the status change
+    await broadcastUserAccountUpdate('user-status-changed', {
+      employeeID,
+      newStatus: 'ACTIVE',
+      timestamp: new Date().toISOString()
+    });
+    
     return {
       success: true,
       message: 'User account set to active successfully'

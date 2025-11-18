@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/utils/authContext';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
@@ -10,6 +10,7 @@ import ConfirmModal from '../_components/confirmModal';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import SuccessModal from '../_components/successModal';
 import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses } from './_actions/index';
+import { usePusherMultiple } from '@/hooks/usePusher';
 
 function RequestEvaluationContent() {
     const { user } = useAuth();
@@ -213,6 +214,20 @@ function RequestEvaluationContent() {
                 return 'bg-gray-100 text-gray-800 border-gray-300';
         }
     };
+
+    // Set up Pusher listeners for real-time updates
+    usePusherMultiple('request-evaluation-broadcast', {
+        'request-approved': useCallback((data) => {
+            console.log('Request approved event received:', data);
+            // Reload approvals data when a request is approved
+            reloadApprovalsData();
+        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]),
+        'request-rejected': useCallback((data) => {
+            console.log('Request rejected event received:', data);
+            // Reload approvals data when a request is rejected
+            reloadApprovalsData();
+        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName])
+    });
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">

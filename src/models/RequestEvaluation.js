@@ -28,6 +28,11 @@ class RequestEvaluation {
             return result.recordset;
         } catch (error) {
             console.error('Error fetching evaluation details:', error);
+            // Return empty array if table doesn't exist
+            if (error.message && error.message.includes('Invalid object name')) {
+                console.warn('PURCHASE.REQUESTDETAILS.1 or PURCHASE.REQUESTHEADER.1 table not found. Returning empty results.');
+                return [];
+            }
             throw error;
         }
     }
@@ -116,6 +121,11 @@ class RequestEvaluation {
 
         } catch (error) {
             console.error('Error fetching requests by requester name:', error);
+            // Return empty array instead of throwing error if table doesn't exist
+            if (error.message && error.message.includes('Invalid object name')) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning empty results.');
+                return [];
+            }
             throw error;
         }
     }
@@ -131,6 +141,21 @@ class RequestEvaluation {
             return result.recordset.length > 0 ? result.recordset[0].REQUESTSTATUS : null;
         } catch (error) {
             console.error('Error fetching request status:', error);
+            throw error;
+        }
+    }
+
+    static async getRequestApprovers(referenceNo) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+            const query = `SELECT APPROVER, ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+            return result.recordset.length > 0 ? result.recordset[0] : null;
+        } catch (error) {
+            console.error('Error fetching request approvers:', error);
             throw error;
         }
     }
@@ -262,6 +287,11 @@ class RequestEvaluation {
             return [...new Set(statuses)];
         } catch (error) {
             console.error('Error fetching user available statuses:', error);
+            // Return default status if table doesn't exist
+            if (error.message && error.message.includes('Invalid object name')) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning default status.');
+                return ['FOR CONFIRMATION'];
+            }
             throw error;
         }
     }

@@ -3,6 +3,7 @@
 import AccountApprovalModel from '@/models/AccountApproval.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { generatePassword } from '@/utils/generatePassword.js';
+import { broadcastUserApprovalUpdate, broadcastUserAccountUpdate } from '@/app/_actions/pusher';
 
 export async function getPendingApprovals() {
     try {
@@ -55,6 +56,25 @@ export async function approveUserAccount(userId, email, name, processedBy) {
             preferencesUrl: '#'
         });
 
+        // Trigger Pusher events to notify all users
+        await broadcastUserApprovalUpdate('user-account-approved', {
+            userId,
+            email,
+            name,
+            approvedBy: processedBy,
+            timestamp: new Date().toISOString()
+        });
+
+        // Also broadcast to user-accounts page to add new user to the list
+        await broadcastUserAccountUpdate('new-user-approved', {
+            userId,
+            email,
+            name,
+            status: 'ACTIVE',
+            approvedBy: processedBy,
+            timestamp: new Date().toISOString()
+        });
+
         return {
             success: true,
             message: 'Account approved successfully'
@@ -94,6 +114,16 @@ export async function rejectUserAccount(userId, email, name, processedBy, remark
             companyPhone: '+1-800-SANTEH',
             unsubscribeUrl: '#',
             preferencesUrl: '#'
+        });
+
+        // Trigger Pusher event to notify user-approval page
+        await broadcastUserApprovalUpdate('user-account-rejected', {
+            userId,
+            email,
+            name,
+            rejectedBy: processedBy,
+            remarks,
+            timestamp: new Date().toISOString()
         });
 
         return {

@@ -10,6 +10,7 @@ import ContentLeftPanel from '../_components/contentLeftPanel';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import ConfirmModal from '../_components/confirmModal';
 import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
+import { usePusherMultiple } from '@/hooks/usePusher';
 
 function RequestEvaluationContent() {
     const router = useRouter();
@@ -37,9 +38,25 @@ function RequestEvaluationContent() {
             router.push('/request-evaluation');
             return;
         }
-        
+
         fetchApprovals();
     }, [loading]);
+
+    // Set up Pusher event listeners for real-time updates
+    usePusherMultiple('user-approval-broadcast', {
+        'new-account-signup': (data) => {
+            console.log('New account signup received:', data);
+            fetchApprovals(); // Refetch approvals when new user signs up
+        },
+        'user-account-approved': (data) => {
+            console.log('Account approved event:', data);
+            fetchApprovals(); // Refetch to update the list
+        },
+        'user-account-rejected': (data) => {
+            console.log('Account rejected event:', data);
+            fetchApprovals(); // Refetch to update the list
+        }
+    });
 
     const fetchApprovals = async () => {
         setPageLoading(true);
@@ -100,11 +117,11 @@ function RequestEvaluationContent() {
             const result = await approveUserAccount(approvingId, approval.email, approval.requester, user?.empName || 'Admin');
             if (result.success) {
                 setApprovals(approvals.map(a =>
-                    a.id === approvingId ? { ...a, status: 'approved', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' } : a
+                    a.id === approvingId ? { ...a, status: 'APPROVED', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' } : a
                 ));
                 const updated = approvals.find(a => a.id === approvingId);
                 if (updated) {
-                    setSelectedApproval({ ...updated, status: 'approved', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' });
+                    setSelectedApproval({ ...updated, status: 'APPROVED', dateProcessed: new Date().toISOString().split('T')[0], processedBy: user?.empName, remarks: 'Validated and approved' });
                 }
                 setShowConfirmModal(false);
                 setApprovingId(null);
@@ -153,11 +170,11 @@ function RequestEvaluationContent() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'approved':
+            case 'APPROVED':
                 return 'bg-green-100 text-green-800 border-green-300';
-            case 'rejected':
+            case 'REJECTED':
                 return 'bg-red-100 text-red-800 border-red-300';
-            case 'pending':
+            case 'PENDING':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-300';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -172,6 +189,7 @@ function RequestEvaluationContent() {
             </div>
         );
     }
+
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
@@ -333,7 +351,7 @@ function RequestEvaluationContent() {
                                     )}
 
                                     {/* Actions */}
-                                    {selectedApproval.status === 'pending' && (
+                                    {selectedApproval.status === 'PENDING' && (
                                         <div className="flex gap-3 pt-6 border-t border-gray-200">
                                             <button
                                                 onClick={() => handleApproveClick(selectedApproval.id)}
@@ -356,7 +374,7 @@ function RequestEvaluationContent() {
                                         </div>
                                     )}
 
-                                    {selectedApproval.status !== 'pending' && (
+                                    {selectedApproval.status !== 'PENDING' && (
                                         <div className="pt-6 border-t border-gray-200">
                                             <p className="text-sm text-gray-600 text-center">
                                                 This request has been {selectedApproval.status}.

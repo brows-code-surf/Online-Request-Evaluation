@@ -24,6 +24,8 @@
     "mysql2": "^3.15.3",
     "next": "16.0.0",
     "next-auth": "^4.24.13",
+    "pusher": "^5.2.0",
+    "pusher-js": "^8.4.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-toastify": "^11.0.5"

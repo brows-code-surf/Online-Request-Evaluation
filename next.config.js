@@ -4,7 +4,6 @@ const nextConfig = {
   experimental: {
     // turbopack: false, // Uncomment if needed
   },
-  swcMinify: true,
 };
 
 export default nextConfig;

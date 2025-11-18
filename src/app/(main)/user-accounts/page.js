@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
@@ -13,6 +13,7 @@ import { JobTitles, Departments } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
+import { usePusherMultiple } from '@/hooks/usePusher';
 
 function UserAccountsContent() {
     const router = useRouter();
@@ -408,6 +409,57 @@ function UserAccountsContent() {
         return 'bg-gray-100 text-gray-800 border-gray-300';
     };
 
+    // Set up Pusher listeners for real-time user account updates
+    usePusherMultiple('user-account-broadcast', {
+        'user-profile-updated': useCallback((data) => {
+            console.log('User profile updated event received:', data);
+            // Update the users list with the new profile data
+            setUsers(prevUsers => prevUsers.map(u =>
+                u.employeeID === data.employeeID
+                    ? {
+                        ...u,
+                        requester: data.empName,
+                        email: data.email,
+                        jobTitle: data.jobTitle,
+                        department: data.department,
+                        location: data.location
+                    }
+                    : u
+            ));
+            
+            // Update selected user if it's the one being updated
+            if (selectedUser?.employeeID === data.employeeID) {
+                setSelectedUser(prev => prev ? {
+                    ...prev,
+                    requester: data.empName,
+                    email: data.email,
+                    jobTitle: data.jobTitle,
+                    department: data.department,
+                    location: data.location
+                } : null);
+            }
+        }, [selectedUser?.employeeID]),
+        'user-status-changed': useCallback((data) => {
+            console.log('User status changed event received:', data);
+            // Update the users list with the new status
+            setUsers(prevUsers => prevUsers.map(u =>
+                u.employeeID === data.employeeID
+                    ? { ...u, status: data.newStatus }
+                    : u
+            ));
+            
+            // Update selected user if it's the one being updated
+            if (selectedUser?.employeeID === data.employeeID) {
+                setSelectedUser(prev => prev ? { ...prev, status: data.newStatus } : null);
+            }
+        }, [selectedUser?.employeeID]),
+        'new-user-approved': useCallback(() => {
+            console.log('New user approved event received - refetching all users');
+            // Refetch all users to ensure complete data is loaded
+            fetchAllUsers();
+        }, [])
+    });
+
     if (loading || pageLoading) {
         return (
             <div className="flex flex-col h-screen bg-gray-50">
@@ -629,4 +681,3 @@ export default function UserAccountsPage() {
         </ProtectedRoute>
     );
 }
-

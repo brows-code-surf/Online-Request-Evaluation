@@ -64,7 +64,7 @@ export class LoginModel {
   async getUserById(id) {
     let connection;
     try {
-      connection = await connectToDatabase();
+      connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
         SELECT 

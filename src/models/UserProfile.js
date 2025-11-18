@@ -201,6 +201,32 @@ class UserProfile {
         }
     }
 
+    static async getEmailByEmployeeName(employeeName) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+        SELECT EMAIL as email
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE EMPLOYEENAME = @employeeName
+      `;
+
+            const result = await connection.request()
+                .input('employeeName', employeeName)
+                .query(query);
+
+            if (result.recordset.length === 0) {
+                return null;
+            }
+
+            return result.recordset[0].email;
+        } catch (error) {
+            console.error('Error fetching email by employee name:', error);
+            throw error;
+        }
+    }
+
     static async setUserActive(employeeID) {
         let connection;
         try {
