@@ -34,47 +34,36 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
             console.log('Starting email notification process for referenceNo:', referenceNo, 'currentStatus:', currentStatus);
             try {
                 if (currentStatus === 'FOR CONFIRMATION' || currentStatus === 'FOR REQUEST APPROVAL') {
-                    const approvers = await RequestEvaluation.getRequestApprovers(referenceNo);
-                    console.log('Approvers data:', approvers);
-                    let recipientName = '';
-                    let subject = '';
-                    let body = '';
+                    const approverData = await RequestEvaluation.getRequestApproversEmails(referenceNo, currentStatus);
+                    console.log('Approver data:', approverData);
 
-                    if (currentStatus === 'FOR CONFIRMATION') {
-                        recipientName = approvers.APPROVER;
-                        subject = 'Request Approved - Waiting for Your Approval';
-                        body = `The request ${referenceNo} has been confirmed and is now waiting for your approval. Please review and approve the request at your earliest convenience.`;
-                    } else if (currentStatus === 'FOR REQUEST APPROVAL') {
-                        recipientName = approvers.ADDRESSEDTO;
-                        subject = 'Request Approved - Ready for Lead Time Review';
-                        body = `The request ${referenceNo} has been approved and is now ready for purchasing lead time review. Please check the request details and proceed with the canvassing process.`;
-                    }
+                    if (approverData) {
+                        const recipientEmail = approverData.EMAIL;
+                        const recipientName = approverData.EMPLOYEENAME;
+                        let subject = '';
+                        let body = '';
 
-                    console.log('Recipient name:', recipientName);
-                    if (recipientName) {
-                        let recipientEmail = null;
-
-                        // Check if the recipientName is already an email address
-                        if (recipientName.includes('@')) {
-                            recipientEmail = recipientName;
-                            console.log('Recipient is already an email:', recipientEmail);
-                        } else {
-                            // Look up email by employee name
-                            recipientEmail = await UserProfile.getEmailByEmployeeName(recipientName);
-                            console.log('Recipient email:', recipientEmail);
+                        if (currentStatus === 'FOR CONFIRMATION') {
+                            subject = 'Request Approved - Waiting for Your Approval';
+                            body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been confirmed and is now waiting for your approval. Please review and approve the request at your earliest convenience.`;
+                        } else if (currentStatus === 'FOR REQUEST APPROVAL') {
+                            subject = 'Request Approved - Ready for Lead Time Review';
+                            body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been approved and is now ready for purchasing lead time review. Please check the request details and proceed with the canvassing process.`;
                         }
+
+                        console.log('Recipient name:', recipientName, 'Recipient email:', recipientEmail);
                         if (recipientEmail) {
                             const emailData = {
                                 email: recipientEmail,
                                 name: recipientName,
-                                title: subject,
+                                subject: subject,
                                 companyName: 'SANTEH',
                                 greeting: 'Dear',
                                 body: body,
                                 buttonText: 'View Request',
                                 buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
-                                companyEmail: 'noreply@santehfeeds.com',
-                                companyPhone: '+63 (02) 8-XXX-XXXX',
+                                companyEmail: 'j.valencia@santehfeeds.com',
+                                companyPhone: '+63 2 8584 4572',
                                 unsubscribeUrl: '#',
                                 preferencesUrl: '#'
                             };
@@ -85,7 +74,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                             console.log('No email found for recipient:', recipientName);
                         }
                     } else {
-                        console.log('No recipient name found for status:', currentStatus);
+                        console.log('No approver data found for status:', currentStatus);
                     }
                 } else {
                     console.log('Current status does not trigger email notification:', currentStatus);
@@ -95,9 +84,16 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                 // Don't throw error to avoid failing the approval process
             }
 
-            // Trigger Pusher event to notify all users of the approval
+            // Trigger Pusher events to notify all users of the approval
             await broadcastRequestEvaluationUpdate('request-approved', {
                 referenceNo,
+                approverName,
+                newStatus: result.newStatus,
+                timestamp: new Date().toISOString()
+            });
+            await broadcastRequestEvaluationUpdate('request-changed', {
+                referenceNo,
+                changeType: 'approve',
                 approverName,
                 newStatus: result.newStatus,
                 timestamp: new Date().toISOString()
@@ -119,6 +115,13 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
         if (result.headerUpdated) {
             await broadcastRequestEvaluationUpdate('request-rejected', {
                 referenceNo,
+                approverName,
+                rejectionReason,
+                timestamp: new Date().toISOString()
+            });
+            await broadcastRequestEvaluationUpdate('request-changed', {
+                referenceNo,
+                changeType: 'reject',
                 approverName,
                 rejectionReason,
                 timestamp: new Date().toISOString()
@@ -187,6 +190,26 @@ export async function fetchUserAvailableStatuses(userName) {
         return statuses;
     } catch (error) {
         console.error('Error fetching user available statuses:', error);
+        throw error;
+    }
+}
+
+export async function markAsRead(referenceNo) {
+    try {
+        const result = await RequestEvaluation.markAsRead(referenceNo);
+
+        if (result) {
+            // Trigger Pusher event to notify all users of the read status change
+            await broadcastRequestEvaluationUpdate('request-changed', {
+                referenceNo,
+                changeType: 'markAsRead',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error marking as read:', error);
         throw error;
     }
 }

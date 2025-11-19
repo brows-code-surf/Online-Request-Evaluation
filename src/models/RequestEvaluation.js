@@ -18,7 +18,8 @@ class RequestEvaluation {
                             (PRD.QUANTITY + PRD.QUANTITYADJ) - PRD.QUANTITYCANCEL as QUANTITY,
                             PRD.BUDGETNAME,
                             PRD.REMARKS as remarks,
-                            PRD.DATENEEDED
+                            PRD.DATENEEDED,
+                            PRH.IS_READ
                             FROM [PURCHASE.REQUESTDETAILS.1] PRD
                             INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
                             WHERE PRH.REFERENCENO = @REFERENCENO`;
@@ -174,6 +175,7 @@ class RequestEvaluation {
                 headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
                                     SET REVIEWEDBY = @approverName, 
                                         DATEREVIEWED = GETDATE(), 
+                                        IS_READ = 0,
                                         REQUESTSTATUS = @newStatus 
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR REQUEST APPROVAL') {
@@ -181,6 +183,7 @@ class RequestEvaluation {
                 headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
                                     SET APPROVEDBY = @approverName, 
                                         DATEAPPROVED = GETDATE(), 
+                                        IS_READ = 0,
                                         REQUESTSTATUS = @newStatus 
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
@@ -188,6 +191,7 @@ class RequestEvaluation {
                 headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
                                     SET RECEIVEDBY = @approverName, 
                                         DATERECEIVED = GETDATE(), 
+                                        IS_READ = 0,
                                         REQUESTSTATUS = @newStatus 
                                     WHERE REFERENCENO = @referenceNo`;
             }
@@ -292,6 +296,54 @@ class RequestEvaluation {
                 console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning default status.');
                 return ['FOR CONFIRMATION'];
             }
+            throw error;
+        }
+    }
+
+    static async getRequestApproversEmails(referenceNo, requestStatus) {
+        let connection;
+        try{
+            connection = await connectToDatabase(process.env.DB_SFC);
+            let query = `SELECT `;
+
+            switch (requestStatus.toUpperCase()) {
+                case 'FOR CONFIRMATION':
+                    query += `SU.EMAIL, SU.EMPLOYEENAME FROM [GDB].[DBO].[SYSTEM.USERACCOUNT.1] SU
+                            INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON SU.EMPLOYEENAME = PRH.APPROVER
+                            WHERE PRH.REFERENCENO = @referenceNo`;
+                    break;
+                case 'FOR REQUEST APPROVAL':
+                    query += `SU.EMAIL, SU.EMPLOYEENAME FROM [GDB].[DBO].[SYSTEM.USERACCOUNT.1] SU
+                            INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON SU.EMPLOYEENAME = PRH.ADDRESSEDTO
+                            WHERE PRH.REFERENCENO = @referenceNo`;
+                    break;
+                default:
+                    return null;
+            }
+
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+            return result.recordset.length > 0 ? result.recordset[0] : null;
+        }catch(error){
+            console.error('Error fetching request approvers emails:', error);
+            throw error;
+        }
+    }
+
+    static async markAsRead(referenceNo) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+            const query = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                           SET IS_READ = 1
+                           WHERE REFERENCENO = @referenceNo`;
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error marking as read:', error);
             throw error;
         }
     }

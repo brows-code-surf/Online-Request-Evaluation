@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/authContext';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
@@ -9,11 +10,13 @@ import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import SuccessModal from '../_components/successModal';
-import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses } from './_actions/index';
+import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses, markAsRead } from './_actions/index';
 import { usePusherMultiple } from '@/hooks/usePusher';
 
 function RequestEvaluationContent() {
     const { user } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [selectedApproval, setSelectedApproval] = useState(null);
     const [approvalDetails, setApprovalDetails] = useState([]);
     const [approvals, setApprovals] = useState([]);
@@ -46,10 +49,13 @@ function RequestEvaluationContent() {
             };
             const data = await fetchEvaluationLeftPanel(user?.empName, filterStatus, filters);
             setApprovals(data);
-            if (data.length > 0) {
-                setSelectedApproval(data[0]);
-            } else {
-                setSelectedApproval(null);
+            // Update selectedApproval to match refreshed data or leave as is if not found
+            if (selectedApproval) {
+                const refreshedSelected = data.find(approval => approval.id === selectedApproval.id);
+                if (refreshedSelected) {
+                    setSelectedApproval(refreshedSelected);
+                }
+                // If not found, keep the current selectedApproval to stay on it
             }
         } catch (error) {
             console.error('Failed to reload approvals:', error);
@@ -72,7 +78,15 @@ function RequestEvaluationContent() {
                 const data = await fetchEvaluationLeftPanel(user?.empName, filterStatus, filters);
                 setApprovals(data);
                 if (data.length > 0 && !selectedApproval) {
-                    setSelectedApproval(data[0]);
+                    const id = searchParams.get('id');
+                    let selectApproval = data[0];
+                    if (id) {
+                        const urlSelected = data.find(approval => approval.id === id);
+                        if (urlSelected) {
+                            selectApproval = urlSelected;
+                        }
+                    }
+                    setSelectedApproval(selectApproval);
                 }
             } catch (error) {
                 console.error('Failed to load approvals:', error);
@@ -126,6 +140,8 @@ function RequestEvaluationContent() {
     // Handle approval selection without redundant loading
     const handleSelectApproval = (approval) => {
         setSelectedApproval(approval);
+        // Update URL with selected id to persist selection
+        router.replace(`?id=${encodeURIComponent(approval.id)}`);
         // Details will be loaded by useEffect
     };
 
@@ -215,6 +231,27 @@ function RequestEvaluationContent() {
         }
     };
 
+    const handleMarkAsRead = async (referenceNo) => {
+        // Optimistic update: update local state first
+        setApprovals(prevApprovals =>
+            prevApprovals.map(approval =>
+                approval.id === referenceNo ? { ...approval, isRead: 'READ' } : approval
+            )
+        );
+
+        try {
+            await markAsRead(referenceNo);
+        } catch (error) {
+            // Revert on error
+            setApprovals(prevApprovals =>
+                prevApprovals.map(approval =>
+                    approval.id === referenceNo ? { ...approval, isRead: 'NOT READ' } : approval
+                )
+            );
+            console.error('Failed to mark as read:', error);
+        }
+    };
+
     // Set up Pusher listeners for real-time updates
     usePusherMultiple('request-evaluation-broadcast', {
         'request-approved': useCallback((data) => {
@@ -226,8 +263,24 @@ function RequestEvaluationContent() {
             console.log('Request rejected event received:', data);
             // Reload approvals data when a request is rejected
             reloadApprovalsData();
+        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]),
+        'request-changed': useCallback((data) => {
+            console.log('Request changed event received:', data);
+            // Reload approvals data when a request is modified (e.g., marked as read)
+            reloadApprovalsData();
         }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName])
     });
+
+    // Poll for new data from external system insertions every 30 seconds
+    useEffect(() => {
+        const pollInterval = setInterval(() => {
+            if (filterStatus && user?.empName) {
+                reloadApprovalsData();
+            }
+        }, 3000); // 20 seconds(20000)
+
+        return () => clearInterval(pollInterval);
+    }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]);
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
@@ -251,6 +304,8 @@ function RequestEvaluationContent() {
                     onApprovalSelect={handleSelectApproval}
                     getStatusColor={getStatusColor}
                     filterType="approval"
+                    enableReadStatus={true}
+                    onMarkAsRead={handleMarkAsRead}
                 />
 
                 {/* Right Panel - Details */}
@@ -268,9 +323,9 @@ function RequestEvaluationContent() {
 
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
-                            {detailsLoading ? (
-                                <Loader />
-                            ) : (
+                            {/* {detailsLoading ? (
+                                // <Loader />
+                            ) : ( */}
                                 <div className="p-6">
                                     {/* Header Info */}
                                     <div className="mb-6">
@@ -412,7 +467,7 @@ function RequestEvaluationContent() {
                                         </div>
                                     )}
                                 </div>
-                            )}
+                             {/* )} */}
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">
@@ -457,6 +512,7 @@ function RequestEvaluationContent() {
                 message={successMessage.message}
                 onClose={() => {
                     setShowSuccessModal(false);
+                    setSelectedApproval(null); // Unselect the approval after action
                     reloadApprovalsData();
                 }}
                 autoCloseDelay={3000}

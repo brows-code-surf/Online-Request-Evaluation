@@ -14,7 +14,9 @@ export default function ContentLeftPanel({
     selectedApprovalId,
     onApprovalSelect,
     getStatusColor,
-    filterType
+    filterType,
+    enableReadStatus = false,
+    onMarkAsRead
 }) {
     return (
         <div className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden`}>
@@ -110,17 +112,29 @@ export default function ContentLeftPanel({
                     approvals.map(approval => (
                         <div
                             key={approval.id}
-                            onClick={() => onApprovalSelect(approval)}
+                            onClick={() => {
+                                onApprovalSelect(approval);
+                                if (enableReadStatus && approval.isRead === 'NOT READ' && onMarkAsRead) {
+                                    onMarkAsRead(approval.id);
+                                }
+                            }}
                             className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${selectedApprovalId === approval.id
-                                ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                                : 'hover:bg-gray-50'
+                                ? 'bg-blue-50 border-r-2 border-r-blue-200'
+                                : enableReadStatus && approval.isRead === 'NOT READ'
+                                    ? 'bg-blue-50/30 border-l-4 border-l-blue-500 hover:bg-blue-100/50'
+                                    : 'hover:bg-gray-50'
                                 }`}
                         >
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">
-                                        {approval.title}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        {enableReadStatus && approval.isRead === 'NOT READ' && (
+                                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                        )}
+                                        <h3 className={`text-sm leading-tight ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold text-blue-700' : 'font-semibold text-gray-900'}`}>
+                                            {approval.title}
+                                        </h3>
+                                    </div>
                                 </div>
                                 <div className="ml-2 flex items-center gap-1">
                                     {approval.isRush && (
@@ -135,11 +149,16 @@ export default function ContentLeftPanel({
                             </div>
 
                             <div className="flex item-start justify-between mb-2">
-                                <p className="text-xs text-gray-600 mb-2">
+                                <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
                                     {approval.requester}
                                 </p>
+                                {approval.id && (
+                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                        {approval.id}
+                                    </p>
+                                )}
                                 {approval.employeeID && (
-                                    <p className="text-xs text-gray-600 mb-2 font-semibold">
+                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                         {approval.employeeID}
                                     </p>
                                 )}
