@@ -11,7 +11,8 @@ import ConfirmModal from '../_components/confirmModal';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import SuccessModal from '../_components/successModal';
 import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses, markAsRead } from './_actions/index';
-import { usePusherMultiple } from '@/hooks/usePusher';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
+import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function RequestEvaluationContent() {
     const { user } = useAuth();
@@ -65,7 +66,7 @@ function RequestEvaluationContent() {
     useEffect(() => {
         const loadApprovals = async () => {
             if (!filterStatus) return;
-            
+
             setLoading(true);
             try {
                 const filters = {
@@ -171,7 +172,7 @@ function RequestEvaluationContent() {
 
     const handleApproveConfirm = async () => {
         if (!selectedApproval || !user?.empName) return;
-        
+
         setIsSubmitting(true);
         try {
             const result = await approveEvaluation(selectedApproval.id, user.empName, selectedApproval.status);
@@ -196,7 +197,7 @@ function RequestEvaluationContent() {
 
     const handleRejectConfirm = async () => {
         if (!selectedApproval || !user?.empName) return;
-        
+
         setIsSubmitting(true);
         try {
             const result = await rejectEvaluation(selectedApproval.id, user.empName, rejectionRemarks);
@@ -251,25 +252,32 @@ function RequestEvaluationContent() {
             console.error('Failed to mark as read:', error);
         }
     };
+    useSocketMultiple("request-evaluation-broadcast", {
+        "request-approved": useCallback(
+            (data) => {
+                console.log("Request approved event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
 
-    // Set up Pusher listeners for real-time updates
-    usePusherMultiple('request-evaluation-broadcast', {
-        'request-approved': useCallback((data) => {
-            console.log('Request approved event received:', data);
-            // Reload approvals data when a request is approved
-            reloadApprovalsData();
-        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]),
-        'request-rejected': useCallback((data) => {
-            console.log('Request rejected event received:', data);
-            // Reload approvals data when a request is rejected
-            reloadApprovalsData();
-        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]),
-        'request-changed': useCallback((data) => {
-            console.log('Request changed event received:', data);
-            // Reload approvals data when a request is modified (e.g., marked as read)
-            reloadApprovalsData();
-        }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName])
+        "request-rejected": useCallback(
+            (data) => {
+                console.log("Request rejected event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "request-changed": useCallback(
+            (data) => {
+                console.log("Request changed event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
     });
+
 
     // Poll for new data from external system insertions every 30 seconds
     useEffect(() => {
@@ -277,7 +285,7 @@ function RequestEvaluationContent() {
             if (filterStatus && user?.empName) {
                 reloadApprovalsData();
             }
-        }, 3000); // 20 seconds(20000)
+        }, 30000); // 20 seconds(20000)
 
         return () => clearInterval(pollInterval);
     }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]);
@@ -310,164 +318,158 @@ function RequestEvaluationContent() {
 
                 {/* Right Panel - Details */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {!sidebarOpen && (
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="md:hidden absolute top-20 left-4 bg-blue-600 text-white p-2 rounded-lg shadow-lg z-40"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                    )}
+                    <SideNotchOpenLeftPanel
+                        sidebarOpen={sidebarOpen}
+                        setSidebarOpen={setSidebarOpen}
+                    />
 
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {/* {detailsLoading ? (
                                 // <Loader />
                             ) : ( */}
-                                <div className="p-6">
-                                    {/* Header Info */}
-                                    <div className="mb-6">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex-1">
-                                                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                                                    {selectedApproval.title}
-                                                </h1>
-                                                <div className="flex items-center gap-3">
-                                                    {selectedApproval.isRush && (
-                                                        <span className="text-xs px-4 py-2 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
-                                                            {selectedApproval.isRush ? 'RUSH' : ''}
-                                                        </span>
-                                                    )}
-                                                    <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(selectedApproval.status)}`}>
-                                                        {selectedApproval.status}
+                            <div className="p-6">
+                                {/* Header Info */}
+                                <div className="mb-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex-1">
+                                            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                                                {selectedApproval.title}
+                                            </h1>
+                                            <div className="flex items-center gap-3">
+                                                {selectedApproval.isRush && (
+                                                    <span className="text-xs px-4 py-2 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
+                                                        {selectedApproval.isRush ? 'RUSH' : ''}
                                                     </span>
-                                                    <span className="text-sm text-gray-600">
-                                                        Requested on {new Date(selectedApproval.requestDate).toLocaleDateString('en-US', {
-                                                            year: 'numeric',
-                                                            month: 'long',
-                                                            day: 'numeric'
-                                                        })}
-                                                    </span>
-                                                </div>
+                                                )}
+                                                <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(selectedApproval.status)}`}>
+                                                    {selectedApproval.status}
+                                                </span>
+                                                <span className="text-sm text-gray-600">
+                                                    Requested on {new Date(selectedApproval.requestDate).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    })}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Request Header Info */}
-                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-6 border border-blue-200">
-                                        <h3 className="font-semibold text-gray-900 mb-3">Request Information</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Reference Number</p>
-                                                <p className="text-sm font-semibold text-blue-600">{selectedApproval.id}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Requested By</p>
-                                                <p className="text-sm font-semibold text-gray-900">{selectedApproval.requester}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Company</p>
-                                                <p className="text-sm font-semibold text-gray-900">{selectedApproval.department}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Location</p>
-                                                <p className="text-sm font-semibold text-gray-900">{selectedApproval.location}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Request Type</p>
-                                                <p className="text-sm font-semibold text-gray-900">{selectedApproval.title}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Remarks */}
-                                    {selectedApproval.description && (
-                                        <div className="mb-6">
-                                            <h3 className="font-semibold text-gray-900 mb-3">Remarks</h3>
-                                            <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                {selectedApproval.description}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Items Table */}
-                                    <div className="mb-6">
-                                        <h3 className="font-semibold text-gray-900 mb-3">Request Items</h3>
-                                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                                            <table className="w-full">
-                                                <thead className="bg-gray-100 border-b border-gray-200">
-                                                    <tr>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Item Code</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Item Description</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">UOFM</th>
-                                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">Quantity</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Budget Name</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Date Needed</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Remarks</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {approvalDetails && approvalDetails.length > 0 ? (
-                                                        approvalDetails.map((item, index) => (
-                                                            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                                                                <td className="px-4 py-3 text-sm text-gray-900">{item.ITEMNMBR || '-'}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-900">{item.ITEMDESC || '-'}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-600">{item.UOFM || '-'}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">{item.QUANTITY || 0}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-600">{item.BUDGETNAME || '-'}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-600 font-semibold">
-                                                                    {item.DATENEEDED ? new Date(item.DATENEEDED).toLocaleDateString() : '-'}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-gray-600">{item.remarks || '-'}</td>
-                                                            </tr>
-                                                        ))
-                                                    ) : (
-                                                        <tr>
-                                                            <td colSpan="7" className="px-4 py-6 text-center text-gray-500">
-                                                                No items found for this request
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions */}
-                                    {(selectedApproval.status === 'FOR REQUEST APPROVAL' || selectedApproval.status === 'FOR CONFIRMATION' || selectedApproval.status === 'FOR PURCHASING LEAD TIME') && (
-                                        <div className="flex gap-3 pt-6 border-t border-gray-200">
-                                            <button
-                                                onClick={handleApproveClick}
-                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                Approve
-                                            </button>
-                                            <button
-                                                onClick={handleRejectClick}
-                                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                                Reject
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {(selectedApproval.status === 'APPROVED' || selectedApproval.status === 'REJECTED') && (
-                                        <div className="pt-6 border-t border-gray-200">
-                                            <p className="text-sm text-gray-600 text-center">
-                                                This request has been {selectedApproval.status.toLowerCase()}.
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
-                             {/* )} */}
+
+                                {/* Request Header Info */}
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-6 border border-blue-200">
+                                    <h3 className="font-semibold text-gray-900 mb-3">Request Information</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <p className="text-xs text-gray-600 font-medium mb-1">Reference Number</p>
+                                            <p className="text-sm font-semibold text-blue-600">{selectedApproval.id}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-600 font-medium mb-1">Requested By</p>
+                                            <p className="text-sm font-semibold text-gray-900">{selectedApproval.requester}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-600 font-medium mb-1">Company</p>
+                                            <p className="text-sm font-semibold text-gray-900">{selectedApproval.department}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-600 font-medium mb-1">Location</p>
+                                            <p className="text-sm font-semibold text-gray-900">{selectedApproval.location}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-600 font-medium mb-1">Request Type</p>
+                                            <p className="text-sm font-semibold text-gray-900">{selectedApproval.title}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Remarks */}
+                                {selectedApproval.description && (
+                                    <div className="mb-6">
+                                        <h3 className="font-semibold text-gray-900 mb-3">Remarks</h3>
+                                        <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            {selectedApproval.description}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Items Table */}
+                                <div className="mb-6">
+                                    <h3 className="font-semibold text-gray-900 mb-3">Request Items</h3>
+                                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                        <table className="w-full">
+                                            <thead className="bg-gray-100 border-b border-gray-200">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Item Code</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Item Description</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">UOFM</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">Quantity</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Budget Name</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Date Needed</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Remarks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {approvalDetails && approvalDetails.length > 0 ? (
+                                                    approvalDetails.map((item, index) => (
+                                                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                                                            <td className="px-4 py-3 text-sm text-gray-900">{item.ITEMNMBR || '-'}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900">{item.ITEMDESC || '-'}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-600">{item.UOFM || '-'}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">{item.QUANTITY || 0}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-600">{item.BUDGETNAME || '-'}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-600 font-semibold">
+                                                                {item.DATENEEDED ? new Date(item.DATENEEDED).toLocaleDateString() : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-600">{item.remarks || '-'}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="7" className="px-4 py-6 text-center text-gray-500">
+                                                            No items found for this request
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                {(selectedApproval.status === 'FOR REQUEST APPROVAL' || selectedApproval.status === 'FOR CONFIRMATION' || selectedApproval.status === 'FOR PURCHASING LEAD TIME') && (
+                                    <div className="flex gap-3 pt-6 border-t border-gray-200">
+                                        <button
+                                            onClick={handleApproveClick}
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Approve
+                                        </button>
+                                        <button
+                                            onClick={handleRejectClick}
+                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Reject
+                                        </button>
+                                    </div>
+                                )}
+
+                                {(selectedApproval.status === 'APPROVED' || selectedApproval.status === 'REJECTED') && (
+                                    <div className="pt-6 border-t border-gray-200">
+                                        <p className="text-sm text-gray-600 text-center">
+                                            This request has been {selectedApproval.status.toLowerCase()}.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            {/* )} */}
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">

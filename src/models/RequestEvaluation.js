@@ -2,10 +2,33 @@ import connectToDatabase from '@/lib/db.js';
 
 class RequestEvaluation {
 
+    static async checkTableExists(connection, tableName) {
+        try {
+            const query = `SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @tableName`;
+            const result = await connection.request()
+                .input('tableName', tableName)
+                .query(query);
+            return result.recordset.length > 0;
+        } catch (error) {
+            console.error(`Error checking if table ${tableName} exists:`, error);
+            return false;
+        }
+    }
+
     static async getEvaluationDetails(referenceNo) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
+            
+            // Check if tables exist
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
+            
+            if (!headerExists || !detailsExists) {
+                console.warn('PURCHASE.REQUESTDETAILS.1 or PURCHASE.REQUESTHEADER.1 table not found.');
+                return [];
+            }
+
             const query = `SELECT 
                             PRD.REFERENCENO,
                             PRH.REQUESTEDBY as requestedBy,
@@ -29,12 +52,7 @@ class RequestEvaluation {
             return result.recordset;
         } catch (error) {
             console.error('Error fetching evaluation details:', error);
-            // Return empty array if table doesn't exist
-            if (error.message && error.message.includes('Invalid object name')) {
-                console.warn('PURCHASE.REQUESTDETAILS.1 or PURCHASE.REQUESTHEADER.1 table not found. Returning empty results.');
-                return [];
-            }
-            throw error;
+            return [];
         }
     }
 
@@ -42,6 +60,13 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
+            
+            // Check if table exists
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning empty results.');
+                return [];
+            }
 
             let query = `SELECT 
                             prh.REFERENCENO as id,
@@ -122,12 +147,7 @@ class RequestEvaluation {
 
         } catch (error) {
             console.error('Error fetching requests by requester name:', error);
-            // Return empty array instead of throwing error if table doesn't exist
-            if (error.message && error.message.includes('Invalid object name')) {
-                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning empty results.');
-                return [];
-            }
-            throw error;
+            return [];
         }
     }
 
@@ -135,6 +155,9 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) return null;
+            
             const query = `SELECT REQUESTSTATUS FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
             const result = await connection.request()
                 .input('referenceNo', referenceNo)
@@ -150,6 +173,9 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) return null;
+            
             const query = `SELECT APPROVER, ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
             const result = await connection.request()
                 .input('referenceNo', referenceNo)
@@ -268,6 +294,12 @@ class RequestEvaluation {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
             
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning default status.');
+                return ['FOR CONFIRMATION'];
+            }
+            
             // Check which roles the user has and return corresponding statuses
             const query = `SELECT 
                             CASE 
@@ -291,43 +323,60 @@ class RequestEvaluation {
             return [...new Set(statuses)];
         } catch (error) {
             console.error('Error fetching user available statuses:', error);
-            // Return default status if table doesn't exist
-            if (error.message && error.message.includes('Invalid object name')) {
-                console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning default status.');
-                return ['FOR CONFIRMATION'];
-            }
-            throw error;
+            return ['FOR CONFIRMATION'];
         }
     }
 
     static async getRequestApproversEmails(referenceNo, requestStatus) {
-        let connection;
+        let sfcConnection;
+        let gdbConnection;
         try{
-            connection = await connectToDatabase(process.env.DB_SFC);
-            let query = `SELECT `;
+            sfcConnection = await connectToDatabase(process.env.DB_SFC);
+            gdbConnection = await connectToDatabase(process.env.DB_NAME); // Connect to GDB
+            
+            const headerExists = await this.checkTableExists(sfcConnection, 'PURCHASE.REQUESTHEADER.1');
+            const userExists = await this.checkTableExists(gdbConnection, 'SYSTEM.USERACCOUNT.1');
+            
+            if (!userExists || !headerExists) {
+                console.warn('Required tables not found.');
+                return null;
+            }
 
+            // Get the approver/addressedTo person from SFC database
+            let approverFieldQuery = `SELECT `;
+            
             switch (requestStatus.toUpperCase()) {
                 case 'FOR CONFIRMATION':
-                    query += `SU.EMAIL, SU.EMPLOYEENAME FROM [GDB].[DBO].[SYSTEM.USERACCOUNT.1] SU
-                            INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON SU.EMPLOYEENAME = PRH.APPROVER
-                            WHERE PRH.REFERENCENO = @referenceNo`;
+                    approverFieldQuery += `APPROVER as employeeName FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
                     break;
                 case 'FOR REQUEST APPROVAL':
-                    query += `SU.EMAIL, SU.EMPLOYEENAME FROM [GDB].[DBO].[SYSTEM.USERACCOUNT.1] SU
-                            INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON SU.EMPLOYEENAME = PRH.ADDRESSEDTO
-                            WHERE PRH.REFERENCENO = @referenceNo`;
+                    approverFieldQuery += `ADDRESSEDTO as employeeName FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
                     break;
                 default:
                     return null;
             }
 
-            const result = await connection.request()
+            const approverResult = await sfcConnection.request()
                 .input('referenceNo', referenceNo)
-                .query(query);
-            return result.recordset.length > 0 ? result.recordset[0] : null;
+                .query(approverFieldQuery);
+            
+            if (approverResult.recordset.length === 0) {
+                console.warn('No approver found for reference:', referenceNo);
+                return null;
+            }
+
+            const employeeName = approverResult.recordset[0].employeeName;
+
+            // Get email from GDB database using the employee name
+            const userQuery = `SELECT EMAIL, EMPLOYEENAME FROM [SYSTEM.USERACCOUNT.1] WHERE EMPLOYEENAME = @employeeName`;
+            const userResult = await gdbConnection.request()
+                .input('employeeName', employeeName)
+                .query(userQuery);
+
+            return userResult.recordset.length > 0 ? userResult.recordset[0] : null;
         }catch(error){
             console.error('Error fetching request approvers emails:', error);
-            throw error;
+            return null;
         }
     }
 
@@ -344,7 +393,7 @@ class RequestEvaluation {
             return result.rowsAffected[0] > 0;
         } catch (error) {
             console.error('Error marking as read:', error);
-            throw error;
+            return false;
         }
     }
 }

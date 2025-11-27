@@ -4,7 +4,7 @@ export class AccountApprovalModel {
   async getPendingApprovals() {
     let connection;
     try {
-      connection = await connectToDatabase();
+      connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
         SELECT
@@ -52,7 +52,7 @@ export class AccountApprovalModel {
   async approveAccount(userId, processedBy, password) {
     let connection;
     try {
-      connection = await connectToDatabase();
+      connection = await connectToDatabase(proccess.env.DB_NAME);
       const bcrypt = require('bcryptjs');
       const hashedPassword = await bcrypt.hash(password, 10);
 

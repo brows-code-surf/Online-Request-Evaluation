@@ -5,7 +5,7 @@ export class LoginModel {
   async authenticate(email, password) {
     let connection;
     try {
-      connection = await connectToDatabase();
+      connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
         SELECT
@@ -43,7 +43,11 @@ export class LoginModel {
       };
 
     } catch (error) {
-      console.error("Authentication error:", error);
+      console.error("Authentication error details:", {
+        message: error.message,
+        code: error.code,
+        email: email
+      });
       throw new Error('Database error: ' + error.message);
     }
   }

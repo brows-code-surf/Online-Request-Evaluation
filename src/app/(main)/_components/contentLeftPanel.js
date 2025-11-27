@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
+
 export default function ContentLeftPanel({
     sidebarOpen,
     onSidebarClose,
@@ -18,173 +20,220 @@ export default function ContentLeftPanel({
     enableReadStatus = false,
     onMarkAsRead
 }) {
+    const [showNotch, setShowNotch] = useState(false);
+    const [lastScrollY, setLastScrollY] = useState(0);
+    const touchStartX = useRef(0);
+
+    const requestEvalApprovalPage = window.location.pathname === '/request-evaluation';
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            setShowNotch(currentScrollY < lastScrollY && currentScrollY > 50);
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX.current;
+
+        // Swipe right to open panel
+        if (diff > 50 && !sidebarOpen) {
+            // onSidebarOpen would be called here, but we use onSidebarClose toggle
+            // This assumes the parent component handles the state
+            window.dispatchEvent(new CustomEvent('openSidebar'));
+        }
+    };
+
+    const handleApprovalSelect = (approval) => {
+        onApprovalSelect(approval);
+        if (enableReadStatus && approval.isRead === 'NOT READ' && onMarkAsRead) {
+            onMarkAsRead(approval.id);
+        }
+        // Close panel on mobile after selection
+        if (window.innerWidth < 768) {
+            onSidebarClose();
+        }
+    };
+
     return (
-        <div className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden`}>
+        <>
 
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-white">{headerTitle}</h2>
-                    <button
-                        onClick={onSidebarClose}
-                        className="md:hidden text-white hover:bg-blue-700 p-1 rounded"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            {/* Left Panel */}
+            <div
+                className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden relative`} // relative for absolute child
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-white">{headerTitle}</h2>
+                        <button
+                            onClick={onSidebarClose}
+                            className="md:hidden text-white hover:bg-blue-700 p-1 rounded transition-all"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                        <svg className="absolute left-3 top-3 w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                    </button>
+                        <input
+                            type="text"
+                            placeholder="Search requests..."
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 bg-blue-400 text-white placeholder-blue-200 rounded-lg focus:outline-none focus:bg-blue-300"
+                        />
+                    </div>
                 </div>
 
-                {/* Search */}
-                <div className="relative">
-                    <svg className="absolute left-3 top-3 w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                        type="text"
-                        placeholder="Search requests..."
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-blue-400 text-white placeholder-blue-200 rounded-lg focus:outline-none focus:bg-blue-300"
-                    />
+                {/* Filters */}
+                <div className="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
+                    {/* User Accounts Filters */}
+                    {filterType === 'accounts' && (
+                        <>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => onFilterStatusChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+
+                            <select
+                                value={sortBy}
+                                onChange={(e) => onSortByChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="date">Sort by Date</option>
+                                <option value="requester">Sort by Name</option>
+                                <option value="status">Sort by Status</option>
+                            </select>
+                        </>
+                    )}
+
+                    {/* Approval Filters */}
+                    {filterType === 'approval' && (
+                        <>
+                            <select
+                                value={filterStatus || ''}
+                                onChange={(e) => onFilterStatusChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="">Select Status</option>
+                                <option value="FOR CONFIRMATION">For Confirmation</option>
+                                <option value="FOR REQUEST APPROVAL">For Request Approval</option>
+                                <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
+                                <option value="APPROVED">Approved</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+
+                            <select
+                                value={sortBy}
+                                onChange={(e) => onSortByChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="date">Sort by Date</option>
+                                <option value="requester">Sort by Name</option>
+                                <option value="status">Sort by Status</option>
+                            </select>
+                        </>
+                    )}
                 </div>
-            </div>
 
-            {/* Filters */}
-            <div className="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
-                {/* User Accounts Filters */}
-                {filterType === 'accounts' && (
-                    <>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => onFilterStatusChange(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                        </select>
-
-                        <select
-                            value={sortBy}
-                            onChange={(e) => onSortByChange(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="date">Sort by Date</option>
-                            <option value="requester">Sort by Name</option>
-                            <option value="status">Sort by Status</option>
-                        </select>
-                    </>
-                )}
-
-                {/* Approval Filters */}
-                {filterType === 'approval' && (
-                    <>
-                        <select
-                            value={filterStatus || ''}
-                            onChange={(e) => onFilterStatusChange(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="">Select Status</option>
-                            <option value="FOR CONFIRMATION">For Confirmation</option>
-                            <option value="FOR REQUEST APPROVAL">For Request Approval</option>
-                            <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
-                            <option value="APPROVED">Approved</option>
-                            <option value="REJECTED">Rejected</option>
-                        </select>
-
-                        <select
-                            value={sortBy}
-                            onChange={(e) => onSortByChange(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                            <option value="date">Sort by Date</option>
-                            <option value="requester">Sort by Name</option>
-                            <option value="status">Sort by Status</option>
-                        </select>
-                    </>
-                )}
-            </div>
-
-            {/* Approvals List */}
-            <div className="flex-1 overflow-y-auto">
-                {approvals.length > 0 ? (
-                    approvals.map(approval => (
-                        <div
-                            key={approval.id}
-                            onClick={() => {
-                                onApprovalSelect(approval);
-                                if (enableReadStatus && approval.isRead === 'NOT READ' && onMarkAsRead) {
-                                    onMarkAsRead(approval.id);
-                                }
-                            }}
-                            className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${selectedApprovalId === approval.id
-                                ? 'bg-blue-50 border-r-2 border-r-blue-200'
-                                : enableReadStatus && approval.isRead === 'NOT READ'
-                                    ? 'bg-blue-50/30 border-l-4 border-l-blue-500 hover:bg-blue-100/50'
-                                    : 'hover:bg-gray-50'
-                                }`}
-                        >
-                            <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        {enableReadStatus && approval.isRead === 'NOT READ' && (
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                {/* Approvals List */}
+                <div className="flex-1 overflow-y-auto">
+                    {approvals.length > 0 ? (
+                        approvals.map(approval => (
+                            <div
+                                key={approval.id}
+                                onClick={() => handleApprovalSelect(approval)}
+                                className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${selectedApprovalId === approval.id
+                                    ? 'bg-blue-50 border-r-2 border-r-blue-200'
+                                    : enableReadStatus && approval.isRead === 'NOT READ'
+                                        ? 'bg-blue-50/30 border-l-4 border-l-blue-500 hover:bg-blue-100/50'
+                                        : 'hover:bg-gray-50'
+                                    }`}
+                            >
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            {enableReadStatus && approval.isRead === 'NOT READ' && (
+                                                <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                            )}
+                                            <h3 className={`text-sm leading-tight ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold text-blue-700' : 'font-semibold text-gray-900'}`}>
+                                                {approval.title}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div className="ml-2 flex items-center gap-1">
+                                        {approval.isRush && (
+                                            <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
+                                                RUSH
+                                            </span>
                                         )}
-                                        <h3 className={`text-sm leading-tight ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold text-blue-700' : 'font-semibold text-gray-900'}`}>
-                                            {approval.title}
-                                        </h3>
+                                        <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${getStatusColor(approval.status)}`}>
+                                            {approval.status}
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="ml-2 flex items-center gap-1">
-                                    {approval.isRush && (
-                                        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
-                                            RUSH
-                                        </span>
+
+                                <div className="flex item-start justify-between mb-2">
+                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
+                                        {approval.requester}
+                                    </p>
+                                    {requestEvalApprovalPage && approval.id && (
+                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                            {approval.id}
+                                        </p>
                                     )}
-                                    <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${getStatusColor(approval.status)}`}>
-                                        {approval.status}
+                                    {approval.employeeID && (
+                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                            {approval.employeeID}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">
+                                        {new Date(approval.requestDate).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-xs bg-blue-300 text-gray-700 px-2 py-1 font-semibold rounded">
+                                        {approval.department}
                                     </span>
                                 </div>
                             </div>
-
-                            <div className="flex item-start justify-between mb-2">
-                                <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
-                                    {approval.requester}
-                                </p>
-                                {approval.id && (
-                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
-                                        {approval.id}
-                                    </p>
-                                )}
-                                {approval.employeeID && (
-                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
-                                        {approval.employeeID}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">
-                                    {new Date(approval.requestDate).toLocaleDateString()}
-                                </span>
-                                <span className="text-xs bg-blue-300 text-gray-700 px-2 py-1 font-semibold rounded">
-                                    {approval.department}
-                                </span>
+                        ))
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">
+                            <div className="text-center">
+                                <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <p className="text-sm">No requests found</p>
                             </div>
                         </div>
-                    ))
-                ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                        <div className="text-center">
-                            <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                            </svg>
-                            <p className="text-sm">No requests found</p>
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
 }

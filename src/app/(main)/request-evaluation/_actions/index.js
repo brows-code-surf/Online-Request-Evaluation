@@ -3,7 +3,7 @@
 import RequestEvaluation from '@/models/RequestEvaluation';
 import UserProfile from '@/models/UserProfile';
 import { sendEmailWithTemplate } from '@/utils/emailService';
-import { broadcastRequestEvaluationUpdate } from '@/app/_actions/pusher';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast';
 
 export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}) {
     try {
@@ -85,18 +85,19 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
             }
 
             // Trigger Pusher events to notify all users of the approval
-            await broadcastRequestEvaluationUpdate('request-approved', {
+            broadcastRequestEvaluationUpdate("request-approved", {
                 referenceNo,
                 approverName,
                 newStatus: result.newStatus,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
-            await broadcastRequestEvaluationUpdate('request-changed', {
+
+            broadcastRequestEvaluationUpdate("request-changed", {
                 referenceNo,
-                changeType: 'approve',
+                changeType: "approve",
                 approverName,
                 newStatus: result.newStatus,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
         }
 
@@ -113,19 +114,23 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
 
         // Send email notification for rejection
         if (result.headerUpdated) {
-            await broadcastRequestEvaluationUpdate('request-rejected', {
+            // Notify that the request was rejected
+            broadcastRequestEvaluationUpdate("request-rejected", {
                 referenceNo,
                 approverName,
                 rejectionReason,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
-            await broadcastRequestEvaluationUpdate('request-changed', {
+
+            // Notify that the request has changed (reject)
+            broadcastRequestEvaluationUpdate("request-changed", {
                 referenceNo,
-                changeType: 'reject',
+                changeType: "reject",
                 approverName,
                 rejectionReason,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
+
 
             try {
                 // Get request details to find the requester
@@ -200,11 +205,13 @@ export async function markAsRead(referenceNo) {
 
         if (result) {
             // Trigger Pusher event to notify all users of the read status change
-            await broadcastRequestEvaluationUpdate('request-changed', {
+            // Notify that the request has been marked as read
+            broadcastRequestEvaluationUpdate("request-changed", {
                 referenceNo,
-                changeType: 'markAsRead',
-                timestamp: new Date().toISOString()
+                changeType: "markAsRead",
+                timestamp: new Date().toISOString(),
             });
+
         }
 
         return result;

@@ -14,6 +14,7 @@ import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
 import { usePusherMultiple } from '@/hooks/usePusher';
+import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function UserAccountsContent() {
     const router = useRouter();
@@ -286,7 +287,7 @@ function UserAccountsContent() {
             const result = await setUserInactive(selectedUser.employeeID);
             if (result.success) {
                 setSuccessMessage(`${selectedUser.requester}'s account has been set to inactive successfully!`);
-                
+
                 // Update the users list
                 setUsers(users.map(u =>
                     u.employeeID === selectedUser.employeeID
@@ -322,7 +323,7 @@ function UserAccountsContent() {
             const result = await setUserActive(selectedUser.employeeID);
             if (result.success) {
                 setSuccessMessage(`${selectedUser.requester}'s account has been set to active successfully!`);
-                
+
                 // Update the users list
                 setUsers(users.map(u =>
                     u.employeeID === selectedUser.employeeID
@@ -357,7 +358,7 @@ function UserAccountsContent() {
     };
 
     const handleConfirmAction = async () => {
-        switch(confirmAction) {
+        switch (confirmAction) {
             case 'saveProfile':
                 await executeProfileUpdate();
                 break;
@@ -426,7 +427,7 @@ function UserAccountsContent() {
                     }
                     : u
             ));
-            
+
             // Update selected user if it's the one being updated
             if (selectedUser?.employeeID === data.employeeID) {
                 setSelectedUser(prev => prev ? {
@@ -447,7 +448,7 @@ function UserAccountsContent() {
                     ? { ...u, status: data.newStatus }
                     : u
             ));
-            
+
             // Update selected user if it's the one being updated
             if (selectedUser?.employeeID === data.employeeID) {
                 setSelectedUser(prev => prev ? { ...prev, status: data.newStatus } : null);
@@ -494,16 +495,10 @@ function UserAccountsContent() {
 
                 {/* Right Panel - Details */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {!sidebarOpen && (
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="md:hidden absolute top-20 left-4 bg-blue-600 text-white p-2 rounded-lg shadow-lg z-40"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                    )}
+                    <SideNotchOpenLeftPanel
+                        sidebarOpen={sidebarOpen}
+                        setSidebarOpen={setSidebarOpen}
+                    />
 
                     {selectedUser ? (
                         <div className="flex-1 overflow-y-auto">

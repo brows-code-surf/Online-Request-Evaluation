@@ -12,6 +12,7 @@ export default function HeaderNavBar() {
   const { logout, user, loading, isAdmin } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'Your account has been approved', time: '2 hours ago', read: false },
     { id: 2, message: 'New message from HR', time: '5 hours ago', read: false },
@@ -62,35 +63,47 @@ export default function HeaderNavBar() {
         </div>
 
         {/* Right Section - Navigation, Notifications & Profile */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
 
-          {/* Navigation */}
+          {/* Hamburger Menu */}
+          <button
+            onClick={() => {
+              setIsMenuOpen(!isMenuOpen);
+              setIsProfileOpen(false);
+              setIsNotificationOpen(false);
+            }}
+            className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Navigation - Desktop */}
           <nav className="hidden md:flex gap-6">
             {isUserAdmin && (
-              <Link
-                href="/user-approval"
-                className={`text-sm font-medium transition ${
-                  pathname === '/user-approval'
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                User Account Approvals
-              </Link>              
-            )}
-          </nav>
-          <nav className="hidden md:flex gap-6">
-            {isUserAdmin && (
-              <Link
-                href="/user-accounts"
-                className={`text-sm font-medium transition ${
-                  pathname === '/user-accounts'
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                User Accounts
-              </Link>              
+              <>
+                <Link
+                  href="/user-approval"
+                  className={`text-sm font-medium transition ${
+                    pathname === '/user-approval'
+                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  User Account Approvals
+                </Link>
+                <Link
+                  href="/user-accounts"
+                  className={`text-sm font-medium transition ${
+                    pathname === '/user-accounts'
+                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  User Accounts
+                </Link>
+              </>
             )}
           </nav>
 
@@ -100,6 +113,7 @@ export default function HeaderNavBar() {
               onClick={() => {
                 setIsNotificationOpen(!isNotificationOpen);
                 setIsProfileOpen(false);
+                setIsMenuOpen(false);
               }}
               className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
@@ -125,7 +139,7 @@ export default function HeaderNavBar() {
 
             {/* Notification Dropdown */}
             {isNotificationOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
                 </div>
@@ -176,6 +190,7 @@ export default function HeaderNavBar() {
               onClick={() => {
                 setIsProfileOpen(!isProfileOpen);
                 setIsNotificationOpen(false);
+                setIsMenuOpen(false);
               }}
               className="flex items-center gap-2 p-2 text-gray-700 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
@@ -199,8 +214,7 @@ export default function HeaderNavBar() {
 
             {/* Profile Dropdown Menu */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
-
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
                 {/* User Info Section */}
                 <div className="px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-600">
                   <p className="text-white font-semibold text-lg">{user?.empName || 'User'}</p>
@@ -259,6 +273,34 @@ export default function HeaderNavBar() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && isUserAdmin && (
+        <div className="md:hidden bg-white border-b border-gray-200 px-6 py-3 space-y-3">
+          <Link
+            href="/user-approval"
+            className={`block px-3 py-2 rounded text-sm font-medium transition ${
+              pathname === '/user-approval'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            User Account Approvals
+          </Link>
+          <Link
+            href="/user-accounts"
+            className={`block px-3 py-2 rounded text-sm font-medium transition ${
+              pathname === '/user-accounts'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            User Accounts
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

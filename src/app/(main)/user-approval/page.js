@@ -11,6 +11,7 @@ import RejectRequestModal from '../_components/rejectRequestModal';
 import ConfirmModal from '../_components/confirmModal';
 import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
 import { usePusherMultiple } from '@/hooks/usePusher';
+import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function RequestEvaluationContent() {
     const router = useRouter();
@@ -102,7 +103,7 @@ function RequestEvaluationContent() {
             }
             return 0;
         });
-    
+
 
     const handleApproveClick = (id) => {
         setApprovingId(id);
@@ -218,17 +219,10 @@ function RequestEvaluationContent() {
 
                 {/* Right Panel - Details */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {!sidebarOpen && (
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="md:hidden absolute top-20 left-4 bg-blue-600 text-white p-2 rounded-lg shadow-lg z-40"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                    )}
-
+                    <SideNotchOpenLeftPanel
+                        sidebarOpen={sidebarOpen}
+                        setSidebarOpen={setSidebarOpen}
+                    />
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {detailsLoading ? (
