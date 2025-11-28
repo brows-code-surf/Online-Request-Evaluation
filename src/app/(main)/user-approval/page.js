@@ -10,7 +10,7 @@ import ContentLeftPanel from '../_components/contentLeftPanel';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import ConfirmModal from '../_components/confirmModal';
 import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
-import { usePusherMultiple } from '@/hooks/usePusher';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function RequestEvaluationContent() {
@@ -44,7 +44,7 @@ function RequestEvaluationContent() {
     }, [loading]);
 
     // Set up Pusher event listeners for real-time updates
-    usePusherMultiple('user-approval-broadcast', {
+    useSocketMultiple('user-approval-broadcast', {
         'new-account-signup': (data) => {
             console.log('New account signup received:', data);
             fetchApprovals(); // Refetch approvals when new user signs up
@@ -58,6 +58,7 @@ function RequestEvaluationContent() {
             fetchApprovals(); // Refetch to update the list
         }
     });
+
 
     const fetchApprovals = async () => {
         setPageLoading(true);

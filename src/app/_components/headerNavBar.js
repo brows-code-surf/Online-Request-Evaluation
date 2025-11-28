@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../utils/authContext';
 import { logoutUser } from '../login/_actions';
+import { NotificationBell } from './notificationBell';
+import { getUnreadNotificationCount } from '../_actions/notifications';
+import { useSocketMultiple } from '../../hooks/useSocketMultiple';
 
 export default function HeaderNavBar() {
   const router = useRouter();
@@ -13,13 +16,35 @@ export default function HeaderNavBar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'Your account has been approved', time: '2 hours ago', read: false },
-    { id: 2, message: 'New message from HR', time: '5 hours ago', read: false },
-    { id: 3, message: 'System maintenance scheduled', time: '1 day ago', read: true },
-  ]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (user?.empName) {
+        try {
+          const result = await getUnreadNotificationCount(user.empName);
+          if (result.success) {
+            setUnreadCount(result.count);
+          }
+        } catch (error) {
+          console.error('Error fetching unread count:', error);
+        }
+      }
+    };
+
+    fetchUnreadCount();
+  }, [user?.empName]);
+
+  // Listen for notification updates via socket
+  useSocketMultiple(`user-${user?.empName}`, {
+    'new-notification': () => {
+      setUnreadCount(prev => prev + 1);
+    },
+    'notification-count-updated': (data) => {
+      setUnreadCount(data.count);
+    }
+  });
 
   // Extract initials from user name or email
   const getInitials = () => {
@@ -42,12 +67,6 @@ export default function HeaderNavBar() {
       logout();
       router.push('/login');
     }
-  };
-
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    ));
   };
 
   const isUserAdmin = user && isAdmin();
@@ -81,25 +100,32 @@ export default function HeaderNavBar() {
 
           {/* Navigation - Desktop */}
           <nav className="hidden md:flex gap-6">
+            <Link
+              href="/request-evaluation"
+              className={`text-sm font-medium transition ${pathname === '/request-evaluation'
+                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                : 'text-gray-600 hover:text-blue-600'
+                }`}
+            >
+              Request Evaluation
+            </Link>
             {isUserAdmin && (
               <>
                 <Link
                   href="/user-approval"
-                  className={`text-sm font-medium transition ${
-                    pathname === '/user-approval'
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                      : 'text-gray-600 hover:text-blue-600'
-                  }`}
+                  className={`text-sm font-medium transition ${pathname === '/user-approval'
+                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                    : 'text-gray-600 hover:text-blue-600'
+                    }`}
                 >
                   User Account Approvals
                 </Link>
                 <Link
                   href="/user-accounts"
-                  className={`text-sm font-medium transition ${
-                    pathname === '/user-accounts'
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                      : 'text-gray-600 hover:text-blue-600'
-                  }`}
+                  className={`text-sm font-medium transition ${pathname === '/user-accounts'
+                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                    : 'text-gray-600 hover:text-blue-600'
+                    }`}
                 >
                   User Accounts
                 </Link>
@@ -139,45 +165,7 @@ export default function HeaderNavBar() {
 
             {/* Notification Dropdown */}
             {isNotificationOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                <div className="p-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.length > 0 ? (
-                    notifications.map(notification => (
-                      <div
-                        key={notification.id}
-                        onClick={() => markAsRead(notification.id)}
-                        className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${!notification.read ? 'bg-blue-50' : ''
-                          }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${!notification.read ? 'bg-blue-600' : 'bg-gray-300'
-                            }`}></div>
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-800 font-medium">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {notification.time}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-8 text-center text-gray-500">
-                      No notifications
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 border-t border-gray-200 text-center">
-                  <Link href="/notifications" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    View All Notifications
-                  </Link>
-                </div>
-              </div>
+              <NotificationBell />
             )}
           </div>
 
@@ -274,31 +262,42 @@ export default function HeaderNavBar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && isUserAdmin && (
+      {isMenuOpen && (
         <div className="md:hidden bg-white border-b border-gray-200 px-6 py-3 space-y-3">
           <Link
-            href="/user-approval"
-            className={`block px-3 py-2 rounded text-sm font-medium transition ${
-              pathname === '/user-approval'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            href="/request-evaluation"
+            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/request-evaluation'
+              ? 'bg-blue-100 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
             onClick={() => setIsMenuOpen(false)}
           >
-            User Account Approvals
+            Request Evaluation
           </Link>
-          <Link
-            href="/user-accounts"
-            className={`block px-3 py-2 rounded text-sm font-medium transition ${
-              pathname === '/user-accounts'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            User Accounts
-          </Link>
+          {isUserAdmin && (
+            <>
+              <Link
+                href="/user-approval"
+                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-approval'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                User Account Approvals
+              </Link>
+              <Link
+                href="/user-accounts"
+                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-accounts'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                User Accounts
+              </Link>
+            </>
+          )}
         </div>
       )}
     </header>

@@ -1,6 +1,7 @@
 'use server';
 
 import UserAccount from '../../../models/SignUp';
+import Notification from '@/models/Notification';
 
 export async function checkEmailExists(email) {
   try {
@@ -65,5 +66,28 @@ export async function sendConfirmationEmail(emailData) {
     return { success: true, message: 'Email sent successfully' };
   } catch (error) {
     return { success: false, message: error.message };
+  }
+}
+
+export async function sendNotification(title, description, createdBy) {
+  try {
+    // Get all approved MIS department users
+    const misUsers = await UserAccount.getApprovedUsersByDepartment('MIS');
+
+    if (misUsers.length === 0) {
+      console.log('No MIS users found to notify');
+      return { success: true, message: 'No MIS users to notify' };
+    }
+
+    // Send notification to each MIS user
+    for (const user of misUsers) {
+      const notification = new Notification(title, description, user.EMPLOYEENAME);
+      await notification.save(createdBy);
+    }
+
+    return { success: true, message: `Notifications sent to ${misUsers.length} MIS users` };
+  } catch (error) {
+    console.error('Send notification error:', error);
+    return { success: false, message: error.message || 'Failed to send notification' };
   }
 }

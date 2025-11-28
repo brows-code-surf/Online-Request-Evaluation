@@ -1,6 +1,6 @@
 import connectToDatabase from "../lib/db.js";
 import bcrypt from "bcryptjs";
-import { broadcastUserApprovalUpdate } from "../app/_actions/pusher.js";
+import { broadcastUserApprovalUpdate } from "../app/_actions/socket.js";
 
 export const UserAccount = {
   async checkEmailExists(email) {
@@ -132,7 +132,7 @@ export const UserAccount = {
       const query = `
         SELECT EMPLOYEENAME, EMAIL, LOCATION, DEPARTMENT, JOBTITLE
         FROM [SYSTEM.USERACCOUNT.1]
-        WHERE DEPARTMENT = @department AND IS_APPROVED = 'APPROVED'
+        WHERE DEPARTMENT = @department AND IS_APPROVED = 'APPROVED' AND STATUS = 'ACTIVE'
       `;
 
       const result = await connection.request()

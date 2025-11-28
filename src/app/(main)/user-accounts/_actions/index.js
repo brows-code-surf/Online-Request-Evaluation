@@ -1,7 +1,7 @@
 'use server';
 
 import UserProfile from '@/models/UserProfile.js';
-import { broadcastUserAccountUpdate } from '@/app/_actions/pusher';
+import { broadcastUserAccountUpdate } from '@/app/_actions/socket';
 
 export async function getAllUsers() {
   try {
@@ -15,7 +15,7 @@ export async function getAllUsers() {
       department: user.department,
       jobTitle: user.jobTitle,
       location: user.location,
-      requestDate: new Date().toISOString(),
+      dateRequested: user.dateRequested || new Date().toISOString(),
       status: user.status
     }));
 

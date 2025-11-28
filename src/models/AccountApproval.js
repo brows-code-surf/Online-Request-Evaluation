@@ -52,7 +52,7 @@ export class AccountApprovalModel {
   async approveAccount(userId, processedBy, password) {
     let connection;
     try {
-      connection = await connectToDatabase(proccess.env.DB_NAME);
+      connection = await connectToDatabase(process.env.DB_NAME);
       const bcrypt = require('bcryptjs');
       const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -79,7 +79,7 @@ export class AccountApprovalModel {
   async rejectAccount(userId, processedBy, remarks) {
     let connection;
     try {
-      connection = await connectToDatabase();
+      connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
         UPDATE [SYSTEM.USERACCOUNT.1]

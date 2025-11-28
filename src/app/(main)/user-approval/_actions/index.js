@@ -3,7 +3,8 @@
 import AccountApprovalModel from '@/models/AccountApproval.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { generatePassword } from '@/utils/generatePassword.js';
-import { broadcastUserApprovalUpdate, broadcastUserAccountUpdate } from '@/app/_actions/pusher';
+import { broadcastUserApprovalUpdate, broadcastUserAccountUpdate } from '@/app/_actions/socket';
+import Notification from '@/models/Notification';
 
 export async function getPendingApprovals() {
     try {
@@ -44,17 +45,31 @@ export async function approveUserAccount(userId, email, name, processedBy) {
             greeting: 'Congratulations',
             name: name,
             body: `<p>Your account has been approved and is now active. You can now log in to the system and start using all available features.</p>
-      <p><strong>Your Login Credentials:</strong></p>
-      <p>Email: <strong>${email}</strong><br>
-      Password: <strong>${generatedPassword}</strong></p>
-      <p style="color: #d97706; margin-top: 16px;"><strong>⚠️ Important:</strong> Please change your password immediately after your first login for security purposes.</p>
-      <p><strong>Remarks:</strong> Validated and approved</p>
-      <p>If you have any questions, please contact our support team.</p>`,
+            <p><strong>Your Login Credentials:</strong></p>
+            <p>Email: <strong>${email}</strong><br>
+            Password: <strong>${generatedPassword}</strong></p>
+            <p style="color: #d97706; margin-top: 16px;"><strong>⚠️ Important:</strong> Please change your password immediately after your first login for security purposes.</p>
+            <p><strong>Remarks:</strong> Validated and approved</p>
+            <p>If you have any questions, please contact our support team.</p>`,
             companyEmail: 'contact@santeh.com',
             companyPhone: '+1-800-SANTEH',
             unsubscribeUrl: '#',
             preferencesUrl: '#'
         });
+
+        // Create notification for the approved user
+        try {
+            const notification = new Notification(
+                'Welcome to ORES - Online Requests Evaluation System!',
+                `Your account has been approved and is now active.`,
+                name // Send notification to the approved user
+            );
+            await notification.save(processedBy);
+            console.log(`Welcome notification sent to user: ${name}`);
+        } catch (notificationError) {
+            console.error('Error creating welcome notification:', notificationError);
+            // Don't fail the approval if notification fails
+        }
 
         // Trigger Pusher events to notify all users
         await broadcastUserApprovalUpdate('user-account-approved', {
@@ -136,5 +151,17 @@ export async function rejectUserAccount(userId, email, name, processedBy, remark
             success: false,
             message: 'Failed to reject account: ' + error.message
         };
+    }
+}
+
+export async function sendNotification(title, description, recipient, createdBy) {
+    try {
+        const notification = new Notification(title, description, recipient);
+        await notification.save(createdBy);
+
+        return { success: true, message: 'Notification sent successfully' };
+    } catch (error) {
+        console.error('Send notification error:', error);
+        return { success: false, message: 'Failed to send notification: ' + error.message };
     }
 }

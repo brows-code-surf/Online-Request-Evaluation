@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Loader from '../_components/loader';
-import { createUser, sendConfirmationEmail, checkEmailExists, checkEmployeeIDExists } from './_actions';
+import { createUser, sendConfirmationEmail, checkEmailExists, checkEmployeeIDExists, sendNotification } from './_actions';
 import { ToastContainer, toast } from 'react-toastify';
 import LoaderButton from '../_components/loaderButton'
 import { JobTitles, Departments } from '../../utils/jobConstants';
@@ -162,6 +162,11 @@ export default function Signup() {
                         companyEmail: 'j.valencia@santehfeeds.com',
                         companyPhone: '+63 2 8584 4572'
                     });
+                    await sendNotification(
+                        'New Account Request',
+                        `A new account has been requested by ${formData.fullName} (${formData.email}). Please review and approve the account.`,
+                        formData.email
+                    );
 
                     toast.success(`Account request submitted! An email has been sent to ${formData.email}`);
                     setTimeout(() => {

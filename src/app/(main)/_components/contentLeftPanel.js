@@ -25,6 +25,7 @@ export default function ContentLeftPanel({
     const touchStartX = useRef(0);
 
     const requestEvalApprovalPage = window.location.pathname === '/request-evaluation';
+    const userAccount = window.location.pathname === '/user-accounts';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -197,9 +198,16 @@ export default function ContentLeftPanel({
                                 </div>
 
                                 <div className="flex item-start justify-between mb-2">
-                                    <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
-                                        {approval.requester}
-                                    </p>
+                                    {!userAccount && (
+                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
+                                            {approval.requester}
+                                        </p>
+                                    )}
+                                    {userAccount && approval.email && (
+                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                            {approval.jobTitle}
+                                        </p>
+                                    )}
                                     {requestEvalApprovalPage && approval.id && (
                                         <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.id}
@@ -213,9 +221,19 @@ export default function ContentLeftPanel({
                                 </div>
 
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500">
-                                        {new Date(approval.requestDate).toLocaleDateString()}
-                                    </span>
+                                    {userAccount && (
+                                        <>
+                                            <span className="text-xs text-gray-500">
+                                                {approval.dateRequested ? new Date(approval.dateRequested).toLocaleDateString() : 'N/A'}
+                                            </span>
+                                            {console.log(approval.dateRequested)}
+                                        </>
+                                    )}
+                                    {!userAccount && (
+                                        <span className="text-xs text-gray-500">
+                                            {new Date(approval.requestDate).toLocaleDateString()}
+                                        </span>
+                                    )}
                                     <span className="text-xs bg-blue-300 text-gray-700 px-2 py-1 font-semibold rounded">
                                         {approval.department}
                                     </span>

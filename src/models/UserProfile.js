@@ -79,6 +79,7 @@ class UserProfile {
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
           LOCATION as location,
+          DATEREQUESTED as dateRequested,
           STATUS as status
         FROM [SYSTEM.USERACCOUNT.1]
         WHERE IS_APPROVED = 'APPROVED'

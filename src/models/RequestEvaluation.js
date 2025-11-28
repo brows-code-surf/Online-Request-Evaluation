@@ -1,4 +1,5 @@
 import connectToDatabase from '@/lib/db.js';
+import Notification from './Notification.js';
 
 class RequestEvaluation {
 
@@ -188,10 +189,11 @@ class RequestEvaluation {
     }
 
     static async updateApprovedEvaluation(referenceNo, approverName, currentStatus) {
+        console.log(`updateApprovedEvaluation called with:`, { referenceNo, approverName, currentStatus });
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
-            
+
             let newStatus = '';
             let headerUpdateQuery = '';
 
@@ -239,6 +241,134 @@ class RequestEvaluation {
             requestDetails.input('newStatus', newStatus);
             
             const resultDetails = await requestDetails.query(detailsUpdateQuery);
+
+            // Create notification for the next approver with improved error handling
+            const notificationResults = [];
+            try {
+                console.log(`Creating notifications for status transition: ${currentStatus} -> ${newStatus}`);
+
+                let notificationRecipient = '';
+                let notificationTitle = '';
+                let notificationDescription = '';
+
+                if (newStatus === 'FOR REQUEST APPROVAL') {
+                    // Get the approver from the request
+                    const approverQuery = `SELECT APPROVER FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
+                    const approverResult = await connection.request()
+                        .input('referenceNo', referenceNo)
+                        .query(approverQuery);
+
+                    if (approverResult.recordset.length > 0 && approverResult.recordset[0].APPROVER) {
+                        notificationRecipient = approverResult.recordset[0].APPROVER;
+                        notificationTitle = 'Request Ready for Approval';
+                        notificationDescription = `Request ${referenceNo} has been reviewed and is now ready for your approval.`;
+
+                        // Validate recipient exists
+                        if (!notificationRecipient || notificationRecipient.trim() === '') {
+                            console.warn(`No valid approver found for request ${referenceNo}`);
+                        } else {
+                            console.log(`Creating notification for approver: ${notificationRecipient}`);
+                            const notification = new Notification(notificationTitle, notificationDescription, notificationRecipient.trim());
+                            const result = await notification.save(approverName);
+                            notificationResults.push({ type: 'approver', recipient: notificationRecipient, result });
+                            console.log(`Approver notification created successfully:`, result);
+                        }
+                    } else {
+                        console.warn(`No approver found in database for request ${referenceNo}`);
+                    }
+                } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
+                    // Get the addressed to person from the request
+                    const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
+                    const addressedToResult = await connection.request()
+                        .input('referenceNo', referenceNo)
+                        .query(addressedToQuery);
+
+                    if (addressedToResult.recordset.length > 0 && addressedToResult.recordset[0].ADDRESSEDTO) {
+                        notificationRecipient = addressedToResult.recordset[0].ADDRESSEDTO;
+                        notificationTitle = 'Request Approved - Ready for Purchasing';
+                        notificationDescription = `Request ${referenceNo} has been approved and is now ready for purchasing lead time review.`;
+
+                        // Validate recipient exists
+                        if (!notificationRecipient || notificationRecipient.trim() === '') {
+                            console.warn(`No valid addressed-to person found for request ${referenceNo}`);
+                        } else {
+                            console.log(`Creating notification for addressed-to: ${notificationRecipient}`);
+                            const notification = new Notification(notificationTitle, notificationDescription, notificationRecipient.trim());
+                            const result = await notification.save(approverName);
+                            notificationResults.push({ type: 'addressed-to', recipient: notificationRecipient, result });
+                            console.log(`Addressed-to notification created successfully:`, result);
+                        }
+                    } else {
+                        console.warn(`No addressed-to person found in database for request ${referenceNo}`);
+                    }
+                } else if (newStatus === 'FOR CANVASSING') {
+                    // For final approval, notify all participants
+                    const participantsQuery = `SELECT REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
+                    const participantsResult = await connection.request()
+                        .input('referenceNo', referenceNo)
+                        .query(participantsQuery);
+
+                    if (participantsResult.recordset.length > 0) {
+                        const { REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY } = participantsResult.recordset[0];
+                        console.log(`Final approval participants:`, { REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY });
+
+                        const participants = [
+                            { role: 'reviewer', name: REVIEWER, message: `Request ${referenceNo} that you reviewed has been fully approved and is now in the canvassing stage.` },
+                            { role: 'approver', name: APPROVER, message: `Request ${referenceNo} that you approved has been fully approved and is now in the canvassing stage.` },
+                            { role: 'addressed-to', name: ADDRESSEDTO, message: `Request ${referenceNo} that was addressed to you has been fully approved and is now in the canvassing stage.` },
+                            { role: 'requester', name: REQUESTEDBY, message: `Your request ${referenceNo} has been fully approved and is now in the canvassing stage.` }
+                        ];
+
+                        for (const participant of participants) {
+                            if (participant.name && participant.name.trim() !== '') {
+                                try {
+                                    console.log(`Creating final notification for ${participant.role}: ${participant.name}`);
+                                    const notification = new Notification(
+                                        'Request Fully Approved',
+                                        participant.message,
+                                        participant.name.trim()
+                                    );
+                                    const result = await notification.save(approverName);
+                                    notificationResults.push({ type: participant.role, recipient: participant.name, result });
+                                    console.log(`${participant.role} notification created successfully:`, result);
+                                } catch (participantError) {
+                                    console.error(`Failed to create notification for ${participant.role} ${participant.name}:`, participantError);
+                                    notificationResults.push({ type: participant.role, recipient: participant.name, error: participantError.message });
+                                }
+                            } else {
+                                console.log(`Skipping notification for ${participant.role} - no name provided`);
+                            }
+                        }
+                    } else {
+                        console.warn(`No participants found for final approval of request ${referenceNo}`);
+                    }
+                }
+
+                // Log notification summary
+                if (notificationResults.length > 0) {
+                    console.log(`Notification creation summary for request ${referenceNo}:`, {
+                        totalAttempted: notificationResults.length,
+                        successful: notificationResults.filter(r => r.result && r.result.success).length,
+                        failed: notificationResults.filter(r => r.error).length,
+                        details: notificationResults
+                    });
+                } else {
+                    console.log(`No notifications were created for request ${referenceNo} (status: ${newStatus})`);
+                }
+
+            } catch (notificationError) {
+                console.error('Critical error in notification creation process:', {
+                    error: notificationError.message,
+                    stack: notificationError.stack,
+                    referenceNo,
+                    currentStatus,
+                    newStatus,
+                    approverName
+                });
+
+                // Log the error but don't fail the approval
+                notificationResults.push({ type: 'system-error', error: notificationError.message });
+            }
 
             return {
                 headerUpdated: resultHeader.rowsAffected[0] > 0,

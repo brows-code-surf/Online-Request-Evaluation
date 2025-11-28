@@ -13,7 +13,7 @@ import { JobTitles, Departments } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
-import { usePusherMultiple } from '@/hooks/usePusher';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function UserAccountsContent() {
@@ -411,7 +411,7 @@ function UserAccountsContent() {
     };
 
     // Set up Pusher listeners for real-time user account updates
-    usePusherMultiple('user-account-broadcast', {
+    useSocketMultiple('user-account-broadcast', {
         'user-profile-updated': useCallback((data) => {
             console.log('User profile updated event received:', data);
             // Update the users list with the new profile data
