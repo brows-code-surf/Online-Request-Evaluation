@@ -53,6 +53,12 @@ export class OTPModel {
         .input('email', email)
         .query(query);
 
+      const loggedInQuery = `UPDATE [SYSTEM.USERACCOUNT.1] SET LOGGEDIN = GETDATE() WHERE EMAIL = @email`;
+
+      await connection.request()
+        .input('email', email)
+        .query(loggedInQuery);
+
       if (result.recordset.length === 0) {
         return false;
       }

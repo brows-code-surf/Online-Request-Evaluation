@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { SkeletonApprovalItem } from '../../_components/skeletonLoader';
 
 export default function ContentLeftPanel({
     sidebarOpen,
@@ -18,7 +19,8 @@ export default function ContentLeftPanel({
     getStatusColor,
     filterType,
     enableReadStatus = false,
-    onMarkAsRead
+    onMarkAsRead,
+    isLoading = false
 }) {
     const [showNotch, setShowNotch] = useState(false);
     const [lastScrollY, setLastScrollY] = useState(0);
@@ -131,19 +133,41 @@ export default function ContentLeftPanel({
                         </>
                     )}
 
+                    {filterType === 'user-accounts-approval' && (
+                        <>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => onFilterStatusChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="APPROVED">Approved</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+
+                            <select
+                                value={sortBy}
+                                onChange={(e) => onSortByChange(e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="date">Sort by Date</option>
+                                <option value="requester">Sort by Name</option>
+                                <option value="status">Sort by Status</option>
+                            </select>
+                        </>
+                    )}
+
                     {/* Approval Filters */}
-                    {filterType === 'approval' && (
+                    {filterType === 'request-evaluation' && (
                         <>
                             <select
                                 value={filterStatus || ''}
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                                <option value="">Select Status</option>
-                                <option value="FOR CONFIRMATION">For Confirmation</option>
-                                <option value="FOR REQUEST APPROVAL">For Request Approval</option>
-                                <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
-                                <option value="APPROVED">Approved</option>
+                                <option value="all">Select Status</option>
+                                <option value="RUSH">Rush</option>
                                 <option value="REJECTED">Rejected</option>
                             </select>
 
@@ -162,7 +186,9 @@ export default function ContentLeftPanel({
 
                 {/* Approvals List */}
                 <div className="flex-1 overflow-y-auto">
-                    {approvals.length > 0 ? (
+                    {isLoading ? (
+                        Array(5).fill().map((_, i) => <SkeletonApprovalItem key={i} />)
+                    ) : approvals.length > 0 ? (
                         approvals.map(approval => (
                             <div
                                 key={approval.id}

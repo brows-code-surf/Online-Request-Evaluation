@@ -1,11 +1,14 @@
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getUserNotifications, markNotificationAsRead } from '../_actions/notifications';
 import { useAuth } from '../../utils/authContext';
 import { useSocketMultiple } from '../../hooks/useSocketMultiple';
+import React, { forwardRef } from "react";
 
-export function NotificationBell() {
+export const NotificationBell = forwardRef((props, ref) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -79,17 +82,42 @@ export function NotificationBell() {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const handleNotificationClick = async (notification) => {
+    // Mark as read if not already read
+    if (!notification.isRead) {
+      await handleMarkAsRead(notification.id);
+    }
+    // Redirect if URL exists
+    if (notification.url) {
+      router.push(notification.url);
+    }
+  };
 
   return (
-    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+    <div
+      ref={ref}
+      className="
+                absolute 
+                right-0 
+                mt-2
+                w-80 
+                max-w-[90vw]
+                bg-white 
+                rounded-lg 
+                shadow-xl 
+                border 
+                border-gray-200 
+                z-[9999]
+              "
+    >
+
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
       </div>
-      <div className="max-h-96 overflow-y-auto">
+
+      <div className="max-h-80 md:max-h-96 overflow-y-auto">
         {loading ? (
           <div className="p-4 space-y-3">
-            {/* Skeleton loader for notifications */}
             {[...Array(3)].map((_, index) => (
               <div key={index} className="flex items-start gap-3 animate-pulse">
                 <div className="w-2 h-2 rounded-full bg-gray-300 mt-2"></div>
@@ -102,23 +130,28 @@ export function NotificationBell() {
             ))}
           </div>
         ) : notifications.length > 0 ? (
-          notifications.map(notification => (
+          notifications.map((notification) => (
             <div
               key={notification.id}
-              onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
-              className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${!notification.isRead ? 'bg-blue-50' : ''
+              onClick={() => handleNotificationClick(notification)}
+              className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${!notification.isRead ? "bg-blue-50" : ""
                 }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 ${!notification.isRead ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full mt-2 ${!notification.isRead ? "bg-blue-600" : "bg-gray-300"
+                    }`}
+                ></div>
+
                 <div className="flex-1">
                   <p className="text-sm text-gray-800 font-medium">
                     {notification.title}
                   </p>
-                  <p className="text-xs text-gray-700 mt-1">
+
+                  <p className="text-sm text-gray-700 mt-1">
                     {notification.description}
                   </p>
+
                   <p className="text-xs text-gray-500 mt-1">
                     {timeAgo(new Date(notification.dateCreated))}
                     {notification.createdBy && ` • by ${notification.createdBy}`}
@@ -133,11 +166,10 @@ export function NotificationBell() {
           </div>
         )}
       </div>
-      <div className="p-3 border-t border-gray-200 text-center">
-        {/* <Link href="/notifications" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          View All Notifications
-        </Link> */}
-      </div>
+
+      <div className="p-3 border-t border-gray-200 text-center"></div>
     </div>
   );
-}
+});
+
+export default NotificationBell;

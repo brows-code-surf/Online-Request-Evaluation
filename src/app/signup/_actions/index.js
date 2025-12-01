@@ -69,7 +69,7 @@ export async function sendConfirmationEmail(emailData) {
   }
 }
 
-export async function sendNotification(title, description, createdBy) {
+export async function sendNotification(title, description, createdBy, employeeId) {
   try {
     // Get all approved MIS department users
     const misUsers = await UserAccount.getApprovedUsersByDepartment('MIS');
@@ -81,7 +81,7 @@ export async function sendNotification(title, description, createdBy) {
 
     // Send notification to each MIS user
     for (const user of misUsers) {
-      const notification = new Notification(title, description, user.EMPLOYEENAME);
+      const notification = new Notification(title, description, user.EMPLOYEENAME, `/user-approval?id=${employeeId}`);
       await notification.save(createdBy);
     }
 

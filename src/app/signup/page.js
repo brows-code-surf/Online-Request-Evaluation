@@ -165,7 +165,8 @@ export default function Signup() {
                     await sendNotification(
                         'New Account Request',
                         `A new account has been requested by ${formData.fullName} (${formData.email}). Please review and approve the account.`,
-                        formData.email
+                        formData.email,
+                        formData.employeeid
                     );
 
                     toast.success(`Account request submitted! An email has been sent to ${formData.email}`);

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../utils/authContext';
 import ContentLeftPanel from '../_components/contentLeftPanel';
+import { SkeletonUserApprovalDetail } from '../../_components/skeletonLoader';
 import RejectRequestModal from '../_components/rejectRequestModal';
 import ConfirmModal from '../_components/confirmModal';
 import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
@@ -15,6 +16,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 
 function RequestEvaluationContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, isAdmin, loading } = useAuth();
     const [selectedApproval, setSelectedApproval] = useState(null);
     const [approvals, setApprovals] = useState([]);
@@ -66,8 +68,20 @@ function RequestEvaluationContent() {
             const result = await getPendingApprovals();
             if (result.success) {
                 setApprovals(result.data);
-                if (result.data.length > 0) {
-                    setSelectedApproval(result.data[0]);
+                if (result.data.length > 0 && !selectedApproval) {
+                    const id = searchParams.get('id');
+                    let selectApproval = result.data[0];
+                    if (id) {
+                        // First try to find by database id, then by employeeID
+                        let urlSelected = result.data.find(approval => approval.id === id);
+                        if (!urlSelected) {
+                            urlSelected = result.data.find(approval => approval.employeeID === id);
+                        }
+                        if (urlSelected) {
+                            selectApproval = urlSelected;
+                        }
+                    }
+                    setSelectedApproval(selectApproval);
                 }
             }
         } catch (error) {
@@ -79,18 +93,37 @@ function RequestEvaluationContent() {
 
     // Handle approval selection
     const handleSelectApproval = (approval) => {
+        setSelectedApproval(approval);
+        // Update URL with selected id to persist selection
+        router.replace(`?id=${encodeURIComponent(approval.employeeID)}`);
         setDetailsLoading(true);
         setTimeout(() => {
-            setSelectedApproval(approval);
             setDetailsLoading(false);
         }, 300);
     };
+
+    // Handle URL parameter changes to select approval
+    useEffect(() => {
+        const id = searchParams.get('id');
+        if (id && approvals.length > 0) {
+            // First try to find by database id, then by employeeID
+            let urlSelected = approvals.find(approval => approval.id === id);
+            if (!urlSelected) {
+                urlSelected = approvals.find(approval => approval.employeeID === id);
+            }
+            if (urlSelected && urlSelected.id !== selectedApproval?.id) {
+                setSelectedApproval(urlSelected);
+            }
+        }
+    }, [searchParams, approvals, selectedApproval?.id]);
 
     // Filter and sort approvals
     const filteredApprovals = approvals
         .filter(approval => {
             const matchesSearch = approval.requester.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                approval.title.toLowerCase().includes(searchQuery.toLowerCase());
+                approval.title.toLowerCase().includes(searchQuery.toLowerCase()) || approval.employeeID.toString().includes(searchQuery) ||
+                approval.department.toLowerCase().includes(searchQuery.toLowerCase()) || approval.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())||
+                approval.status.toLowerCase().includes(searchQuery.toLowerCase()) || approval.requestDate.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = filterStatus === 'all' || approval.status === filterStatus;
             return matchesSearch && matchesStatus;
         })
@@ -195,7 +228,6 @@ function RequestEvaluationContent() {
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
-            <Loader loading={pageLoading} />
             <HeaderNavBar />
 
             <div className="flex flex-1 overflow-hidden pt-14">
@@ -215,7 +247,8 @@ function RequestEvaluationContent() {
                     selectedApprovalId={selectedApproval?.id}
                     onApprovalSelect={handleSelectApproval}
                     getStatusColor={getStatusColor}
-                    filterType="approval"
+                    filterType="user-accounts-approval"
+                    isLoading={pageLoading}
                 />
 
                 {/* Right Panel - Details */}
@@ -227,7 +260,7 @@ function RequestEvaluationContent() {
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {detailsLoading ? (
-                                <Loader />
+                                <SkeletonUserApprovalDetail />
                             ) : (
                                 <div className="p-6">
                                     <div className="mb-6">

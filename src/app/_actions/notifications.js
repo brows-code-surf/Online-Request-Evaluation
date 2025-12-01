@@ -14,6 +14,7 @@ export async function getUserNotifications(recipient) {
         description: n.description,
         createdBy: n.createdBy,
         dateCreated: n.dateCreated,
+        url: n.url,
         isRead: n.isRead,
         dateRead: n.dateRead
       }))

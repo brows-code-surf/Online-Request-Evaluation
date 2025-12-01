@@ -15,11 +15,13 @@ import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
+import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
 
 function UserAccountsContent() {
     const router = useRouter();
     const { user, loading, isAdmin, login } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
+    const [detailsLoading, setDetailsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [users, setUsers] = useState([]);
@@ -100,10 +102,14 @@ function UserAccountsContent() {
     };
 
     const handleSelectUser = (userData) => {
-        setSelectedUser(userData);
-        loadUserProfile(userData);
-        setIsEditing(false);
-        setIsChangingPassword(false);
+        setDetailsLoading(true);
+        setTimeout(() => {
+            setSelectedUser(userData);
+            loadUserProfile(userData);
+            setIsEditing(false);
+            setIsChangingPassword(false);
+            setDetailsLoading(false);
+        }, 300);
     };
 
     const validateProfileForm = () => {
@@ -386,7 +392,9 @@ function UserAccountsContent() {
     const filteredUsers = users
         .filter(u => {
             const matchesSearch = u.requester.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                u.email.toLowerCase().includes(searchQuery.toLowerCase());
+                u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toString().includes(searchQuery) ||
+                u.department.toLowerCase().includes(searchQuery.toLowerCase()) || u.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                u.status.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = filterStatus === 'all' || u.status === filterStatus;
             return matchesSearch && matchesStatus;
         })
@@ -472,7 +480,6 @@ function UserAccountsContent() {
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
-            <Loader loading={pageLoading} />
             <HeaderNavBar />
 
             <div className="flex flex-1 overflow-hidden pt-14">
@@ -491,6 +498,8 @@ function UserAccountsContent() {
                     selectedApprovalId={selectedUser?.id}
                     onApprovalSelect={handleSelectUser}
                     getStatusColor={getStatusColor}
+                    filterType={"accounts"}
+                    isLoading={pageLoading}
                 />
 
                 {/* Right Panel - Details */}
@@ -502,143 +511,147 @@ function UserAccountsContent() {
 
                     {selectedUser ? (
                         <div className="flex-1 overflow-y-auto">
-                            <div className="p-6">
+                            {detailsLoading ? (
+                                <SkeletonUserAccountsDetail />
+                            ) : (
+                                <div className="p-6">
 
-                                {/* Success/Error Messages */}
-                                {successMessage && (
-                                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <p className="text-green-800 font-medium">{successMessage}</p>
-                                    </div>
-                                )}
-
-                                {errorMessage && (
-                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                        <p className="text-red-800 font-medium">{errorMessage}</p>
-                                    </div>
-                                )}
-
-                                {/* Profile Header Component */}
-                                <UserProfileHeader
-                                    profileData={profileData}
-                                    isEditing={isEditing}
-                                    isUserAdmin={isAdmin()}
-                                    onEditClick={() => setIsEditing(true)}
-                                    profileErrors={profileErrors}
-                                    onProfileChange={handleProfileChange}
-                                    onJobChange={handleJobChange}
-                                />
-
-                                {isEditing && (
-                                    <div className="flex gap-3 mb-6">
-                                        <button
-                                            onClick={handleSaveProfile}
-                                            disabled={saveLoading}
-                                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                        >
-                                            {saveLoading ? (
-                                                <>
-                                                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="12" r="1" />
-                                                    </svg>
-                                                    Saving...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                    Save Changes
-                                                </>
-                                            )}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setIsEditing(false);
-                                                loadUserProfile(selectedUser);
-                                            }}
-                                            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Password Component */}
-                                <UserPassword
-                                    isChangingPassword={isChangingPassword}
-                                    passwordData={passwordData}
-                                    passwordErrors={passwordErrors}
-                                    changePasswordLoading={changePasswordLoading}
-                                    onPasswordChange={handlePasswordChange}
-                                    onChangePassword={handleChangePassword}
-                                    onCancelPasswordChange={handleCancelPasswordChange}
-                                    onTogglePasswordChange={() => setIsChangingPassword(true)}
-                                    showCurrentPassword={showCurrentPassword}
-                                    showNewPassword={showNewPassword}
-                                    showConfirmPasswordField={false}
-                                    showCurrentPasswordField={false}
-                                    onToggleCurrentPassword={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    onToggleNewPassword={() => setShowNewPassword(!showNewPassword)}
-                                />
-
-                                {/* Set Active/Inactive Buttons */}
-                                <div className="mt-6 pt-6 border-t border-gray-200 flex gap-3">
-                                    {selectedUser.status === 'INACTIVE' && (
-                                        <button
-                                            onClick={handleSetActive}
-                                            disabled={setActiveLoading}
-                                            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                        >
-                                            {setActiveLoading ? (
-                                                <>
-                                                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="12" r="1" />
-                                                    </svg>
-                                                    Setting Active...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                    Set Active
-                                                </>
-                                            )}
-                                        </button>
+                                    {/* Success/Error Messages */}
+                                    {successMessage && (
+                                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <p className="text-green-800 font-medium">{successMessage}</p>
+                                        </div>
                                     )}
 
-                                    {selectedUser.status !== 'INACTIVE' && (
-                                        <button
-                                            onClick={handleSetInactive}
-                                            disabled={setInactiveLoading}
-                                            className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                        >
-                                            {setInactiveLoading ? (
-                                                <>
-                                                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="12" r="1" />
-                                                    </svg>
-                                                    Setting Inactive...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Set Inactive
-                                                </>
-                                            )}
-                                        </button>
+                                    {errorMessage && (
+                                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            <p className="text-red-800 font-medium">{errorMessage}</p>
+                                        </div>
                                     )}
+
+                                    {/* Profile Header Component */}
+                                    <UserProfileHeader
+                                        profileData={profileData}
+                                        isEditing={isEditing}
+                                        isUserAdmin={isAdmin()}
+                                        onEditClick={() => setIsEditing(true)}
+                                        profileErrors={profileErrors}
+                                        onProfileChange={handleProfileChange}
+                                        onJobChange={handleJobChange}
+                                    />
+
+                                    {isEditing && (
+                                        <div className="flex gap-3 mb-6">
+                                            <button
+                                                onClick={handleSaveProfile}
+                                                disabled={saveLoading}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                            >
+                                                {saveLoading ? (
+                                                    <>
+                                                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <circle cx="12" cy="12" r="1" />
+                                                        </svg>
+                                                        Saving...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Save Changes
+                                                    </>
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditing(false);
+                                                    loadUserProfile(selectedUser);
+                                                }}
+                                                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Password Component */}
+                                    <UserPassword
+                                        isChangingPassword={isChangingPassword}
+                                        passwordData={passwordData}
+                                        passwordErrors={passwordErrors}
+                                        changePasswordLoading={changePasswordLoading}
+                                        onPasswordChange={handlePasswordChange}
+                                        onChangePassword={handleChangePassword}
+                                        onCancelPasswordChange={handleCancelPasswordChange}
+                                        onTogglePasswordChange={() => setIsChangingPassword(true)}
+                                        showCurrentPassword={showCurrentPassword}
+                                        showNewPassword={showNewPassword}
+                                        showConfirmPasswordField={false}
+                                        showCurrentPasswordField={false}
+                                        onToggleCurrentPassword={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        onToggleNewPassword={() => setShowNewPassword(!showNewPassword)}
+                                    />
+
+                                    {/* Set Active/Inactive Buttons */}
+                                    <div className="mt-6 pt-6 border-t border-gray-200 flex gap-3">
+                                        {selectedUser.status === 'INACTIVE' && (
+                                            <button
+                                                onClick={handleSetActive}
+                                                disabled={setActiveLoading}
+                                                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                            >
+                                                {setActiveLoading ? (
+                                                    <>
+                                                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <circle cx="12" cy="12" r="1" />
+                                                        </svg>
+                                                        Setting Active...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Set Active
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+
+                                        {selectedUser.status !== 'INACTIVE' && (
+                                            <button
+                                                onClick={handleSetInactive}
+                                                disabled={setInactiveLoading}
+                                                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                            >
+                                                {setInactiveLoading ? (
+                                                    <>
+                                                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <circle cx="12" cy="12" r="1" />
+                                                        </svg>
+                                                        Setting Inactive...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        Set Inactive
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+
                                 </div>
-
-                            </div>
+                            )}
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">

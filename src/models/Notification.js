@@ -2,10 +2,11 @@ import connectToDatabase from "../lib/db.js";
 import { notifyUserUpdate } from "../lib/socketBroadcast.js";
 
 export class Notification {
-  constructor(title, description, recipient) {
+  constructor(title, description, recipient, url = null) {
     this.title = title;
     this.description = description;
     this.recipient = recipient;
+    this.url = url;
     this.createdBy = null;
     this.dateCreated = new Date();
     this.isRead = false;
@@ -51,9 +52,9 @@ export class Notification {
 
       const query = `
         INSERT INTO [SYSTEM.NOTIFICATION.1]
-        (TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, IS_READ, DATEREAD)
+        (TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED,  URL, IS_READ, DATEREAD)
         VALUES
-        (@title, @description, @recipient, @createdBy, @dateCreated, @isRead, @dateRead)
+        (@title, @description, @recipient, @createdBy, @dateCreated, @url, @isRead, @dateRead)
       `;
 
       const request = connection.request()
@@ -62,6 +63,7 @@ export class Notification {
         .input('recipient', this.recipient)
         .input('createdBy', this.createdBy)
         .input('dateCreated', this.dateCreated)
+        .input('url', this.url) 
         .input('isRead', this.isRead ? 1 : 0)
         .input('dateRead', this.dateRead);
 
@@ -89,6 +91,7 @@ export class Notification {
             description: this.description,
             createdBy: this.createdBy,
             dateCreated: this.dateCreated,
+            url: this.url,
             isRead: this.isRead,
             dateRead: this.dateRead
           });
@@ -116,7 +119,8 @@ export class Notification {
           title: this.title,
           description: this.description,
           recipient: this.recipient,
-          createdBy: this.createdBy
+          createdBy: this.createdBy,
+          url: this.url
         }
       });
       throw new Error(`Failed to save notification: ${error.message}`);
@@ -187,7 +191,7 @@ export class Notification {
       connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
-        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, IS_READ, DATEREAD
+        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, URL, IS_READ, DATEREAD
         FROM [SYSTEM.NOTIFICATION.1]
         WHERE RECIPIENT = @recipient
         ORDER BY DATECREATED DESC
@@ -200,7 +204,7 @@ export class Notification {
         .query(query);
 
       return result.recordset.map(row => {
-        const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT);
+        const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
         notification.rowId = row.ROWID;
         notification.createdBy = row.CREATEDBY;
         notification.dateCreated = row.DATECREATED;
@@ -245,7 +249,7 @@ export class Notification {
       connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
-        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, IS_READ, DATEREAD
+        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, URL, IS_READ, DATEREAD
         FROM [SYSTEM.NOTIFICATION.1]
         WHERE ROWID = @rowId
       `;
@@ -259,7 +263,7 @@ export class Notification {
       }
 
       const row = result.recordset[0];
-      const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT);
+      const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
       notification.rowId = row.ROWID;
       notification.createdBy = row.CREATEDBY;
       notification.dateCreated = row.DATECREATED;

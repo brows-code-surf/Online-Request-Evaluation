@@ -2,6 +2,7 @@
 
 import RequestEvaluation from '@/models/RequestEvaluation';
 import UserProfile from '@/models/UserProfile';
+import Notification from '@/models/Notification';
 import { sendEmailWithTemplate } from '@/utils/emailService';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast';
 
@@ -42,13 +43,19 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                         const recipientName = approverData.EMPLOYEENAME;
                         let subject = '';
                         let body = '';
+                        let notificationTitle = '';
+                        let notificationDescription = '';
 
                         if (currentStatus === 'FOR CONFIRMATION') {
                             subject = 'Request Approved - Waiting for Your Approval';
                             body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been confirmed and is now waiting for your approval. Please review and approve the request at your earliest convenience.`;
+                            notificationTitle = 'Request Approved - Waiting for Your Approval';
+                            notificationDescription = `The request ${referenceNo} has been confirmed and is now waiting for your approval.`;
                         } else if (currentStatus === 'FOR REQUEST APPROVAL') {
                             subject = 'Request Approved - Ready for Lead Time Review';
                             body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been approved and is now ready for purchasing lead time review. Please check the request details and proceed with the canvassing process.`;
+                            notificationTitle = 'Request Approved - Ready for Lead Time Review';
+                            notificationDescription = `The request ${referenceNo} has been approved and is now ready for purchasing lead time review.`;
                         }
 
                         console.log('Recipient name:', recipientName, 'Recipient email:', recipientEmail);
@@ -72,6 +79,22 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                             console.log('Email sent successfully');
                         } else {
                             console.log('No email found for recipient:', recipientName);
+                        }
+
+                        // Create notification for the next approver
+                        try {
+                            const notification = new Notification(
+                                notificationTitle,
+                                notificationDescription,
+                                recipientName,
+                                `/request-evaluation?id=${referenceNo}`
+                            );
+
+                            await notification.save(approverName);
+                            console.log('Notification created for next approver:', recipientName);
+                        } catch (notificationError) {
+                            console.error('Error creating notification:', notificationError);
+                            // Don't throw error to avoid failing the approval process
                         }
                     } else {
                         console.log('No approver data found for status:', currentStatus);
@@ -173,6 +196,22 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
                             console.log('Rejection email sent successfully');
                         } else {
                             console.log('No email found for requester:', requesterName);
+                        }
+
+                        // Create notification for the requester
+                        try {
+                            const notification = new Notification(
+                                'Request Rejected',
+                                `Your request ${referenceNo} has been rejected by ${approverName}. Reason: ${rejectionReason}.`,
+                                requesterName,
+                                `/request-evaluation?id=${referenceNo}`
+                            );
+
+                            await notification.save(approverName);
+                            console.log('Notification created for requester:', requesterName);
+                        } catch (notificationError) {
+                            console.error('Error creating rejection notification:', notificationError);
+                            // Don't throw error to avoid failing the rejection process
                         }
                     }
                 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../utils/authContext';
@@ -8,6 +8,7 @@ import { logoutUser } from '../login/_actions';
 import { NotificationBell } from './notificationBell';
 import { getUnreadNotificationCount } from '../_actions/notifications';
 import { useSocketMultiple } from '../../hooks/useSocketMultiple';
+import useClickOutside from '../../utils/useClickOutsideClose';
 
 export default function HeaderNavBar() {
   const router = useRouter();
@@ -17,6 +18,21 @@ export default function HeaderNavBar() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+  const notifButtonRef = useRef(null);
+  const profileButtonRef = useRef(null);
+  useClickOutside(notifRef, (event) => {
+    if (!notifButtonRef.current || !notifButtonRef.current.contains(event.target)) {
+      setIsNotificationOpen(false);
+    }
+  });
+  useClickOutside(profileRef, (event) => {
+    if (!profileButtonRef.current || !profileButtonRef.current.contains(event.target)) {
+      setIsProfileOpen(false);
+    }
+  });
 
   // Fetch unread notification count
   useEffect(() => {
@@ -112,6 +128,15 @@ export default function HeaderNavBar() {
             {isUserAdmin && (
               <>
                 <Link
+                  href="/dashboard"
+                  className={`text-sm font-medium transition ${pathname === '/dashboard'
+                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                    : 'text-gray-600 hover:text-blue-600'
+                    }`}
+                >
+                  Dashboard
+                </Link>
+                <Link
                   href="/user-approval"
                   className={`text-sm font-medium transition ${pathname === '/user-approval'
                     ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
@@ -136,10 +161,15 @@ export default function HeaderNavBar() {
           {/* Notification Bell */}
           <div className="relative">
             <button
+              ref={notifButtonRef}
               onClick={() => {
-                setIsNotificationOpen(!isNotificationOpen);
-                setIsProfileOpen(false);
-                setIsMenuOpen(false);
+                if (isNotificationOpen) {
+                  setIsNotificationOpen(false);
+                } else {
+                  setIsNotificationOpen(true);
+                  setIsProfileOpen(false);
+                  setIsMenuOpen(false);
+                }
               }}
               className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
@@ -165,7 +195,8 @@ export default function HeaderNavBar() {
 
             {/* Notification Dropdown */}
             {isNotificationOpen && (
-              <NotificationBell />
+              <NotificationBell
+                ref={notifRef} />
             )}
           </div>
 
@@ -175,10 +206,15 @@ export default function HeaderNavBar() {
           {/* User Profile Dropdown */}
           <div className="relative">
             <button
+              ref={profileButtonRef}
               onClick={() => {
-                setIsProfileOpen(!isProfileOpen);
-                setIsNotificationOpen(false);
-                setIsMenuOpen(false);
+                if (isProfileOpen) {
+                  setIsProfileOpen(false);
+                } else {
+                  setIsProfileOpen(true);
+                  setIsNotificationOpen(false);
+                  setIsMenuOpen(false);
+                }
               }}
               className="flex items-center gap-2 p-2 text-gray-700 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
@@ -202,7 +238,7 @@ export default function HeaderNavBar() {
 
             {/* Profile Dropdown Menu */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+              <div ref={profileRef} className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
                 {/* User Info Section */}
                 <div className="px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-600">
                   <p className="text-white font-semibold text-lg">{user?.empName || 'User'}</p>
@@ -276,6 +312,16 @@ export default function HeaderNavBar() {
           </Link>
           {isUserAdmin && (
             <>
+              <Link
+                href="/dashboard"
+                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/dashboard'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
               <Link
                 href="/user-approval"
                 className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-approval'
