@@ -57,7 +57,7 @@ export default function UserProfileHeader({ profileData, isEditing, isUserAdmin,
                 className={`w-full px-4 py-2 text-black border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${profileErrors.email ? 'border-red-500' : 'border-gray-300'}`}
               />
               {profileErrors.email && (
-                <p className="text-red-600 text-xs mt-1">{profileErrors.email}</p>
+                <p className="text-red-600 text-xs mt-1 truncate">{profileErrors.email}</p>
               )}
             </div>
 

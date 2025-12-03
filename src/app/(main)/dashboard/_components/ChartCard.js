@@ -1,18 +1,18 @@
 import { motion } from "framer-motion";
 
-export const ChartCard = ({ title, children, delay }) => {
+export const ChartCard = ({ title, children, delay, className = "" }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      className="group relative overflow-hidden rounded-xl bg-glass-bg/70 backdrop-blur-glass border border-glass-border p-6 shadow-glass hover:shadow-hover transition-all duration-300"
+      className={`group relative overflow-hidden rounded-xl bg-white/70 backdrop-blur-sm border border-gray-200 p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 ${className}`}
     >
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
       <div className="relative">
-        <h2 className="text-xl font-semibold text-foreground mb-6">{title}</h2>
+        <h2 className="text-sm sm:text-base lg:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">{title}</h2>
         {children}
       </div>
     </motion.div>

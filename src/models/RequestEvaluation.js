@@ -526,6 +526,106 @@ class RequestEvaluation {
             return false;
         }
     }
+
+    // Get request evaluation status breakdown
+    static async getRequestEvaluationStatusBreakdown() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if table exists
+            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
+            if (!detailsExists) {
+                console.warn('PURCHASE.REQUESTDETAILS.1 table not found.');
+                return [];
+            }
+
+            const query = `
+                SELECT
+                    CASE
+                        WHEN ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE 'OTHER'
+                    END as status,
+                    COUNT(*) as count
+                FROM [PURCHASE.REQUESTDETAILS.1]
+                GROUP BY
+                    CASE
+                        WHEN ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE 'OTHER'
+                    END
+                ORDER BY status
+            `;
+
+            const result = await connection.request().query(query);
+            return result.recordset;
+        } catch (error) {
+            console.error('Error fetching request evaluation status breakdown:', error);
+            return [];
+        }
+    }
+
+    // Get 30-day requests trend
+    static async getThirtyDayRequestsTrend() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if table exists
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found.');
+                return [];
+            }
+
+            const query = `
+                SELECT
+                    CAST(DATEREQUESTED AS DATE) as requestDate,
+                    COUNT(*) as requestCount
+                FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE DATEREQUESTED >= DATEADD(DAY, -30, GETDATE())
+                GROUP BY CAST(DATEREQUESTED AS DATE)
+                ORDER BY CAST(DATEREQUESTED AS DATE)
+            `;
+
+            const result = await connection.request().query(query);
+
+            // Create array for last 30 days with zero-fill for missing dates
+            const thirtyDays = [];
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                const existing = result.recordset.find(r => {
+                    const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
+                    return recordDate === dateStr;
+                });
+                thirtyDays.push({
+                    date: dateStr,
+                    requests: existing ? existing.requestCount : 0
+                });
+            }
+
+            return thirtyDays;
+        } catch (error) {
+            console.error('Error fetching 30-day requests trend:', error);
+            // Return array with zeros for all 30 days
+            return Array.from({ length: 30 }, (_, i) => ({
+                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                requests: 0
+            }));
+        }
+    }
 }
 
 export default RequestEvaluation;

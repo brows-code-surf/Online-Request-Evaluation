@@ -1,41 +1,72 @@
 import { motion } from "framer-motion";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
-export const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => {
+export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklineData, percentChange }) => {
+  const isPositive = percentChange >= 0;
+  const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="group relative overflow-hidden rounded-xl bg-glass-bg/50 backdrop-blur-glass border border-glass-border p-6 shadow-glass hover:shadow-hover transition-all duration-300"
+      className="group relative overflow-hidden rounded-2xl bg-white/50 backdrop-blur-sm border border-gray-200/50 p-3 sm:p-4 shadow-sm hover:shadow-lg transition-all duration-300"
     >
       {/* Gradient overlay on hover */}
       <div className={`absolute inset-0 bg-gradient-to-br ${colorClass} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-      
-      <div className="relative flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-          <motion.p
-            initial={{ scale: 0.5 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: delay + 0.2 }}
-            className="text-3xl font-bold text-foreground"
+
+      <div className="relative">
+        <div className="flex items-start justify-between mb-2 sm:mb-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-600 mb-1 truncate">{title}</p>
+            <motion.p
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: delay + 0.2 }}
+              className="text-xl sm:text-2xl font-bold text-gray-900"
+            >
+              {value.toLocaleString()}
+            </motion.p>
+          </div>
+
+          <motion.div
+            whileHover={{ rotate: 360, scale: 1.1 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className={`p-1.5 sm:p-2 rounded-lg bg-gradient-to-br ${colorClass} bg-opacity-10 flex-shrink-0`}
           >
-            {value}
-          </motion.p>
+            <Icon className={`h-3 w-3 sm:h-4 sm:w-4 text-white`} />
+          </motion.div>
         </div>
-        
-        <motion.div
-          whileHover={{ rotate: 360, scale: 1.1 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-          className={`p-3 rounded-lg ${colorClass} bg-opacity-10`}
-        >
-          <Icon className={`h-6 w-6 ${colorClass.replace('from-', 'text-').replace('to-', '').split(' ')[0]}`} />
-        </motion.div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-1 min-w-0 flex-1">
+            <TrendIcon className={`h-3 w-3 flex-shrink-0 ${isPositive ? 'text-green-500' : 'text-red-500'}`} />
+            <span className={`text-xs font-medium truncate ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+              {isPositive ? '+' : ''}{percentChange.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="w-12 sm:w-16 h-5 sm:h-6 flex-shrink-0 ml-2">
+            <ResponsiveContainer width="100%" height="100%" minWidth={48} minHeight={20}>
+              <LineChart data={sparklineData.map((value, index) => ({ value }))}>
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke={isPositive ? '#10b981' : '#ef4444'}
+                  strokeWidth={1.5}
+                  dot={false}
+                  activeDot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-      
+
       {/* Decorative element */}
-      <div className={`absolute -right-8 -bottom-8 w-24 h-24 rounded-full ${colorClass} opacity-5 blur-2xl group-hover:opacity-10 transition-opacity duration-300`} />
+      <div className={`absolute -right-2 sm:-right-4 -bottom-2 sm:-bottom-4 w-8 h-8 sm:w-12 sm:h-12 rounded-full ${colorClass} opacity-5 blur-xl group-hover:opacity-10 transition-opacity duration-300`} />
     </motion.div>
   );
 };

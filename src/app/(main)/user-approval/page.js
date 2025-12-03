@@ -297,9 +297,9 @@ function RequestEvaluationContent() {
                                                 <p className="text-xs text-gray-600 font-medium mb-1">Employee ID</p>
                                                 <p className="text-sm text-gray-900 font-bold">{selectedApproval.employeeID}</p>
                                             </div>
-                                            <div>
+                                            <div className="w-full sm:w-1/2 break-words whitespace-normal">
                                                 <p className="text-xs text-gray-600 font-medium mb-1">Email</p>
-                                                <p className="text-sm text-blue-600">{selectedApproval.email}</p>
+                                                <p className="text-sm text-blue-600 break-words">{selectedApproval.email}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600 font-medium mb-1">Location</p>

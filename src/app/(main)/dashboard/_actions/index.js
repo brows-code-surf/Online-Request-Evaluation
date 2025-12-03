@@ -1,43 +1,73 @@
 'use server';
 
-import connectToDatabase from '@/lib/db.js';
+import 'server-only';
+import Dashboard from '@/models/Dashboard.js';
 
 export async function getDashboardStats() {
-  try {
-    // Get request evaluation stats
-    const sfcConnection = await connectToDatabase(process.env.DB_SFC);
+    try {
+        const dashboard = new Dashboard();
 
-    const requestStatsQuery = `
-      SELECT REQUESTSTATUS, COUNT(*) as count
-      FROM [PURCHASE.REQUESTHEADER.1]
-      GROUP BY REQUESTSTATUS
-    `;
+        // Fetch all data concurrently
+        const [userStats, requestEvaluations, thirtyDayTrend, recentLogins] = await Promise.all([
+            dashboard.getUserStats(),
+            dashboard.getRequestEvaluationStats(),
+            dashboard.getThirtyDayTrend(),
+            dashboard.getRecentLogins()
+        ]);
 
-    const requestStats = await sfcConnection.request().query(requestStatsQuery);
-    const requestStatsData = requestStats.recordset;
+        // Generate sparkline data (last 10 values - using current value for all)
+        const generateSparklines = (currentValue) => {
+            return Array.from({ length: 10 }, () => currentValue);
+        };
 
-    // Get total users
-    const gdbConnection = await connectToDatabase(process.env.DB_NAME);
-    const userQuery = `SELECT COUNT(*) as totalUsers FROM [SYSTEM.USERACCOUNT.1] WHERE IS_APPROVED = 'APPROVED'`;
-    const userResult = await gdbConnection.request().query(userQuery);
-    const totalUsers = userResult.recordset[0].totalUsers;
+        // Calculate percent changes (set to 0 for now - could be calculated from historical data)
+        const percentChanges = {
+            totalUsers: 0,
+            activeUsers: 0,
+            pendingRequests: 0,
+            requestsLast24h: 0
+        };
 
-    // For recently logged in, since no login tracking, we'll count users active in last 30 days (based on MODIFIEDDATE)
-    const recentUsersQuery = `SELECT COUNT(*) as recentUsers FROM [SYSTEM.USERACCOUNT.1] WHERE IS_APPROVED = 'APPROVED' AND LOGGEDIN >= DATEADD(DAY, -30, GETDATE())`;
-    const recentResult = await gdbConnection.request().query(recentUsersQuery);
-    const recentUsers = recentResult.recordset[0].recentUsers;
-
-    return {
-      requestStats: requestStatsData,
-      totalUsers,
-      recentUsers
-    };
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return {
-      requestStats: [],
-      totalUsers: 0,
-      recentUsers: 0
-    };
-  }
+        return {
+            stats: {
+                ...userStats,
+                sparklines: {
+                    totalUsers: generateSparklines(userStats.totalUsers),
+                    activeUsers: generateSparklines(userStats.activeUsers),
+                    pendingRequests: generateSparklines(userStats.pendingRequests),
+                    requestsLast24h: generateSparklines(userStats.requestsLast24h)
+                },
+                percentChanges
+            },
+            requestEvaluations,
+            thirtyDayTrend,
+            recentLogins
+        };
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        // Return empty data structure on error
+        return {
+            stats: {
+                totalUsers: 0,
+                activeUsers: 0,
+                pendingRequests: 0,
+                requestsLast24h: 0,
+                sparklines: {
+                    totalUsers: [],
+                    activeUsers: [],
+                    pendingRequests: [],
+                    requestsLast24h: []
+                },
+                percentChanges: {
+                    totalUsers: 0,
+                    activeUsers: 0,
+                    pendingRequests: 0,
+                    requestsLast24h: 0
+                }
+            },
+            requestEvaluations: [],
+            thirtyDayTrend: [],
+            recentLogins: []
+        };
+    }
 }

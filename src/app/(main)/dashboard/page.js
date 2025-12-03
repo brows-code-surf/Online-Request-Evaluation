@@ -1,31 +1,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { motion } from 'framer-motion';
-import AdminOnly from '@/utils/adminOnly';
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { getDashboardStats } from './_actions/index.js';
-import { Users, Activity, FileText, TrendingUp } from 'lucide-react';
+import { Users, Activity, FileText, TrendingUp, User, Calendar } from 'lucide-react';
 import { StatCard } from "./_components/StatCard.js";
-import { ChartCard } from "./_components/ChartCard";
-import HeaderNavBar from '../../_components/headerNavBar';
+import { ChartCard } from "./_components/ChartCard.js";
+import { RecentLogins } from "./_components/RecentLogins.js";
 import Loader from '@/app/_components/loader.js';
+import HeaderNavBar from '@/app/_components/headerNavBar.js';
+import AdminOnly from '@/utils/adminOnly';
 
-const COLORS = ["hsl(217, 91%, 60%)", "hsl(142, 76%, 36%)", "hsl(38, 92%, 50%)", "hsl(350, 89%, 60%)", "hsl(270, 70%, 60%)"];
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-export default function Dashboard() {
-    const [stats, setStats] = useState({
-        requestStats: [],
-        totalUsers: 0,
-        recentUsers: 0
-    });
+// Client-side function to simulate live updates (no random numbers)
+function simulateLiveUpdate(currentData) {
+  const newData = { ...currentData };
+
+  // Keep stats the same (no random changes)
+
+  // Update sparklines (shift and add current value)
+  Object.keys(newData.stats.sparklines).forEach(key => {
+    newData.stats.sparklines[key] = [...newData.stats.sparklines[key]]; // Create a mutable copy
+    newData.stats.sparklines[key].shift();
+    newData.stats.sparklines[key].push(newData.stats[key]);
+  });
+
+  // Keep percent changes the same (no random fluctuations)
+
+  // Keep request evaluations the same (no random changes)
+
+  // Update 30-day trend (keep existing data for demo purposes)
+  // For live updates, we maintain the same trend data without adding duplicates
+
+  return newData;
+}
+
+export default function DashboardClient() {
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedDateRange, setSelectedDateRange] = useState(30); // Default to 30 days
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+    const [useCustomRange, setUseCustomRange] = useState(false);
 
     useEffect(() => {
         async function fetchStats() {
             try {
-                const data = await getDashboardStats();
-                setStats(data);
+                const statsData = await getDashboardStats();
+                setData(statsData);
             } catch (error) {
                 console.error('Error fetching stats:', error);
             } finally {
@@ -33,200 +56,336 @@ export default function Dashboard() {
             }
         }
         fetchStats();
+
+        // Live updates every 5 seconds
+        const interval = setInterval(() => {
+            setData(prevData => {
+                if (prevData) {
+                    return simulateLiveUpdate(prevData);
+                }
+                return prevData;
+            });
+        }, 5000);
+
+        return () => clearInterval(interval);
     }, []);
 
-    if (loading) {
-        return (
-            <AdminOnly>
-                <Loader />
-            </AdminOnly>
-        );
+    if (loading || !data) {
+        return <Loader />;
     }
 
-    const totalRequests = stats.requestStats.reduce((acc, stat) => acc + stat.count, 0);
-    const pendingRequests = stats.requestStats.find(stat => stat.REQUESTSTATUS === "FOR CONFIRMATION")?.count || 0;
-    const activeRequests = stats.requestStats
-        .filter(stat => ["FOR CONFIRMATION", "FOR REQUEST APPROVAL", "FOR PURCHASING LEAD TIME"].includes(stat.REQUESTSTATUS))
-        .reduce((acc, stat) => acc + stat.count, 0);
-    const completedRequests = stats.requestStats
-        .filter(stat => ["FOR CANVASSING", "APPROVED"].includes(stat.REQUESTSTATUS))
-        .reduce((acc, stat) => acc + stat.count, 0);
-    const rejectedRequests = stats.requestStats
-        .filter(stat => stat.REQUESTSTATUS === "REJECTED")
-        .reduce((acc, stat) => acc + stat.count, 0);
+    // Prepare chart data
+    const pieChartData = data.requestEvaluations.length > 0 ? data.requestEvaluations : [{ status: 'No Data', count: 1 }];
+
+    // Filter line chart data based on selected date range
+    const getFilteredLineChartData = () => {
+        if (!data.thirtyDayTrend || data.thirtyDayTrend.length === 0) {
+            return [{ date: new Date().toISOString().split('T')[0], requests: 0 }];
+        }
+
+        let startDate, endDate;
+
+        if (useCustomRange && customStartDate && customEndDate) {
+            startDate = new Date(customStartDate);
+            endDate = new Date(customEndDate);
+        } else {
+            endDate = new Date();
+            startDate = new Date();
+            startDate.setDate(endDate.getDate() - selectedDateRange + 1);
+        }
+
+        return data.thirtyDayTrend
+            .filter(item => {
+                const itemDate = new Date(item.date);
+                return itemDate >= startDate && itemDate <= endDate;
+            })
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+    };
+
+    const lineChartData = getFilteredLineChartData();
+
+    // Get chart title based on selected range
+    const getChartTitle = () => {
+        if (useCustomRange && customStartDate && customEndDate) {
+            return `Custom Range: ${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()}`;
+        }
+        return `${selectedDateRange}-Day Requests Trend`;
+    };
+
+    // Calculate total for percentage calculations
+    const totalRequests = pieChartData.reduce((sum, item) => sum + item.count, 0);
+
+    // Custom tooltip for pie chart
+    const CustomPieTooltip = ({ active, payload }) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            const percentage = ((data.count / totalRequests) * 100).toFixed(1);
+            return (
+                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                    <p className="font-semibold text-gray-900">{data.status}</p>
+                    <p className="text-sm text-gray-600">
+                        Count: <span className="font-medium">{data.count}</span>
+                    </p>
+                    <p className="text-sm text-gray-600">
+                        Percentage: <span className="font-medium">{percentage}%</span>
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    // Custom label for pie slices
+    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+        if (percent < 0.05) return null; // Don't show labels for slices smaller than 5%
+
+        const RADIAN = Math.PI / 180;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill="white"
+                textAnchor={x > cx ? 'start' : 'end'}
+                dominantBaseline="central"
+                fontSize="12"
+                fontWeight="bold"
+            >
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
 
     return (
         <AdminOnly>
-            <div className="min-h-screen bg-white relative overflow-hidden">
-                {/* Ambient background effects */}
+            <div className="min-h-screen bg-gray-50 mt-15">
                 <HeaderNavBar />
-                <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
-                    <div className="absolute top-1/2 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: "1s" }} />
-                    <div className="absolute -bottom-40 right-1/3 w-96 h-96 bg-stat-amber/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: "2s" }} />
-                </div>
-
-                <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-                    <div className="max-w-7xl mx-auto">
-                        {/* Header */}
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="mb-8"
-                        >
-                            <h1 className="text-4xl font-bold bg-gradient-to-r from-dashboard-gradient-start to-dashboard-gradient-end bg-clip-text text-transparent mb-2">
-                                Admin Dashboard
-                            </h1>
-                            <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
-                        </motion.div>
-
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <StatCard
-                                title="Total Requests"
-                                value={totalRequests}
-                                icon={FileText}
-                                colorClass="from-stat-blue to-primary"
-                                delay={0.1}
-                            />
+                {/* Main Content - Scrollable */}
+                <div className="overflow-y-auto">
+                    <div className="p-4 sm:p-6">
+                        {/* Stats Row - Responsive grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <StatCard
                                 title="Total Users"
-                                value={stats.totalUsers}
+                                value={data.stats.totalUsers}
                                 icon={Users}
-                                colorClass="from-stat-emerald to-accent"
-                                delay={0.2}
+                                colorClass="from-blue-500 to-blue-600"
+                                delay={0.1}
+                                sparklineData={data.stats.sparklines.totalUsers}
+                                percentChange={data.stats.percentChanges.totalUsers}
                             />
                             <StatCard
-                                title="Active Users (30d)"
-                                value={stats.recentUsers}
+                                title="Active Users"
+                                value={data.stats.activeUsers}
                                 icon={Activity}
-                                colorClass="from-stat-amber to-stat-amber"
-                                delay={0.3}
+                                colorClass="from-green-500 to-green-600"
+                                delay={0.2}
+                                sparklineData={data.stats.sparklines.activeUsers}
+                                percentChange={data.stats.percentChanges.activeUsers}
                             />
                             <StatCard
-                                title="Pending Requests"
-                                value={pendingRequests}
+                                title="Pending Request Evaluations"
+                                value={data.stats.pendingRequests}
+                                icon={FileText}
+                                colorClass="from-orange-500 to-orange-600"
+                                delay={0.3}
+                                sparklineData={data.stats.sparklines.pendingRequests}
+                                percentChange={data.stats.percentChanges.pendingRequests}
+                            />
+                            <StatCard
+                                title="Requests in the Last 24 Hours"
+                                value={data.stats.requestsLast24h}
                                 icon={TrendingUp}
-                                colorClass="from-stat-rose to-destructive"
+                                colorClass="from-purple-500 to-purple-600"
                                 delay={0.4}
+                                sparklineData={data.stats.sparklines.requestsLast24h}
+                                percentChange={data.stats.percentChanges.requestsLast24h}
                             />
                         </div>
 
-                        {/* Charts */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                            <ChartCard title="Request Status Distribution" delay={0.5}>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={stats.requestStats}>
-                                        <defs>
-                                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.8} />
-                                                <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                                        <XAxis
-                                            dataKey="REQUESTSTATUS"
-                                            angle={-45}
-                                            textAnchor="end"
-                                            height={100}
-                                            interval={0}
-                                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                                        />
-                                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: "hsl(var(--glass-bg))",
-                                                border: "1px solid hsl(var(--glass-border))",
-                                                borderRadius: "0.5rem",
-                                                backdropFilter: "blur(16px)",
-                                            }}
-                                        />
-                                        <Bar dataKey="count" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
+                        {/* Charts and Recent Logins Row - Responsive layout */}
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                            {/* Charts Section - Stacked on mobile, side by side on larger screens */}
+                            <div className="xl:col-span-2 space-y-6 xl:space-y-0">
+                                {/* Request Evaluation Status Breakdown - Donut Chart */}
+                                <div className="xl:hidden">
+                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5}>
+                                        <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={pieChartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={40}
+                                                    outerRadius={80}
+                                                    paddingAngle={2}
+                                                    dataKey="count"
+                                                    nameKey="status"
+                                                    label={renderCustomLabel}
+                                                    labelLine={false}
+                                                >
+                                                    {pieChartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip content={<CustomPieTooltip />} />
+                                                <Legend
+                                                    verticalAlign="bottom"
+                                                    height={36}
+                                                    formatter={(value, entry) => (
+                                                        <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>
+                                                            {value} ({entry.payload.count})
+                                                        </span>
+                                                    )}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
+                                </div>
 
-                            <ChartCard title="Request Status Overview" delay={0.6}>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <defs>
-                                            {COLORS.map((color, index) => (
-                                                <linearGradient key={index} id={`pieGradient${index}`} x1="0" y1="0" x2="1" y2="1">
-                                                    <stop offset="0%" stopColor={color} stopOpacity={0.8} />
-                                                    <stop offset="100%" stopColor={color} stopOpacity={0.6} />
-                                                </linearGradient>
+                                {/* Date Range Selector */}
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-gray-500" />
+                                            <span className="text-sm font-medium text-gray-700">Time Range:</span>
+                                        </div>
+
+                                        {/* Preset buttons */}
+                                        <div className="flex flex-wrap gap-2">
+                                            {[7, 14, 30, 60, 90].map((days) => (
+                                                <button
+                                                    key={days}
+                                                    onClick={() => {
+                                                        setSelectedDateRange(days);
+                                                        setUseCustomRange(false);
+                                                    }}
+                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                        !useCustomRange && selectedDateRange === days
+                                                            ? 'bg-blue-600 text-white shadow-sm'
+                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    {days === 7 ? '7 Days' : days === 14 ? '14 Days' : days === 30 ? '30 Days' : days === 60 ? '60 Days' : '90 Days'}
+                                                </button>
                                             ))}
-                                        </defs>
-                                        <Pie
-                                            data={stats.requestStats}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={false}
-                                            label={({ REQUESTSTATUS, count, percent }) =>
-                                                `${REQUESTSTATUS.split(" ")[0]}: ${count} (${(percent * 100).toFixed(0)}%)`
-                                            }
-                                            outerRadius={90}
-                                            dataKey="count"
-                                        >
-                                            {stats.requestStats.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={`url(#pieGradient${index % COLORS.length})`} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: "hsl(var(--glass-bg))",
-                                                border: "1px solid hsl(var(--glass-border))",
-                                                borderRadius: "0.5rem",
-                                                backdropFilter: "blur(16px)",
-                                            }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-                        </div>
 
-                        {/* System Overview */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.7 }}
-                            className="relative overflow-hidden rounded-xl bg-glass-bg/70 backdrop-blur-glass border border-glass-border p-8 shadow-glass"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-stat-amber/5" />
+                                            {/* Custom Range Button */}
+                                            <button
+                                                onClick={() => setUseCustomRange(!useCustomRange)}
+                                                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                    useCustomRange
+                                                        ? 'bg-blue-600 text-white shadow-sm'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                Custom
+                                            </button>
+                                        </div>
 
-                            <div className="relative">
-                                <h2 className="text-2xl font-semibold text-foreground mb-6">System Overview</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="text-center p-6 rounded-lg bg-stat-blue/5 border border-stat-blue/20"
-                                    >
-                                        <p className="text-4xl font-bold text-stat-blue mb-2">{activeRequests}</p>
-                                        <p className="text-sm text-muted-foreground">Active Requests</p>
-                                    </motion.div>
+                                        {/* Custom Date Inputs */}
+                                        {useCustomRange && (
+                                            <div className="flex items-center gap-2 ml-4">
+                                                <label className="text-xs font-medium text-gray-600">From:</label>
+                                                <input
+                                                    type="date"
+                                                    value={customStartDate}
+                                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                                    className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                <label className="text-xs font-medium text-gray-600">To:</label>
+                                                <input
+                                                    type="date"
+                                                    value={customEndDate}
+                                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                                    className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="text-center p-6 rounded-lg bg-stat-emerald/5 border border-stat-emerald/20"
-                                    >
-                                        <p className="text-4xl font-bold text-stat-emerald mb-2">{completedRequests}</p>
-                                        <p className="text-sm text-muted-foreground">Completed Requests</p>
-                                    </motion.div>
+                                {/* 30-Day Requests Trend - Line Chart */}
+                                <ChartCard title={getChartTitle()} delay={0.6}>
+                                    <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
+                                        <LineChart data={lineChartData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                                            <XAxis
+                                                dataKey="date"
+                                                tick={{ fontSize: 10 }}
+                                                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            />
+                                            <YAxis tick={{ fontSize: 10 }} />
+                                            <Tooltip
+                                                labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                                                contentStyle={{
+                                                    backgroundColor: "white",
+                                                    border: "1px solid #e5e7eb",
+                                                    borderRadius: "0.5rem",
+                                                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1"
+                                                }}
+                                                formatter={(value, name) => [value, 'Requests']}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="requests"
+                                                stroke="#3b82f6"
+                                                strokeWidth={2}
+                                                dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                                                activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </ChartCard>
 
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="text-center p-6 rounded-lg bg-stat-rose/5 border border-stat-rose/20"
-                                    >
-                                        <p className="text-4xl font-bold text-stat-rose mb-2">{rejectedRequests}</p>
-                                        <p className="text-sm text-muted-foreground">Rejected Requests</p>
-                                    </motion.div>
+                                {/* Spacer between line chart and pie chart */}
+                                <div className="hidden xl:block h-6"></div>
+
+                                {/* Pie chart for larger screens - side by side with line chart */}
+                                <div className="hidden xl:block">
+                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5}>
+                                        <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={pieChartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={40}
+                                                    outerRadius={80}
+                                                    paddingAngle={2}
+                                                    dataKey="count"
+                                                    nameKey="status"
+                                                    label={renderCustomLabel}
+                                                    labelLine={false}
+                                                >
+                                                    {pieChartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip content={<CustomPieTooltip />} />
+                                                <Legend
+                                                    verticalAlign="bottom"
+                                                    height={36}
+                                                    formatter={(value, entry) => (
+                                                        <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>
+                                                            {value} ({entry.payload.count})
+                                                        </span>
+                                                    )}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
                                 </div>
                             </div>
-                        </motion.div>
+
+                            {/* Recently Logged In Users Panel */}
+                            <div className="xl:col-span-1">
+                                <RecentLogins users={data.recentLogins} delay={0.7} />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
