@@ -3,8 +3,9 @@
 import RequestEvaluation from '@/models/RequestEvaluation';
 import UserProfile from '@/models/UserProfile';
 import Notification from '@/models/Notification';
+import { ActivityLogs } from '@/models/ActivityLogs';
 import { sendEmailWithTemplate } from '@/utils/emailService';
-import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast';
+import { broadcastRequestEvaluationUpdate, broadcastDashboardUpdate } from '@/lib/socketBroadcast';
 
 export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}) {
     try {
@@ -31,6 +32,16 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
         const result = await RequestEvaluation.updateApprovedEvaluation(referenceNo, approverName, currentStatus);
 
         if (result.headerUpdated) {
+            // Log activity
+            try {
+                const activityMessage = `Approved request ${referenceNo} from status ${currentStatus}`;
+                await ActivityLogs.saveActivity(activityMessage, approverName);
+                console.log('Activity logged for approval:', activityMessage);
+            } catch (logError) {
+                console.error('Error logging approval activity:', logError);
+                // Don't throw error to avoid failing the approval process
+            }
+
             // Send email notification for next approver
             console.log('Starting email notification process for referenceNo:', referenceNo, 'currentStatus:', currentStatus);
             try {
@@ -122,6 +133,15 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                 newStatus: result.newStatus,
                 timestamp: new Date().toISOString(),
             });
+
+            // Notify dashboard of stats update
+            broadcastDashboardUpdate("stats-updated", {
+                type: "request-approved",
+                referenceNo,
+                oldStatus: currentStatus,
+                newStatus: result.newStatus,
+                timestamp: new Date().toISOString(),
+            });
         }
 
         return result;
@@ -137,6 +157,16 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
 
         // Send email notification for rejection
         if (result.headerUpdated) {
+            // Log activity
+            try {
+                const activityMessage = `Rejected request ${referenceNo} with reason: ${rejectionReason}`;
+                await ActivityLogs.saveActivity(activityMessage, approverName);
+                console.log('Activity logged for rejection:', activityMessage);
+            } catch (logError) {
+                console.error('Error logging rejection activity:', logError);
+                // Don't throw error to avoid failing the rejection process
+            }
+
             // Notify that the request was rejected
             broadcastRequestEvaluationUpdate("request-rejected", {
                 referenceNo,
@@ -150,6 +180,14 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
                 referenceNo,
                 changeType: "reject",
                 approverName,
+                rejectionReason,
+                timestamp: new Date().toISOString(),
+            });
+
+            // Notify dashboard of stats update
+            broadcastDashboardUpdate("stats-updated", {
+                type: "request-rejected",
+                referenceNo,
                 rejectionReason,
                 timestamp: new Date().toISOString(),
             });

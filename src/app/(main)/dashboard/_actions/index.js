@@ -8,11 +8,12 @@ export async function getDashboardStats() {
         const dashboard = new Dashboard();
 
         // Fetch all data concurrently
-        const [userStats, requestEvaluations, thirtyDayTrend, recentLogins] = await Promise.all([
+        const [userStats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs] = await Promise.all([
             dashboard.getUserStats(),
             dashboard.getRequestEvaluationStats(),
             dashboard.getThirtyDayTrend(),
-            dashboard.getRecentLogins()
+            dashboard.getRecentLogins(),
+            dashboard.getRecentActivityLogs()
         ]);
 
         // Generate sparkline data (last 10 values - using current value for all)
@@ -41,7 +42,8 @@ export async function getDashboardStats() {
             },
             requestEvaluations,
             thirtyDayTrend,
-            recentLogins
+            recentLogins,
+            recentActivityLogs
         };
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -67,7 +69,8 @@ export async function getDashboardStats() {
             },
             requestEvaluations: [],
             thirtyDayTrend: [],
-            recentLogins: []
+            recentLogins: [],
+            recentActivityLogs: []
         };
     }
 }

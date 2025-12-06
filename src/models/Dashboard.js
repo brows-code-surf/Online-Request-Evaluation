@@ -107,6 +107,35 @@ import RequestEvaluation from '@/models/RequestEvaluation.js';
             return [];
         }
     }
+
+    // Server action to get recent activity logs
+    async getRecentActivityLogs() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC); // SFC for activity logs
+
+            const query = `
+      SELECT 
+        ACTIVITY as activity,
+        CREATEDBY as createdBy,
+        DATECREATED as dateCreated
+      FROM [ACTIVITY.LOGS.1]
+      ORDER BY DATECREATED DESC
+    `;
+
+            const result = await connection.request().query(query);
+
+            return result.recordset.map((log, index) => ({
+                id: index + 1,
+                activity: log.activity,
+                createdBy: log.createdBy,
+                dateCreated: log.dateCreated
+            }));
+        } catch (error) {
+            console.error('Error fetching recent activity logs:', error);
+            return [];
+        }
+    }
 }
 
 export default Dashboard;

@@ -160,7 +160,7 @@ function RequestEvaluationContent() {
     const filteredApprovals = approvals
         .filter(approval => {
             const matchesSearch = searchQuery === '' ||
-                [approval.requester, approval.title, approval.id, approval.status, approval.department, approval.location, approval.employeeID, approval.description, approval.requestDate?.toString()].some(field =>
+                [approval.requester, approval.title, approval.id, approval.status, approval.department, approval.location, approval.employeeID, approval.description, approval.isRush , approval.requestDate?.toString()].some(field =>
                     field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
                 );
 

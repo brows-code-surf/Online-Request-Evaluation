@@ -7,9 +7,11 @@ import { Users, Activity, FileText, TrendingUp, User, Calendar } from 'lucide-re
 import { StatCard } from "./_components/StatCard.js";
 import { ChartCard } from "./_components/ChartCard.js";
 import { RecentLogins } from "./_components/RecentLogins.js";
-import Loader from '@/app/_components/loader.js';
+import { RecentActivityLogs } from "./_components/RecentActivityLogs.js";
+import { SkeletonDashboard } from '@/app/_components/skeletonLoader.js';
 import HeaderNavBar from '@/app/_components/headerNavBar.js';
 import AdminOnly from '@/utils/adminOnly';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -70,8 +72,51 @@ export default function DashboardClient() {
         return () => clearInterval(interval);
     }, []);
 
+    // Socket listeners for real-time updates
+    useSocketMultiple("dashboard-broadcast", {
+        "activity-log-added": (data) => {
+            console.log("Activity log added:", data);
+            setData(prevData => {
+                if (!prevData) return prevData;
+
+                // Add the new activity log to the beginning of the list
+                const newActivityLog = {
+                    id: Date.now(), // Use timestamp as temporary ID
+                    activity: data.activity,
+                    createdBy: data.createdBy,
+                    dateCreated: data.dateCreated
+                };
+
+                const updatedActivityLogs = [newActivityLog, ...prevData.recentActivityLogs.slice(0, 9)]; // Keep only 10 items
+
+                return {
+                    ...prevData,
+                    recentActivityLogs: updatedActivityLogs
+                };
+            });
+        },
+
+        "stats-updated": async (data) => {
+            console.log("Stats updated:", data);
+            // Refetch dashboard stats when requests are approved/rejected
+            try {
+                const updatedStats = await getDashboardStats();
+                setData(updatedStats);
+            } catch (error) {
+                console.error('Error refetching stats after update:', error);
+            }
+        }
+    });
+
     if (loading || !data) {
-        return <Loader />;
+        return (
+            <AdminOnly>
+                <div className="min-h-screen bg-gray-50 mt-15">
+                    <HeaderNavBar />
+                    <SkeletonDashboard />
+                </div>
+            </AdminOnly>
+        );
     }
 
     // Prepare chart data
@@ -294,14 +339,14 @@ export default function DashboardClient() {
                                                     type="date"
                                                     value={customStartDate}
                                                     onChange={(e) => setCustomStartDate(e.target.value)}
-                                                    className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="px-2 py-1 text-black text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 />
                                                 <label className="text-xs font-medium text-gray-600">To:</label>
                                                 <input
                                                     type="date"
                                                     value={customEndDate}
                                                     onChange={(e) => setCustomEndDate(e.target.value)}
-                                                    className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="px-2 py-1 text-black text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 />
                                             </div>
                                         )}
@@ -381,9 +426,10 @@ export default function DashboardClient() {
                                 </div>
                             </div>
 
-                            {/* Recently Logged In Users Panel */}
-                            <div className="xl:col-span-1">
+                            {/* Recently Logged In Users and Activity Logs Panel */}
+                            <div className="xl:col-span-1 space-y-6">
                                 <RecentLogins users={data.recentLogins} delay={0.7} />
+                                <RecentActivityLogs logs={data.recentActivityLogs} delay={0.8} />
                             </div>
                         </div>
                     </div>

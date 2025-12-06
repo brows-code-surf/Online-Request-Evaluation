@@ -38,6 +38,16 @@ export function broadcastUserProfileUpdate(event, data) {
   }
 }
 
+export function broadcastDashboardUpdate(event, data) {
+  const room = 'dashboard-broadcast';
+  if (global.io) {
+    global.io.to(room).emit(event, data);
+    console.log(`[Socket.IO] Room: ${room} | Event: ${event}`, data);
+  } else {
+    console.warn('[Socket.IO] Server not initialized yet');
+  }
+}
+
 export function notifyUserUpdate(userName, event, data) {
   const room = `user-${userName}`;
   if (global.io) {
