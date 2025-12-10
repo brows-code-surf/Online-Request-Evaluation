@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { SkeletonApprovalItem } from '../../_components/skeletonLoader';
+import { useAuth } from '../../../utils/authContext';
 
 export default function ContentLeftPanel({
     sidebarOpen,
@@ -22,6 +23,7 @@ export default function ContentLeftPanel({
     onMarkAsRead,
     isLoading = false
 }) {
+    const { darkMode } = useAuth();
     const [showNotch, setShowNotch] = useState(false);
     const [lastScrollY, setLastScrollY] = useState(0);
     const touchStartX = useRef(0);
@@ -72,13 +74,13 @@ export default function ContentLeftPanel({
 
             {/* Left Panel */}
             <div
-                className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden relative`} // relative for absolute child
+                className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 ${darkMode ? 'bg-gray-800' : 'bg-white'} border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col transition-all duration-300 overflow-hidden relative`} // relative for absolute child
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
 
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600">
+                <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} bg-gradient-to-r from-blue-500 to-blue-600`}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-bold text-white">{headerTitle}</h2>
                         <button
@@ -107,14 +109,14 @@ export default function ContentLeftPanel({
                 </div>
 
                 {/* Filters */}
-                <div className="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
+                <div className={`p-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} flex gap-2`}>
                     {/* User Accounts Filters */}
                     {filterType === 'accounts' && (
                         <>
                             <select
                                 value={filterStatus}
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="all">All Status</option>
                                 <option value="ACTIVE">Active</option>
@@ -124,7 +126,7 @@ export default function ContentLeftPanel({
                             <select
                                 value={sortBy}
                                 onChange={(e) => onSortByChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="date">Sort by Date</option>
                                 <option value="requester">Sort by Name</option>
@@ -138,7 +140,7 @@ export default function ContentLeftPanel({
                             <select
                                 value={filterStatus}
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="all">All Status</option>
                                 <option value="PENDING">Pending</option>
@@ -149,7 +151,7 @@ export default function ContentLeftPanel({
                             <select
                                 value={sortBy}
                                 onChange={(e) => onSortByChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="date">Sort by Date</option>
                                 <option value="requester">Sort by Name</option>
@@ -164,7 +166,7 @@ export default function ContentLeftPanel({
                             <select
                                 value={filterStatus || ''}
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="all">Select Status</option>
                                 <option value="RUSH">Rush</option>
@@ -174,7 +176,7 @@ export default function ContentLeftPanel({
                             <select
                                 value={sortBy}
                                 onChange={(e) => onSortByChange(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs text-black border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="date">Sort by Date</option>
                                 <option value="requester">Sort by Name</option>
@@ -193,11 +195,11 @@ export default function ContentLeftPanel({
                             <div
                                 key={approval.id}
                                 onClick={() => handleApprovalSelect(approval)}
-                                className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${selectedApprovalId === approval.id
-                                    ? 'bg-blue-50 border-r-2 border-r-blue-200'
+                                className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} cursor-pointer transition-all ${selectedApprovalId === approval.id
+                                    ? (darkMode ? 'bg-blue-900/50 border-r-2 border-r-blue-300' : 'bg-blue-50 border-r-2 border-r-blue-200')
                                     : enableReadStatus && approval.isRead === 'NOT READ'
-                                        ? 'bg-blue-50/30 border-l-4 border-l-blue-500 hover:bg-blue-100/50'
-                                        : 'hover:bg-gray-50'
+                                        ? (darkMode ? 'bg-blue-900/20 border-l-4 border-l-blue-400 hover:bg-blue-800/30' : 'bg-blue-50/30 border-l-4 border-l-blue-500 hover:bg-blue-100/50')
+                                        : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
                                     }`}
                             >
                                 <div className="flex items-start justify-between mb-2">
@@ -206,14 +208,14 @@ export default function ContentLeftPanel({
                                             {enableReadStatus && approval.isRead === 'NOT READ' && (
                                                 <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
                                             )}
-                                            <h3 className={`text-sm leading-tight ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold text-blue-700' : 'font-semibold text-gray-900'}`}>
+                                            <h3 className={`text-sm leading-tight ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold text-blue-400' : `font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}`}>
                                                 {approval.title}
                                             </h3>
                                         </div>
                                     </div>
                                     <div className="ml-2 flex items-center gap-1">
                                         {approval.isRush && (
-                                            <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
                                                 RUSH
                                             </span>
                                         )}
@@ -225,22 +227,22 @@ export default function ContentLeftPanel({
 
                                 <div className="flex item-start justify-between mb-2">
                                     {!userAccount && (
-                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
+                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
                                             {approval.requester}
                                         </p>
                                     )}
                                     {userAccount && approval.email && (
-                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.jobTitle}
                                         </p>
                                     )}
                                     {requestEvalApprovalPage && approval.id && (
-                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.id}
                                         </p>
                                     )}
                                     {approval.employeeID && (
-                                        <p className={`text-xs text-gray-600 mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.employeeID}
                                         </p>
                                     )}
@@ -249,18 +251,18 @@ export default function ContentLeftPanel({
                                 <div className="flex items-center justify-between">
                                     {userAccount && (
                                         <>
-                                            <span className="text-xs text-gray-500">
+                                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                                 {approval.dateRequested ? new Date(approval.dateRequested).toLocaleDateString() : 'N/A'}
                                             </span>
                                             {console.log(approval.dateRequested)}
                                         </>
                                     )}
                                     {!userAccount && (
-                                        <span className="text-xs text-gray-500">
+                                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                             {new Date(approval.requestDate).toLocaleDateString()}
                                         </span>
                                     )}
-                                    <span className="text-xs bg-blue-300 text-gray-700 px-2 py-1 font-semibold rounded">
+                                    <span className={`text-xs ${darkMode ? 'bg-blue-600 text-blue-100' : 'bg-blue-300 text-gray-700'} px-2 py-1 font-semibold rounded`}>
                                         {approval.department}
                                     </span>
                                 </div>

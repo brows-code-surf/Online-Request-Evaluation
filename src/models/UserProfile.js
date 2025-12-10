@@ -251,6 +251,88 @@ class UserProfile {
             throw error;
         }
     }
+
+    static async getUserSettings(employeeID) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                SELECT
+                    IS_DARK_MODE as isDarkMode,
+                    IS_EMAIL_NOTIFICATION as isEmailNotification
+                FROM [SYSTEM.USERACCOUNT.1]
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .query(query);
+
+            if (result.recordset.length === 0) {
+                return null;
+            }
+
+            const settings = result.recordset[0];
+            return {
+                isDarkMode: settings.isDarkMode || 0,
+                isEmailNotification: settings.isEmailNotification || 1
+            };
+        } catch (error) {
+            console.error('Error fetching user settings:', error);
+            throw error;
+        }
+    }
+
+    static async updateDarkMode(employeeID, isDarkMode) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                UPDATE [SYSTEM.USERACCOUNT.1]
+                SET
+                IS_DARK_MODE = @isDarkMode,
+                MODIFIEDDATE = GETDATE()
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .input('isDarkMode', isDarkMode ? 1 : 0)
+                .query(query);
+
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error updating dark mode:', error);
+            throw error;
+        }
+    }
+
+    static async updateEmailNotification(employeeID, isEmailNotification) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                UPDATE [SYSTEM.USERACCOUNT.1]
+                SET
+                IS_EMAIL_NOTIFICATION = @isEmailNotification,
+                MODIFIEDDATE = GETDATE()
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .input('isEmailNotification', isEmailNotification ? 1 : 0)
+                .query(query);
+
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error updating email notification:', error);
+            throw error;
+        }
+    }
 }
 
 export default UserProfile;

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklineData, percentChange }) => {
+export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklineData, percentChange, darkMode }) => {
   const isPositive = percentChange >= 0;
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
 
@@ -12,7 +12,7 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklin
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="group relative overflow-hidden rounded-2xl bg-white/50 backdrop-blur-sm border border-gray-200/50 p-3 sm:p-4 shadow-sm hover:shadow-lg transition-all duration-300"
+      className={`group relative overflow-hidden rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} backdrop-blur-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-3 sm:p-4 shadow-sm hover:shadow-lg transition-all duration-300`}
     >
       {/* Gradient overlay on hover */}
       <div className={`absolute inset-0 bg-gradient-to-br ${colorClass} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
@@ -20,12 +20,12 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklin
       <div className="relative">
         <div className="flex items-start justify-between mb-2 sm:mb-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-600 mb-1 truncate">{title}</p>
+            <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-1 truncate`}>{title}</p>
             <motion.p
               initial={{ scale: 0.5 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, delay: delay + 0.2 }}
-              className="text-xl sm:text-2xl font-bold text-gray-900"
+              className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
             >
               {value.toLocaleString()}
             </motion.p>

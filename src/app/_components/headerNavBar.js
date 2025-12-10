@@ -13,7 +13,7 @@ import useClickOutside from '../../utils/useClickOutsideClose';
 export default function HeaderNavBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout, user, loading, isAdmin } = useAuth();
+  const { logout, user, loading, isAdmin, darkMode } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -88,12 +88,15 @@ export default function HeaderNavBar() {
   const isUserAdmin = user && isAdmin();
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 border-b-[3px] border-blue-600">
+    <header className={`fixed top-0 left-0 right-0 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md z-50 border-b-[3px] border-blue-600`}>
       <div className="flex items-center justify-between px-6 py-1 max-w-full">
 
         <div className="flex items-center">
           <Link href="/request-evaluation" className="flex items-center gap-2">
-            <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="w-30 h-10" />
+            <img src={darkMode ? "/SANTEH-LOGO/SFC-GRAY.png" : "/SANTEH-LOGO/SFC.png"}
+              alt="SANTEH Logo"
+              className="w-30 h-10 object-contain"
+            />
           </Link>
         </div>
 
@@ -107,7 +110,7 @@ export default function HeaderNavBar() {
               setIsProfileOpen(false);
               setIsNotificationOpen(false);
             }}
-            className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
+            className={`md:hidden p-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600 transition rounded-full hover:${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -120,7 +123,7 @@ export default function HeaderNavBar() {
               href="/request-evaluation"
               className={`text-sm font-medium transition ${pathname === '/request-evaluation'
                 ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                : 'text-gray-600 hover:text-blue-600'
+                : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                 }`}
             >
               Request Evaluation
@@ -131,7 +134,7 @@ export default function HeaderNavBar() {
                   href="/dashboard"
                   className={`text-sm font-medium transition ${pathname === '/dashboard'
                     ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-600 hover:text-blue-600'
+                    : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                     }`}
                 >
                   Dashboard
@@ -140,7 +143,7 @@ export default function HeaderNavBar() {
                   href="/user-approval"
                   className={`text-sm font-medium transition ${pathname === '/user-approval'
                     ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-600 hover:text-blue-600'
+                    : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                     }`}
                 >
                   User Account Approvals
@@ -149,7 +152,7 @@ export default function HeaderNavBar() {
                   href="/user-accounts"
                   className={`text-sm font-medium transition ${pathname === '/user-accounts'
                     ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-600 hover:text-blue-600'
+                    : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                     }`}
                 >
                   User Accounts
@@ -171,7 +174,7 @@ export default function HeaderNavBar() {
                   setIsMenuOpen(false);
                 }
               }}
-              className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
+              className={`relative p-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600 transition rounded-full hover:${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
             >
               <svg
                 className="w-6 h-6"
@@ -201,7 +204,7 @@ export default function HeaderNavBar() {
           </div>
 
           {/* Divider */}
-          <div className="hidden sm:block w-px h-6 bg-gray-300"></div>
+          <div className={`hidden sm:block w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
 
           {/* User Profile Dropdown */}
           <div className="relative">
@@ -216,7 +219,7 @@ export default function HeaderNavBar() {
                   setIsMenuOpen(false);
                 }
               }}
-              className="flex items-center gap-2 p-2 text-gray-700 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
+              className={`flex items-center gap-2 p-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'} hover:text-blue-600 transition rounded-full hover:${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
             >
               <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300">
                 {getInitials()}
@@ -238,7 +241,7 @@ export default function HeaderNavBar() {
 
             {/* Profile Dropdown Menu */}
             {isProfileOpen && (
-              <div ref={profileRef} className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+              <div ref={profileRef} className={`absolute right-0 mt-2 w-56 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
                 {/* User Info Section */}
                 <div className="px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-600">
                   <p className="text-white font-semibold text-lg">{user?.empName || 'User'}</p>
@@ -249,7 +252,7 @@ export default function HeaderNavBar() {
                 <div className="py-2">
                   <Link
                     href="/user-profile"
-                    className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition text-sm font-medium"
+                    className={`block px-4 py-3 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'} hover:text-blue-600 transition text-sm font-medium`}
                   >
                     <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -259,7 +262,7 @@ export default function HeaderNavBar() {
 
                   <Link
                     href="/settings"
-                    className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition text-sm font-medium"
+                    className={`block px-4 py-3 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'} hover:text-blue-600 transition text-sm font-medium`}
                   >
                     <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -270,7 +273,7 @@ export default function HeaderNavBar() {
 
                   <Link
                     href="/help"
-                    className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition text-sm font-medium"
+                    className={`block px-4 py-3 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'} hover:text-blue-600 transition text-sm font-medium`}
                   >
                     <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -280,12 +283,12 @@ export default function HeaderNavBar() {
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-gray-200"></div>
+                <div className={`border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}></div>
 
                 {/* Logout */}
                 <button
                   onClick={handleLogout}
-                  className="w-full px-4 py-3 text-red-600 hover:bg-red-50 transition text-sm font-medium text-left"
+                  className={`w-full px-4 py-3 text-red-600 hover:${darkMode ? 'bg-red-900' : 'bg-red-50'} transition text-sm font-medium text-left`}
                 >
                   <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -299,12 +302,12 @@ export default function HeaderNavBar() {
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-b border-gray-200 px-6 py-3 space-y-3">
+        <div className={`md:hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-3 space-y-3`}>
           <Link
             href="/request-evaluation"
             className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/request-evaluation'
               ? 'bg-blue-100 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-100'
+              : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
               }`}
             onClick={() => setIsMenuOpen(false)}
           >
@@ -316,7 +319,7 @@ export default function HeaderNavBar() {
                 href="/dashboard"
                 className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/dashboard'
                   ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
                   }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -326,7 +329,7 @@ export default function HeaderNavBar() {
                 href="/user-approval"
                 className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-approval'
                   ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
                   }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -336,7 +339,7 @@ export default function HeaderNavBar() {
                 href="/user-accounts"
                 className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-accounts'
                   ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
                   }`}
                 onClick={() => setIsMenuOpen(false)}
               >

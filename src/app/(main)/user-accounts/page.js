@@ -19,7 +19,7 @@ import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
 
 function UserAccountsContent() {
     const router = useRouter();
-    const { user, loading, isAdmin, login } = useAuth();
+    const { user, loading, isAdmin, login, darkMode } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -471,7 +471,7 @@ function UserAccountsContent() {
 
     if (loading || pageLoading) {
         return (
-            <div className="flex flex-col h-screen bg-gray-50">
+            <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
                 <Loader loading={true} />
                 <HeaderNavBar />
             </div>
@@ -479,7 +479,7 @@ function UserAccountsContent() {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
             <HeaderNavBar />
 
             <div className="flex flex-1 overflow-hidden pt-14">
@@ -518,20 +518,20 @@ function UserAccountsContent() {
 
                                     {/* Success/Error Messages */}
                                     {successMessage && (
-                                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                                        <div className={`mb-6 p-4 ${darkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200'} border rounded-lg flex items-center gap-3`}>
                                             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <p className="text-green-800 font-medium">{successMessage}</p>
+                                            <p className={`font-medium ${darkMode ? 'text-green-300' : 'text-green-800'}`}>{successMessage}</p>
                                         </div>
                                     )}
 
                                     {errorMessage && (
-                                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                                        <div className={`mb-6 p-4 ${darkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'} border rounded-lg flex items-center gap-3`}>
                                             <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                             </svg>
-                                            <p className="text-red-800 font-medium">{errorMessage}</p>
+                                            <p className={`font-medium ${darkMode ? 'text-red-300' : 'text-red-800'}`}>{errorMessage}</p>
                                         </div>
                                     )}
 
@@ -600,7 +600,7 @@ function UserAccountsContent() {
                                     />
 
                                     {/* Set Active/Inactive Buttons */}
-                                    <div className="mt-6 pt-6 border-t border-gray-200 flex gap-3">
+                                    <div className={`mt-6 pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'} flex gap-3`}>
                                         {selectedUser.status === 'INACTIVE' && (
                                             <button
                                                 onClick={handleSetActive}
@@ -655,7 +655,7 @@ function UserAccountsContent() {
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">
-                            <div className="text-center text-gray-500">
+                            <div className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>

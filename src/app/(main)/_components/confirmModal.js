@@ -1,4 +1,5 @@
 'use client';
+import { useAuth } from '../../../utils/authContext';
 
 export default function ConfirmModal({
     isOpen,
@@ -10,6 +11,7 @@ export default function ConfirmModal({
     isLoading,
     confirmButtonColor = 'green'
 }) {
+    const { darkMode } = useAuth();
     if (!isOpen) return null;
 
     const colorClasses = {
@@ -19,11 +21,11 @@ export default function ConfirmModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
+        <div className={`fixed inset-0 ${darkMode ? 'bg-gray-900/50' : 'bg-gray-600/30'} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+                <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{title}</h2>
 
-                <p className="text-sm text-gray-600 mb-6">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-6`}>
                     {message}
                 </p>
 
@@ -52,7 +54,7 @@ export default function ConfirmModal({
                     <button
                         onClick={onCancel}
                         disabled={isLoading}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                        className={`flex-1 px-4 py-2 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${darkMode ? 'text-gray-200' : 'text-gray-700'} font-medium rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition disabled:opacity-50`}
                     >
                         Cancel
                     </button>

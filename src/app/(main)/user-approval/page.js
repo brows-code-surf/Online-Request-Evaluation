@@ -17,7 +17,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 function RequestEvaluationContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, isAdmin, loading } = useAuth();
+    const { user, isAdmin, loading, darkMode } = useAuth();
     const [selectedApproval, setSelectedApproval] = useState(null);
     const [approvals, setApprovals] = useState([]);
     const [pageLoading, setPageLoading] = useState(true);
@@ -218,7 +218,7 @@ function RequestEvaluationContent() {
 
     if (loading || pageLoading) {
         return (
-            <div className="flex flex-col h-screen bg-gray-50">
+            <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
                 <Loader loading={true} />
                 <HeaderNavBar />
             </div>
@@ -227,7 +227,7 @@ function RequestEvaluationContent() {
 
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
             <HeaderNavBar />
 
             <div className="flex flex-1 overflow-hidden pt-14">
@@ -266,14 +266,14 @@ function RequestEvaluationContent() {
                                     <div className="mb-6">
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex-1">
-                                                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                                                <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
                                                     {selectedApproval.title}
                                                 </h1>
                                                 <div className="flex items-center gap-3">
                                                     <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(selectedApproval.status)}`}>
                                                         {selectedApproval.status.charAt(0).toUpperCase() + selectedApproval.status.slice(1)}
                                                     </span>
-                                                    <span className="text-sm text-gray-600">
+                                                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                                         Requested on {new Date(selectedApproval.requestDate).toLocaleDateString('en-US', {
                                                             year: 'numeric',
                                                             month: 'long',
@@ -286,51 +286,51 @@ function RequestEvaluationContent() {
                                     </div>
 
                                     {/* Requester Info */}
-                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-6 border border-blue-200">
-                                        <h3 className="font-semibold text-gray-900 mb-3">Requester Information</h3>
+                                    <div className={`${darkMode ? 'bg-gradient-to-r from-blue-900 to-indigo-900 border-blue-700' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg mb-6 border`}>
+                                        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Requester Information</h3>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Name</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.requester}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Name</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.requester}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Employee ID</p>
-                                                <p className="text-sm text-gray-900 font-bold">{selectedApproval.employeeID}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Employee ID</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'} font-bold`}>{selectedApproval.employeeID}</p>
                                             </div>
                                             <div className="w-full sm:w-1/2 break-words whitespace-normal">
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Email</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Email</p>
                                                 <p className="text-sm text-blue-600 break-words">{selectedApproval.email}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Location</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.location}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Location</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.location}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Job Title</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.jobTitle}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Job Title</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.jobTitle}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Department</p>
-                                                <p className="text-sm text-gray-900">{selectedApproval.department}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Department</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.department}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium mb-1">Request Date</p>
-                                                <p className="text-sm text-gray-900">{new Date(selectedApproval.requestDate).toLocaleDateString()}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Request Date</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{new Date(selectedApproval.requestDate).toLocaleDateString()}</p>
                                             </div>
                                             {selectedApproval.dateProcessed && (
                                                 <>
                                                     <div>
-                                                        <p className="text-xs text-gray-600 font-medium mb-1">Processed Date</p>
-                                                        <p className="text-sm text-gray-900">{new Date(selectedApproval.dateProcessed).toLocaleDateString()}</p>
+                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Processed Date</p>
+                                                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{new Date(selectedApproval.dateProcessed).toLocaleDateString()}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-gray-600 font-medium mb-1">Processed By</p>
-                                                        <p className="text-sm text-gray-900">{selectedApproval.processedBy}</p>
+                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Processed By</p>
+                                                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.processedBy}</p>
                                                     </div>
                                                     {selectedApproval.remarks && (
                                                         <div>
-                                                            <p className="text-xs text-gray-600 font-medium mb-1">Remarks</p>
-                                                            <p className="text-sm text-gray-900">{selectedApproval.remarks}</p>
+                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Remarks</p>
+                                                            <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.remarks}</p>
                                                         </div>
                                                     )}
                                                 </>
@@ -340,8 +340,8 @@ function RequestEvaluationContent() {
 
                                     {/* Description */}
                                     <div className="mb-6">
-                                        <h3 className="font-semibold text-gray-900 mb-3">Description</h3>
-                                        <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Description</h3>
+                                        <p className={`leading-relaxed ${darkMode ? 'text-gray-300 bg-gray-700 border-gray-600' : 'text-gray-700 bg-gray-50 border-gray-200'} p-4 rounded-lg border`}>
                                             {selectedApproval.description}
                                         </p>
                                     </div>
@@ -349,26 +349,26 @@ function RequestEvaluationContent() {
                                     {/* Attachments */}
                                     {selectedApproval.attachments.length > 0 && (
                                         <div className="mb-6">
-                                            <h3 className="font-semibold text-gray-900 mb-3">Attachments</h3>
+                                            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Attachments</h3>
                                             <div className="space-y-2">
                                                 {selectedApproval.attachments.map(attachment => (
                                                     <div
                                                         key={attachment.id}
-                                                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                                                        className={`flex items-center gap-3 p-3 ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'} rounded-lg border transition cursor-pointer`}
                                                     >
                                                         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                         </svg>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-gray-900 truncate">
+                                                            <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'} truncate`}>
                                                                 {attachment.name}
                                                             </p>
-                                                            <p className="text-xs text-gray-500">
+                                                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                                                 {attachment.size}
                                                             </p>
                                                         </div>
-                                                        <button className="p-1 hover:bg-gray-200 rounded transition">
-                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <button className={`p-1 ${darkMode ? 'hover:bg-gray-500' : 'hover:bg-gray-200'} rounded transition`}>
+                                                            <svg className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                                             </svg>
                                                         </button>
@@ -380,7 +380,7 @@ function RequestEvaluationContent() {
 
                                     {/* Actions */}
                                     {selectedApproval.status === 'PENDING' && (
-                                        <div className="flex gap-3 pt-6 border-t border-gray-200">
+                                        <div className={`flex gap-3 pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                                             <button
                                                 onClick={() => handleApproveClick(selectedApproval.id)}
                                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
@@ -403,8 +403,8 @@ function RequestEvaluationContent() {
                                     )}
 
                                     {selectedApproval.status !== 'PENDING' && (
-                                        <div className="pt-6 border-t border-gray-200">
-                                            <p className="text-sm text-gray-600 text-center">
+                                        <div className={`pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} text-center`}>
                                                 This request has been {selectedApproval.status}.
                                             </p>
                                         </div>
@@ -414,7 +414,7 @@ function RequestEvaluationContent() {
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">
-                            <div className="text-center text-gray-500">
+                            <div className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>

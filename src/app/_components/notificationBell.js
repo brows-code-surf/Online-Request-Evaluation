@@ -7,7 +7,7 @@ import { useSocketMultiple } from '../../hooks/useSocketMultiple';
 import React, { forwardRef } from "react";
 
 export const NotificationBell = forwardRef((props, ref) => {
-  const { user } = useAuth();
+  const { user, darkMode } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,23 +96,23 @@ export const NotificationBell = forwardRef((props, ref) => {
   return (
     <div
       ref={ref}
-      className="
-                absolute 
-                right-0 
+      className={`
+                absolute
+                right-0
                 mt-2
-                w-80 
+                w-80
                 max-w-[90vw]
-                bg-white 
-                rounded-lg 
-                shadow-xl 
-                border 
-                border-gray-200 
+                ${darkMode ? 'bg-gray-800' : 'bg-white'}
+                rounded-lg
+                shadow-xl
+                border
+                ${darkMode ? 'border-gray-700' : 'border-gray-200'}
                 z-[9999]
-              "
+              `}
     >
 
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+      <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Notifications</h3>
       </div>
 
       <div className="max-h-80 md:max-h-96 overflow-y-auto">
@@ -120,11 +120,11 @@ export const NotificationBell = forwardRef((props, ref) => {
           <div className="p-4 space-y-3">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="flex items-start gap-3 animate-pulse">
-                <div className="w-2 h-2 rounded-full bg-gray-300 mt-2"></div>
+                <div className={`w-2 h-2 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} mt-2`}></div>
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-300 rounded w-full"></div>
-                  <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                  <div className={`h-4 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded w-3/4`}></div>
+                  <div className={`h-3 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded w-full`}></div>
+                  <div className={`h-3 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} rounded w-1/2`}></div>
                 </div>
               </div>
             ))}
@@ -134,25 +134,25 @@ export const NotificationBell = forwardRef((props, ref) => {
             <div
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
-              className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition ${!notification.isRead ? "bg-blue-50" : ""
+              className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} cursor-pointer transition ${!notification.isRead ? (darkMode ? "bg-blue-900/50" : "bg-blue-50") : ""
                 }`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`w-2 h-2 rounded-full mt-2 ${!notification.isRead ? "bg-blue-600" : "bg-gray-300"
+                  className={`w-2 h-2 rounded-full mt-2 ${!notification.isRead ? "bg-blue-600" : (darkMode ? "bg-gray-600" : "bg-gray-300")
                     }`}
                 ></div>
 
                 <div className="flex-1">
-                  <p className="text-sm text-gray-800 font-medium">
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'} font-medium`}>
                     {notification.title}
                   </p>
 
-                  <p className="text-sm text-gray-700 mt-1">
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-1`}>
                     {notification.description}
                   </p>
 
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                     {timeAgo(new Date(notification.dateCreated))}
                     {notification.createdBy && ` • by ${notification.createdBy}`}
                   </p>
@@ -161,13 +161,13 @@ export const NotificationBell = forwardRef((props, ref) => {
             </div>
           ))
         ) : (
-          <div className="px-4 py-8 text-center text-gray-500">
+          <div className={`px-4 py-8 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             No notifications
           </div>
         )}
       </div>
 
-      <div className="p-3 border-t border-gray-200 text-center"></div>
+      <div className={`p-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} text-center`}></div>
     </div>
   );
 });

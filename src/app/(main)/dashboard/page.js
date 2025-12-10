@@ -12,6 +12,7 @@ import { SkeletonDashboard } from '@/app/_components/skeletonLoader.js';
 import HeaderNavBar from '@/app/_components/headerNavBar.js';
 import AdminOnly from '@/utils/adminOnly';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
+import { useAuth } from '@/utils/authContext';
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -39,6 +40,7 @@ function simulateLiveUpdate(currentData) {
 }
 
 export default function DashboardClient() {
+    const { darkMode } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedDateRange, setSelectedDateRange] = useState(30); // Default to 30 days
@@ -111,7 +113,7 @@ export default function DashboardClient() {
     if (loading || !data) {
         return (
             <AdminOnly>
-                <div className="min-h-screen bg-gray-50 mt-15">
+                <div className={`min-h-screen mt-15 ${darkMode ? 'bg-gray-900 dark' : 'bg-white'}`}>
                     <HeaderNavBar />
                     <SkeletonDashboard />
                 </div>
@@ -166,13 +168,13 @@ export default function DashboardClient() {
             const data = payload[0].payload;
             const percentage = ((data.count / totalRequests) * 100).toFixed(1);
             return (
-                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                    <p className="font-semibold text-gray-900">{data.status}</p>
-                    <p className="text-sm text-gray-600">
-                        Count: <span className="font-medium">{data.count}</span>
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-lg`}>
+                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.status}</p>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Count: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.count}</span>
                     </p>
-                    <p className="text-sm text-gray-600">
-                        Percentage: <span className="font-medium">{percentage}%</span>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Percentage: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{percentage}%</span>
                     </p>
                 </div>
             );
@@ -206,7 +208,7 @@ export default function DashboardClient() {
 
     return (
         <AdminOnly>
-            <div className="min-h-screen bg-gray-50 mt-15">
+            <div className={`min-h-screen mt-15 ${darkMode ? 'bg-gray-900 dark' : 'bg-white'}`}>
                 <HeaderNavBar />
                 {/* Main Content - Scrollable */}
                 <div className="overflow-y-auto">
@@ -221,6 +223,7 @@ export default function DashboardClient() {
                                 delay={0.1}
                                 sparklineData={data.stats.sparklines.totalUsers}
                                 percentChange={data.stats.percentChanges.totalUsers}
+                                darkMode={darkMode}
                             />
                             <StatCard
                                 title="Active Users"
@@ -230,6 +233,7 @@ export default function DashboardClient() {
                                 delay={0.2}
                                 sparklineData={data.stats.sparklines.activeUsers}
                                 percentChange={data.stats.percentChanges.activeUsers}
+                                darkMode={darkMode}
                             />
                             <StatCard
                                 title="Pending Request Evaluations"
@@ -239,6 +243,7 @@ export default function DashboardClient() {
                                 delay={0.3}
                                 sparklineData={data.stats.sparklines.pendingRequests}
                                 percentChange={data.stats.percentChanges.pendingRequests}
+                                darkMode={darkMode}
                             />
                             <StatCard
                                 title="Requests in the Last 24 Hours"
@@ -248,6 +253,7 @@ export default function DashboardClient() {
                                 delay={0.4}
                                 sparklineData={data.stats.sparklines.requestsLast24h}
                                 percentChange={data.stats.percentChanges.requestsLast24h}
+                                darkMode={darkMode}
                             />
                         </div>
 
@@ -257,7 +263,7 @@ export default function DashboardClient() {
                             <div className="xl:col-span-2 space-y-6 xl:space-y-0">
                                 {/* Request Evaluation Status Breakdown - Donut Chart */}
                                 <div className="xl:hidden">
-                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5}>
+                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5} darkMode={darkMode}>
                                         <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
                                             <PieChart>
                                                 <Pie
@@ -292,11 +298,11 @@ export default function DashboardClient() {
                                 </div>
 
                                 {/* Date Range Selector */}
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm mb-6`}>
                                     <div className="flex flex-wrap items-center gap-4">
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4 text-gray-500" />
-                                            <span className="text-sm font-medium text-gray-700">Time Range:</span>
+                                            <Calendar className={`h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                                            <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-700'}`}>Time Range:</span>
                                         </div>
 
                                         {/* Preset buttons */}
@@ -311,7 +317,7 @@ export default function DashboardClient() {
                                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                         !useCustomRange && selectedDateRange === days
                                                             ? 'bg-blue-600 text-white shadow-sm'
-                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                            : `${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`
                                                     }`}
                                                 >
                                                     {days === 7 ? '7 Days' : days === 14 ? '14 Days' : days === 30 ? '30 Days' : days === 60 ? '60 Days' : '90 Days'}
@@ -324,7 +330,7 @@ export default function DashboardClient() {
                                                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                     useCustomRange
                                                         ? 'bg-blue-600 text-white shadow-sm'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        : `${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`
                                                 }`}
                                             >
                                                 Custom
@@ -334,19 +340,19 @@ export default function DashboardClient() {
                                         {/* Custom Date Inputs */}
                                         {useCustomRange && (
                                             <div className="flex items-center gap-2 ml-4">
-                                                <label className="text-xs font-medium text-gray-600">From:</label>
+                                                <label className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-600'}`}>From:</label>
                                                 <input
                                                     type="date"
                                                     value={customStartDate}
                                                     onChange={(e) => setCustomStartDate(e.target.value)}
-                                                    className="px-2 py-1 text-black text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className={`px-2 py-1 ${darkMode ? 'text-white' : 'text-black'} text-xs border ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 />
-                                                <label className="text-xs font-medium text-gray-600">To:</label>
+                                                <label className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-600'}`}>To:</label>
                                                 <input
                                                     type="date"
                                                     value={customEndDate}
                                                     onChange={(e) => setCustomEndDate(e.target.value)}
-                                                    className="px-2 py-1 text-black text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className={`px-2 py-1 ${darkMode ? 'text-white' : 'text-black'} text-xs border ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                                                 />
                                             </div>
                                         )}
@@ -354,7 +360,7 @@ export default function DashboardClient() {
                                 </div>
 
                                 {/* 30-Day Requests Trend - Line Chart */}
-                                <ChartCard title={getChartTitle()} delay={0.6}>
+                                <ChartCard title={getChartTitle()} delay={0.6} darkMode={darkMode}>
                                     <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
                                         <LineChart data={lineChartData}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -391,7 +397,7 @@ export default function DashboardClient() {
 
                                 {/* Pie chart for larger screens - side by side with line chart */}
                                 <div className="hidden xl:block">
-                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5}>
+                                    <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5} darkMode={darkMode}>
                                         <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
                                             <PieChart>
                                                 <Pie
@@ -428,8 +434,8 @@ export default function DashboardClient() {
 
                             {/* Recently Logged In Users and Activity Logs Panel */}
                             <div className="xl:col-span-1 space-y-6">
-                                <RecentLogins users={data.recentLogins} delay={0.7} />
-                                <RecentActivityLogs logs={data.recentActivityLogs} delay={0.8} />
+                                <RecentLogins users={data.recentLogins} delay={0.7} darkMode={darkMode} />
+                                <RecentActivityLogs logs={data.recentActivityLogs} delay={0.8} darkMode={darkMode} />
                             </div>
                         </div>
                     </div>
