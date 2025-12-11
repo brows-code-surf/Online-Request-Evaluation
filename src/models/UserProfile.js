@@ -308,31 +308,6 @@ class UserProfile {
             throw error;
         }
     }
-
-    static async updateEmailNotification(employeeID, isEmailNotification) {
-        let connection;
-        try {
-            connection = await connectToDatabase();
-
-            const query = `
-                UPDATE [SYSTEM.USERACCOUNT.1]
-                SET
-                IS_EMAIL_NOTIFICATION = @isEmailNotification,
-                MODIFIEDDATE = GETDATE()
-                WHERE EMPLOYEEIDNO = @employeeID
-            `;
-
-            const result = await connection.request()
-                .input('employeeID', employeeID)
-                .input('isEmailNotification', isEmailNotification ? 1 : 0)
-                .query(query);
-
-            return result.rowsAffected[0] > 0;
-        } catch (error) {
-            console.error('Error updating email notification:', error);
-            throw error;
-        }
-    }
 }
 
 export default UserProfile;

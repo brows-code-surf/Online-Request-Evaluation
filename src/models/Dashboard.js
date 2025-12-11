@@ -3,7 +3,7 @@
 import 'server-only';
 import connectToDatabase from '@/lib/db.js';
 import RequestEvaluation from '@/models/RequestEvaluation.js';
- class Dashboard {
+class Dashboard {
     // Server action to get request evaluation status counts
     async getRequestEvaluationStats() {
         try {

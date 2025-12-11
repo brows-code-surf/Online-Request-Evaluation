@@ -9,6 +9,7 @@ import { NotificationBell } from './notificationBell';
 import { getUnreadNotificationCount } from '../_actions/notifications';
 import { useSocketMultiple } from '../../hooks/useSocketMultiple';
 import useClickOutside from '../../utils/useClickOutsideClose';
+import HelpSupportModal from '../(main)/_components/helpSupportModal';
 
 export default function HeaderNavBar() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function HeaderNavBar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const notifRef = useRef(null);
@@ -271,15 +273,18 @@ export default function HeaderNavBar() {
                     Settings
                   </Link>
 
-                  <Link
-                    href="/help"
-                    className={`block px-4 py-3 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'} hover:text-blue-600 transition text-sm font-medium`}
+                  <button
+                    onClick={() => {
+                      setIsHelpModalOpen(true);
+                      setIsProfileOpen(false);
+                    }}
+                    className={`w-full text-left block px-4 py-3 ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'} hover:text-blue-600 transition text-sm font-medium`}
                   >
                     <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Help & Support
-                  </Link>
+                  </button>
                 </div>
 
                 {/* Divider */}
@@ -349,6 +354,12 @@ export default function HeaderNavBar() {
           )}
         </div>
       )}
+
+      {/* Help & Support Modal */}
+      <HelpSupportModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
     </header>
   );
 }

@@ -25,15 +25,23 @@ export default function UserPassword({
     const passwordValidation = validatePassword(passwordData.newPassword);
 
     return (
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md overflow-hidden`}>
+        <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl shadow-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} overflow-hidden backdrop-blur-sm`}>
 
             {/* Card Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4">
-                <h2 className="text-xl font-bold text-white">Security Settings</h2>
+            <div className="bg-gradient-to-r from-orange-600 via-red-600 to-orange-700 px-8 py-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white">Security Settings</h2>
+                </div>
+                <p className="text-orange-100 mt-2">Manage your password and security preferences</p>
             </div>
 
             {/* Card Content */}
-            <div className="px-6 py-6">
+            <div className="px-8 py-8">
                 {isChangingPassword ? (
                     <div className="space-y-4">
 

@@ -8,7 +8,8 @@ export class Notification {
     this.recipient = recipient;
     this.url = url;
     this.createdBy = null;
-    this.dateCreated = new Date();
+    const now = new Date();
+    this.dateCreated = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
     this.isRead = false;
     this.dateRead = null;
     this.rowId = null;
@@ -63,7 +64,7 @@ export class Notification {
         .input('recipient', this.recipient)
         .input('createdBy', this.createdBy)
         .input('dateCreated', this.dateCreated)
-        .input('url', this.url) 
+        .input('url', this.url)
         .input('isRead', this.isRead ? 1 : 0)
         .input('dateRead', this.dateRead);
 
@@ -75,10 +76,10 @@ export class Notification {
         const identityResult = await connection.request().query(identityQuery);
 
         if (identityResult.recordset && identityResult.recordset.length > 0) {
-            this.rowId = identityResult.recordset[0].rowId;
+          this.rowId = identityResult.recordset[0].rowId;
         } else {
-            console.warn('Could not retrieve SCOPE_IDENTITY() after notification insert');
-            this.rowId = null;
+          console.warn('Could not retrieve SCOPE_IDENTITY() after notification insert');
+          this.rowId = null;
         }
 
         console.log(`Notification saved successfully with ID: ${this.rowId}`);
@@ -171,7 +172,8 @@ export class Notification {
 
       if (result.rowsAffected[0] > 0) {
         this.isRead = true;
-        this.dateRead = new Date();
+        const now = new Date();
+        this.dateRead = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
         return {
           success: true,
           message: "Notification marked as read"
@@ -207,7 +209,9 @@ export class Notification {
         const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
         notification.rowId = row.ROWID;
         notification.createdBy = row.CREATEDBY;
-        notification.dateCreated = row.DATECREATED;
+        notification.dateCreated = row.DATECREATED
+          ? new Date(row.DATECREATED).toISOString()
+          : null;
         notification.isRead = row.IS_READ === 1;
         notification.dateRead = row.DATEREAD;
         return notification;
@@ -266,7 +270,9 @@ export class Notification {
       const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
       notification.rowId = row.ROWID;
       notification.createdBy = row.CREATEDBY;
-      notification.dateCreated = row.DATECREATED;
+      notification.dateCreated = row.DATECREATED
+        ? new Date(row.DATECREATED).toISOString()
+        : null;
       notification.isRead = row.IS_READ === 1;
       notification.dateRead = row.DATEREAD;
 
