@@ -3,27 +3,27 @@
 import 'server-only';
 import Dashboard from '@/models/Dashboard.js';
 
-export async function getDashboardStats(user = null, isAdmin = false) {
+export async function getDashboardStats(user = null, isAdmin = false, days = 30) {
     try {
         const dashboard = new Dashboard();
 
-        let stats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs;
+        let stats, requestEvaluations, requestTrend, recentLogins, recentActivityLogs;
 
         if (isAdmin) {
             // Admin: fetch system-wide data
-            [stats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs] = await Promise.all([
+            [stats, requestEvaluations, requestTrend, recentLogins, recentActivityLogs] = await Promise.all([
                 dashboard.getUserStats(),
                 dashboard.getRequestEvaluationStats(),
-                dashboard.getThirtyDayTrend(),
+                dashboard.getThirtyDayTrend(days),
                 dashboard.getRecentLogins(),
                 dashboard.getRecentActivityLogs()
             ]);
         } else if (user) {
             // Non-admin: fetch user-specific data
-            [stats, requestEvaluations, thirtyDayTrend, recentActivityLogs] = await Promise.all([
+            [stats, requestEvaluations, requestTrend, recentActivityLogs] = await Promise.all([
                 dashboard.getUserRequestStats(user.empName),
                 dashboard.getUserRequestEvaluationStats(user.empName),
-                dashboard.getUserThirtyDayTrend(user.empName),
+                dashboard.getUserThirtyDayTrend(user.empName, days),
                 dashboard.getUserRecentActivityLogs(user.empName)
             ]);
             recentLogins = []; // Non-admins don't see recent logins
@@ -85,7 +85,7 @@ export async function getDashboardStats(user = null, isAdmin = false) {
         return {
             stats: transformedStats,
             requestEvaluations,
-            thirtyDayTrend,
+            thirtyDayTrend: requestTrend,
             recentLogins,
             recentActivityLogs
         };

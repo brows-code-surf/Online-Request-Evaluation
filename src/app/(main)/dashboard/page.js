@@ -52,7 +52,7 @@ export default function DashboardClient() {
     useEffect(() => {
         async function fetchStats() {
             try {
-                const statsData = await getDashboardStats(user, isUserAdmin);
+                const statsData = await getDashboardStats(user, isUserAdmin, selectedDateRange);
                 setData(statsData);
             } catch (error) {
                 console.error('Error fetching stats:', error);
@@ -73,7 +73,7 @@ export default function DashboardClient() {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [user, isUserAdmin]);
+    }, [user, isUserAdmin, selectedDateRange]);
 
     // Socket listeners for real-time updates
     useSocketMultiple("dashboard-broadcast", {
@@ -103,7 +103,7 @@ export default function DashboardClient() {
             console.log("Stats updated:", data);
             // Refetch dashboard stats when requests are approved/rejected
             try {
-                const updatedStats = await getDashboardStats(user, isUserAdmin);
+                const updatedStats = await getDashboardStats(user, isUserAdmin, selectedDateRange);
                 setData(updatedStats);
             } catch (error) {
                 console.error('Error refetching stats after update:', error);

@@ -555,8 +555,8 @@ class RequestEvaluation {
         }
     }
 
-    // Get 30-day requests trend
-    static async getThirtyDayRequestsTrend() {
+    // Get requests trend for specified number of days
+    static async getThirtyDayRequestsTrend(days = 30) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -573,16 +573,16 @@ class RequestEvaluation {
                     CAST(DATEREQUESTED AS DATE) as requestDate,
                     COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE DATEREQUESTED >= DATEADD(DAY, -30, GETDATE())
+                WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
                 GROUP BY CAST(DATEREQUESTED AS DATE)
                 ORDER BY CAST(DATEREQUESTED AS DATE)
             `;
 
             const result = await connection.request().query(query);
 
-            // Create array for last 30 days with zero-fill for missing dates
-            const thirtyDays = [];
-            for (let i = 29; i >= 0; i--) {
+            // Create array for last N days with zero-fill for missing dates
+            const trendDays = [];
+            for (let i = days - 1; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 const dateStr = date.toISOString().split('T')[0];
@@ -591,18 +591,18 @@ class RequestEvaluation {
                     const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
                     return recordDate === dateStr;
                 });
-                thirtyDays.push({
+                trendDays.push({
                     date: dateStr,
                     requests: existing ? existing.requestCount : 0
                 });
             }
 
-            return thirtyDays;
+            return trendDays;
         } catch (error) {
-            console.error('Error fetching 30-day requests trend:', error);
-            // Return array with zeros for all 30 days
-            return Array.from({ length: 30 }, (_, i) => ({
-                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            console.error(`Error fetching ${days}-day requests trend:`, error);
+            // Return array with zeros for all days
+            return Array.from({ length: days }, (_, i) => ({
+                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 requests: 0
             }));
         }
@@ -665,8 +665,8 @@ class RequestEvaluation {
         }
     }
 
-    // Get user's 30-day requests trend (for requests they created or are assigned to)
-    static async getUserThirtyDayRequestsTrend(createdBy) {
+    // Get user's requests trend for specified number of days (for requests they created or are assigned to)
+    static async getUserThirtyDayRequestsTrend(createdBy, days = 30) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -683,7 +683,7 @@ class RequestEvaluation {
                     CAST(DATEREQUESTED AS DATE) as requestDate,
                     COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE DATEREQUESTED >= DATEADD(DAY, -30, GETDATE())
+                WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
                 AND (CREATEDBY = @createdBy OR REVIEWER = @createdBy OR APPROVER = @createdBy OR ADDRESSEDTO = @createdBy)
                 GROUP BY CAST(DATEREQUESTED AS DATE)
                 ORDER BY CAST(DATEREQUESTED AS DATE)
@@ -693,9 +693,9 @@ class RequestEvaluation {
                 .input('createdBy', createdBy)
                 .query(query);
 
-            // Create array for last 30 days with zero-fill for missing dates
-            const thirtyDays = [];
-            for (let i = 29; i >= 0; i--) {
+            // Create array for last N days with zero-fill for missing dates
+            const trendDays = [];
+            for (let i = days - 1; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 const dateStr = date.toISOString().split('T')[0];
@@ -704,18 +704,18 @@ class RequestEvaluation {
                     const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
                     return recordDate === dateStr;
                 });
-                thirtyDays.push({
+                trendDays.push({
                     date: dateStr,
                     requests: existing ? existing.requestCount : 0
                 });
             }
 
-            return thirtyDays;
+            return trendDays;
         } catch (error) {
-            console.error('Error fetching user 30-day requests trend:', error);
-            // Return array with zeros for all 30 days
-            return Array.from({ length: 30 }, (_, i) => ({
-                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            console.error(`Error fetching user ${days}-day requests trend:`, error);
+            // Return array with zeros for all days
+            return Array.from({ length: days }, (_, i) => ({
+                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 requests: 0
             }));
         }

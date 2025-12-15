@@ -131,6 +131,15 @@ export default function HeaderNavBar() {
               Dashboard
             </Link>
             <Link
+              href="/purchase-request"
+              className={`text-sm font-medium transition ${pathname === '/purchase-request'
+                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                }`}
+            >
+              Purchase Request
+            </Link>
+            <Link
               href="/request-evaluation"
               className={`text-sm font-medium transition ${pathname === '/request-evaluation'
                 ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
@@ -306,6 +315,7 @@ export default function HeaderNavBar() {
         </div>
       </div>
 
+      {/*Mobile View Humburger*/}
       {isMenuOpen && (
         <div className={`md:hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-3 space-y-3`}>
           <Link
@@ -317,6 +327,16 @@ export default function HeaderNavBar() {
             onClick={() => setIsMenuOpen(false)}
           >
             Dashboard
+          </Link>
+          <Link
+            href="/purchase-request"
+            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/purchase-request'
+              ? 'bg-blue-100 text-blue-600'
+              : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+              }`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Purchase Request
           </Link>
           <Link
             href="/request-evaluation"

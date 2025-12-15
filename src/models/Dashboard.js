@@ -14,14 +14,14 @@ class Dashboard {
         }
     }
 
-    // Server action to get 30-day request trend
-    async getThirtyDayTrend() {
+    // Server action to get request trend for specified number of days
+    async getThirtyDayTrend(days = 30) {
         try {
-            return await RequestEvaluation.getThirtyDayRequestsTrend();
+            return await RequestEvaluation.getThirtyDayRequestsTrend(days);
         } catch (error) {
-            console.error('Error fetching 30-day trend:', error);
-            return Array.from({ length: 30 }, (_, i) => ({
-                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            console.error(`Error fetching ${days}-day trend:`, error);
+            return Array.from({ length: days }, (_, i) => ({
+                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 requests: 0
             }));
         }
@@ -224,14 +224,14 @@ class Dashboard {
         }
     }
 
-    // Get user's 30-day request trend
-    async getUserThirtyDayTrend(createdBy) {
+    // Get user's request trend for specified number of days
+    async getUserThirtyDayTrend(createdBy, days = 30) {
         try {
-            return await RequestEvaluation.getUserThirtyDayRequestsTrend(createdBy);
+            return await RequestEvaluation.getUserThirtyDayRequestsTrend(createdBy, days);
         } catch (error) {
-            console.error('Error fetching user 30-day trend:', error);
-            return Array.from({ length: 30 }, (_, i) => ({
-                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            console.error(`Error fetching user ${days}-day trend:`, error);
+            return Array.from({ length: days }, (_, i) => ({
+                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 requests: 0
             }));
         }

@@ -72,9 +72,22 @@ export default function ContentLeftPanel({
     return (
         <>
 
+            {/* Notch for opening on desktop */}
+            {!sidebarOpen && (
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('openSidebar'))}
+                    className="hidden md:flex fixed top-1/2 left-0 transform -translate-y-1/2 w-5 h-20 bg-blue-600 hover:bg-blue-700 text-white items-center justify-center rounded-r-2xl shadow-lg transition-all duration-300 z-50"
+                    title="Click to open panel"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            )}
+
             {/* Left Panel */}
             <div
-                className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0'} md:w-96 ${darkMode ? 'bg-gray-800' : 'bg-white'} border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col transition-all duration-300 overflow-hidden relative`} // relative for absolute child
+                className={`${sidebarOpen ? 'w-full md:w-96' : 'w-0 md:w-0'} ${darkMode ? 'bg-gray-800' : 'bg-white'} border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col transition-all duration-300 overflow-hidden relative`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
@@ -85,10 +98,11 @@ export default function ContentLeftPanel({
                         <h2 className="text-lg font-bold text-white">{headerTitle}</h2>
                         <button
                             onClick={onSidebarClose}
-                            className="md:hidden text-white hover:bg-blue-700 p-1 rounded transition-all"
+                            className="text-white hover:bg-blue-700 p-1 rounded transition-all"
+                            title="Close Panel"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
@@ -169,6 +183,34 @@ export default function ContentLeftPanel({
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="all">Select Status</option>
+                                <option value="RUSH">Rush</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+
+                            <select
+                                value={sortBy}
+                                onChange={(e) => onSortByChange(e.target.value)}
+                                className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                            >
+                                <option value="date">Sort by Date</option>
+                                <option value="requester">Sort by Name</option>
+                                <option value="status">Sort by Status</option>
+                            </select>
+                        </>
+                    )}
+
+                    {filterType === 'purchase-request' && (
+                        <>
+                            <select
+                                value={filterStatus || ''}
+                                onChange={(e) => onFilterStatusChange(e.target.value)}
+                                className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                            >
+                                <option value="all">Select Status</option>
+                                <option value="FOR CONFIRMATION">For Confirmation</option>
+                                <option value="FOR REQUEST APPROVAL">For Request Approval</option>
+                                <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
+                                <option value="FOR CANVASSING">For Canvassing</option>
                                 <option value="RUSH">Rush</option>
                                 <option value="REJECTED">Rejected</option>
                             </select>

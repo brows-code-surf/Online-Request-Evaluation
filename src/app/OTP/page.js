@@ -80,7 +80,7 @@ function OTPContent() {
             }
 
             login(result.user)
-            router.push('/request-evaluation')
+            router.push('/dashboard')
         } catch (err) {
             setError('OTP verification failed. Please try again.')
             console.error(err)
