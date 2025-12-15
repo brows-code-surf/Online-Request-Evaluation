@@ -10,6 +10,7 @@ export class TicketModel {
         SELECT
           ROWID,
           SUBJECT,
+          DESCRIPTION,
           CATEGORY,
           STATUS,
           DATECREATED,
@@ -59,6 +60,7 @@ export class TicketModel {
       return result.recordset.map(record => ({
         id: record.ROWID,
         subject: record.SUBJECT,
+        description: record.DESCRIPTION,
         category: record.CATEGORY,
         status: record.STATUS,
         dateCreated: record.DATECREATED,
@@ -80,6 +82,7 @@ export class TicketModel {
         SELECT
           ROWID,
           SUBJECT,
+          DESCRIPTION,
           CATEGORY,
           STATUS,
           DATECREATED,
@@ -121,6 +124,7 @@ export class TicketModel {
       return {
         id: record.ROWID,
         subject: record.SUBJECT,
+        description: record.DESCRIPTION,
         category: record.CATEGORY,
         status: record.STATUS,
         dateCreated: record.DATECREATED,

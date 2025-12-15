@@ -122,6 +122,15 @@ export default function HeaderNavBar() {
           {/* Navigation - Desktop */}
           <nav className="hidden md:flex gap-6">
             <Link
+              href="/dashboard"
+              className={`text-sm font-medium transition ${pathname === '/dashboard'
+                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                }`}
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/request-evaluation"
               className={`text-sm font-medium transition ${pathname === '/request-evaluation'
                 ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
@@ -132,15 +141,6 @@ export default function HeaderNavBar() {
             </Link>
             {isUserAdmin && (
               <>
-                <Link
-                  href="/dashboard"
-                  className={`text-sm font-medium transition ${pathname === '/dashboard'
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : `${darkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                    }`}
-                >
-                  Dashboard
-                </Link>
                 <Link
                   href="/user-approval"
                   className={`text-sm font-medium transition ${pathname === '/user-approval'
@@ -309,6 +309,16 @@ export default function HeaderNavBar() {
       {isMenuOpen && (
         <div className={`md:hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-3 space-y-3`}>
           <Link
+            href="/dashboard"
+            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/dashboard'
+              ? 'bg-blue-100 text-blue-600'
+              : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+              }`}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Dashboard
+          </Link>
+          <Link
             href="/request-evaluation"
             className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/request-evaluation'
               ? 'bg-blue-100 text-blue-600'
@@ -320,16 +330,6 @@ export default function HeaderNavBar() {
           </Link>
           {isUserAdmin && (
             <>
-              <Link
-                href="/dashboard"
-                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/dashboard'
-                  ? 'bg-blue-100 text-blue-600'
-                  : `${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-                  }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
               <Link
                 href="/user-approval"
                 className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-approval'

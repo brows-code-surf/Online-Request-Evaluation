@@ -257,7 +257,7 @@ function RequestEvaluationContent() {
         );
 
         try {
-            await markAsRead(referenceNo);
+            await markAsRead(referenceNo, user?.empName);
         } catch (error) {
             // Revert on error
             setApprovals(prevApprovals =>

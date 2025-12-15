@@ -12,10 +12,10 @@ const STATUS_OPTIONS = [
 ];
 
 const SORT_OPTIONS = [
+  { value: 'dateCreated_asc', label: 'Date Created (Oldest)' },
+  { value: 'dateCreated_desc', label: 'Date Created (Newest)' },
   { value: 'dateModified_desc', label: 'Last Modified (Newest)' },
   { value: 'dateModified_asc', label: 'Last Modified (Oldest)' },
-  { value: 'dateCreated_desc', label: 'Date Created (Newest)' },
-  { value: 'dateCreated_asc', label: 'Date Created (Oldest)' },
   { value: 'subject_asc', label: 'Subject (A-Z)' },
   { value: 'subject_desc', label: 'Subject (Z-A)' }
 ];
@@ -27,7 +27,7 @@ export default function TicketList({ tickets = [], onTicketClick, loading = fals
     category: '',
     search: ''
   });
-  const [sortBy, setSortBy] = useState('dateModified_desc');
+  const [sortBy, setSortBy] = useState('dateCreated_desc');
 
   const filteredAndSortedTickets = useMemo(() => {
     let filtered = tickets.filter(ticket => {

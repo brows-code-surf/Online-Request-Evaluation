@@ -32,14 +32,43 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
         const result = await RequestEvaluation.updateApprovedEvaluation(referenceNo, approverName, currentStatus);
 
         if (result.headerUpdated) {
-            // Log activity
+            // Log activity with detailed workflow information
             try {
-                const activityMessage = `Approved request ${referenceNo} from status ${currentStatus}`;
+                // Get request details to identify workflow participants
+                const requestDetails = await RequestEvaluation.getEvaluationDetails(referenceNo);
+                let personBefore = 'Unknown';
+                let recipient = 'Unknown';
+
+                if (requestDetails.length > 0) {
+                    const request = requestDetails[0];
+
+                    // Determine who sent it to this approver (person before)
+                    if (currentStatus === 'FOR CONFIRMATION') {
+                        personBefore = request.requestedBy || 'Requester';
+                    } else if (currentStatus === 'FOR REQUEST APPROVAL') {
+                        personBefore = request.reviewer || 'Reviewer';
+                    } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
+                        personBefore = request.approver || 'Approver';
+                    }
+
+                    // Determine who will receive it next (recipient)
+                    if (result.newStatus === 'FOR REQUEST APPROVAL') {
+                        recipient = request.approver || 'Approver';
+                    } else if (result.newStatus === 'FOR PURCHASING LEAD TIME') {
+                        recipient = request.addressedTo || 'Purchasing Lead';
+                    } else if (result.newStatus === 'FOR CANVASSING') {
+                        recipient = 'Canvassing Team';
+                    }
+                }
+
+                const activityMessage = `Approved request ${referenceNo} from ${currentStatus} to ${result.newStatus}. From: ${personBefore} → To: ${recipient}`;
                 await ActivityLogs.saveActivity(activityMessage, approverName);
                 console.log('Activity logged for approval:', activityMessage);
             } catch (logError) {
                 console.error('Error logging approval activity:', logError);
-                // Don't throw error to avoid failing the approval process
+                // Fallback to simple logging
+                const fallbackMessage = `Approved request ${referenceNo} from status ${currentStatus}`;
+                await ActivityLogs.saveActivity(fallbackMessage, approverName);
             }
 
             // Send email notification for next approver
@@ -157,14 +186,37 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
 
         // Send email notification for rejection
         if (result.headerUpdated) {
-            // Log activity
+            // Log activity with detailed workflow information
             try {
-                const activityMessage = `Rejected request ${referenceNo} with reason: ${rejectionReason}`;
+                // Get request details to identify workflow participants
+                const requestDetails = await RequestEvaluation.getEvaluationDetails(referenceNo);
+                let personBefore = 'Unknown';
+                let recipient = 'Unknown';
+
+                if (requestDetails.length > 0) {
+                    const request = requestDetails[0];
+
+                    // Determine who sent it to this approver (person before)
+                    if (currentStatus === 'FOR CONFIRMATION') {
+                        personBefore = request.requestedBy || 'Requester';
+                    } else if (currentStatus === 'FOR REQUEST APPROVAL') {
+                        personBefore = request.reviewer || 'Reviewer';
+                    } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
+                        personBefore = request.approver || 'Approver';
+                    }
+
+                    // For rejections, the recipient is typically the requester
+                    recipient = request.requestedBy || 'Requester';
+                }
+
+                const activityMessage = `Rejected request ${referenceNo} from ${currentStatus}. From: ${personBefore} → Returned to: ${recipient}. Reason: ${rejectionReason}`;
                 await ActivityLogs.saveActivity(activityMessage, approverName);
                 console.log('Activity logged for rejection:', activityMessage);
             } catch (logError) {
                 console.error('Error logging rejection activity:', logError);
-                // Don't throw error to avoid failing the rejection process
+                // Fallback to simple logging
+                const fallbackMessage = `Rejected request ${referenceNo} with reason: ${rejectionReason}`;
+                await ActivityLogs.saveActivity(fallbackMessage, approverName);
             }
 
             // Notify that the request was rejected
@@ -276,16 +328,27 @@ export async function fetchUserAvailableStatuses(userName) {
     }
 }
 
-export async function markAsRead(referenceNo) {
+export async function markAsRead(referenceNo, userName) {
     try {
         const result = await RequestEvaluation.markAsRead(referenceNo);
 
         if (result) {
+            // Log activity for marking as read
+            try {
+                const activityMessage = `Marked request ${referenceNo} as read`;
+                await ActivityLogs.saveActivity(activityMessage, userName);
+                console.log('Activity logged for marking as read:', activityMessage);
+            } catch (logError) {
+                console.error('Error logging read activity:', logError);
+                // Don't throw error to avoid failing the mark as read process
+            }
+
             // Trigger Pusher event to notify all users of the read status change
             // Notify that the request has been marked as read
             broadcastRequestEvaluationUpdate("request-changed", {
                 referenceNo,
                 changeType: "markAsRead",
+                userName,
                 timestamp: new Date().toISOString(),
             });
 

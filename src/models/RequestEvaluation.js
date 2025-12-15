@@ -257,25 +257,6 @@ class RequestEvaluation {
                     const approverResult = await connection.request()
                         .input('referenceNo', referenceNo)
                         .query(approverQuery);
-
-                    if (approverResult.recordset.length > 0 && approverResult.recordset[0].APPROVER) {
-                        notificationRecipient = approverResult.recordset[0].APPROVER;
-                        notificationTitle = 'Request Ready for Approval';
-                        notificationDescription = `Request ${referenceNo} has been reviewed and is now ready for your approval.`;
-
-                        // Validate recipient exists
-                        if (!notificationRecipient || notificationRecipient.trim() === '') {
-                            console.warn(`No valid approver found for request ${referenceNo}`);
-                        } else {
-                            console.log(`Creating notification for approver: ${notificationRecipient}`);
-                            const notification = new Notification(notificationTitle, notificationDescription, notificationRecipient.trim());
-                            const result = await notification.save(approverName);
-                            notificationResults.push({ type: 'approver', recipient: notificationRecipient, result });
-                            console.log(`Approver notification created successfully:`, result);
-                        }
-                    } else {
-                        console.warn(`No approver found in database for request ${referenceNo}`);
-                    }
                 } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
                     // Get the addressed to person from the request
                     const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
@@ -619,6 +600,119 @@ class RequestEvaluation {
             return thirtyDays;
         } catch (error) {
             console.error('Error fetching 30-day requests trend:', error);
+            // Return array with zeros for all 30 days
+            return Array.from({ length: 30 }, (_, i) => ({
+                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                requests: 0
+            }));
+        }
+    }
+
+    // User-specific methods for non-admin dashboard
+
+    // Get user's request evaluation status breakdown (for requests they created or are assigned to)
+    static async getUserRequestEvaluationStatusBreakdown(createdBy) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if tables exist
+            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!detailsExists || !headerExists) {
+                console.warn('Required tables not found.');
+                return [];
+            }
+
+            const query = `
+                SELECT
+                    CASE
+                        WHEN PRD.ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRD.ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN PRD.ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN PRD.ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN PRD.ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN PRD.ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE 'OTHER'
+                    END as status,
+                    COUNT(*) as count
+                FROM [PURCHASE.REQUESTDETAILS.1] PRD
+                INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
+                WHERE PRH.CREATEDBY = @createdBy
+                OR PRH.REVIEWER = @createdBy
+                OR PRH.APPROVER = @createdBy
+                OR PRH.ADDRESSEDTO = @createdBy
+                GROUP BY
+                    CASE
+                        WHEN PRD.ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRD.ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN PRD.ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN PRD.ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN PRD.ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN PRD.ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE 'OTHER'
+                    END
+                ORDER BY status
+            `;
+
+            const result = await connection.request()
+                .input('createdBy', createdBy)
+                .query(query);
+            return result.recordset;
+        } catch (error) {
+            console.error('Error fetching user request evaluation status breakdown:', error);
+            return [];
+        }
+    }
+
+    // Get user's 30-day requests trend (for requests they created or are assigned to)
+    static async getUserThirtyDayRequestsTrend(createdBy) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if table exists
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found.');
+                return [];
+            }
+
+            const query = `
+                SELECT
+                    CAST(DATEREQUESTED AS DATE) as requestDate,
+                    COUNT(*) as requestCount
+                FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE DATEREQUESTED >= DATEADD(DAY, -30, GETDATE())
+                AND (CREATEDBY = @createdBy OR REVIEWER = @createdBy OR APPROVER = @createdBy OR ADDRESSEDTO = @createdBy)
+                GROUP BY CAST(DATEREQUESTED AS DATE)
+                ORDER BY CAST(DATEREQUESTED AS DATE)
+            `;
+
+            const result = await connection.request()
+                .input('createdBy', createdBy)
+                .query(query);
+
+            // Create array for last 30 days with zero-fill for missing dates
+            const thirtyDays = [];
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                const existing = result.recordset.find(r => {
+                    const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
+                    return recordDate === dateStr;
+                });
+                thirtyDays.push({
+                    date: dateStr,
+                    requests: existing ? existing.requestCount : 0
+                });
+            }
+
+            return thirtyDays;
+        } catch (error) {
+            console.error('Error fetching user 30-day requests trend:', error);
             // Return array with zeros for all 30 days
             return Array.from({ length: 30 }, (_, i) => ({
                 date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

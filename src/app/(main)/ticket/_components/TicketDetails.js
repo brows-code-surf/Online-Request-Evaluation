@@ -21,7 +21,7 @@ export default function TicketDetails({
   user = null
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, darkMode } = useAuth();
 
   if (!ticket) return null;
 
@@ -85,6 +85,18 @@ export default function TicketDetails({
             </label>
             <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg px-4 py-3`}>
               <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-medium`}>{ticket.subject}</p>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className={`block text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              Description
+            </label>
+            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg px-4 py-3`}>
+              <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {ticket.description || 'No description provided'}
+              </p>
             </div>
           </div>
 

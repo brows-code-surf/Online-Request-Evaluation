@@ -115,7 +115,7 @@ class Dashboard {
             connection = await connectToDatabase(process.env.DB_SFC); // SFC for activity logs
 
             const query = `
-      SELECT 
+      SELECT
         ACTIVITY as activity,
         CREATEDBY as createdBy,
         DATECREATED as dateCreated
@@ -133,6 +133,138 @@ class Dashboard {
             }));
         } catch (error) {
             console.error('Error fetching recent activity logs:', error);
+            return [];
+        }
+    }
+
+    // User-specific methods for non-admin dashboard
+
+    // Get user's request statistics (both created and assigned for evaluation)
+    async getUserRequestStats(createdBy) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Total requests by user (both created and assigned for evaluation)
+            const totalRequestsQuery = `
+                SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE CREATEDBY = @createdBy
+                OR REVIEWER = @createdBy
+                OR APPROVER = @createdBy
+                OR ADDRESSEDTO = @createdBy
+            `;
+            const totalRequestsResult = await connection.request()
+                .input('createdBy', createdBy)
+                .query(totalRequestsQuery);
+            const totalRequests = totalRequestsResult.recordset[0].count;
+
+            // Active requests (not completed/cancelled) - for requests user created or is assigned to
+            const activeRequestsQuery = `
+                SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1] PRH
+                INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
+                WHERE (PRH.CREATEDBY = @createdBy OR PRH.REVIEWER = @createdBy OR PRH.APPROVER = @createdBy OR PRH.ADDRESSEDTO = @createdBy)
+                AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
+            `;
+            const activeRequestsResult = await connection.request()
+                .input('createdBy', createdBy)
+                .query(activeRequestsQuery);
+            const activeRequests = activeRequestsResult.recordset[0].count;
+
+            // Pending requests for evaluation (assigned to user) - requests they need to act on
+            const pendingRequestsQuery = `
+                SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1] PRH
+                INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
+                WHERE ((PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION')
+                    OR (PRH.APPROVER = @createdBy AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL')
+                    OR (PRH.ADDRESSEDTO = @createdBy AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME'))
+                AND PRD.ITEMSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+            `;
+            const pendingRequestsResult = await connection.request()
+                .input('createdBy', createdBy)
+                .query(pendingRequestsQuery);
+            const pendingRequests = pendingRequestsResult.recordset[0].count;
+
+            // Requests in last 24 hours (both created and assigned)
+            const requestsLast24hQuery = `
+                SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE (CREATEDBY = @createdBy OR REVIEWER = @createdBy OR APPROVER = @createdBy OR ADDRESSEDTO = @createdBy)
+                AND DATEREQUESTED >= DATEADD(HOUR, -24, GETDATE())
+            `;
+            const requestsLast24hResult = await connection.request()
+                .input('createdBy', createdBy)
+                .query(requestsLast24hQuery);
+            const requestsLast24h = requestsLast24hResult.recordset[0].count;
+
+            return {
+                totalRequests,
+                activeRequests,
+                pendingRequests,
+                requestsLast24h
+            };
+        } catch (error) {
+            console.error('Error fetching user request stats:', error);
+            return {
+                totalRequests: 0,
+                activeRequests: 0,
+                pendingRequests: 0,
+                requestsLast24h: 0
+            };
+        }
+    }
+
+    // Get user's request evaluation statistics
+    async getUserRequestEvaluationStats(createdBy) {
+        try {
+            return await RequestEvaluation.getUserRequestEvaluationStatusBreakdown(createdBy);
+        } catch (error) {
+            console.error('Error fetching user request evaluation stats:', error);
+            return [];
+        }
+    }
+
+    // Get user's 30-day request trend
+    async getUserThirtyDayTrend(createdBy) {
+        try {
+            return await RequestEvaluation.getUserThirtyDayRequestsTrend(createdBy);
+        } catch (error) {
+            console.error('Error fetching user 30-day trend:', error);
+            return Array.from({ length: 30 }, (_, i) => ({
+                date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                requests: 0
+            }));
+        }
+    }
+
+    // Get recent activity logs related to user's requests
+    async getUserRecentActivityLogs(createdBy) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                SELECT
+                    ACTIVITY as activity,
+                    CREATEDBY as createdBy,
+                    DATECREATED as dateCreated
+                FROM [ACTIVITY.LOGS.1]
+                WHERE CREATEDBY = @createdBy OR ACTIVITY LIKE '%' + @createdBy + '%'
+                ORDER BY DATECREATED DESC
+            `;
+
+            const result = await connection.request()
+                .input('createdBy', createdBy)
+                .query(query);
+
+            return result.recordset.map((log, index) => ({
+                id: index + 1,
+                activity: log.activity,
+                createdBy: log.createdBy,
+                dateCreated: log.dateCreated
+            }));
+        } catch (error) {
+            console.error('Error fetching user recent activity logs:', error);
             return [];
         }
     }

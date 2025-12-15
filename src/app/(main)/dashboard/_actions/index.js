@@ -3,18 +3,33 @@
 import 'server-only';
 import Dashboard from '@/models/Dashboard.js';
 
-export async function getDashboardStats() {
+export async function getDashboardStats(user = null, isAdmin = false) {
     try {
         const dashboard = new Dashboard();
 
-        // Fetch all data concurrently
-        const [userStats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs] = await Promise.all([
-            dashboard.getUserStats(),
-            dashboard.getRequestEvaluationStats(),
-            dashboard.getThirtyDayTrend(),
-            dashboard.getRecentLogins(),
-            dashboard.getRecentActivityLogs()
-        ]);
+        let stats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs;
+
+        if (isAdmin) {
+            // Admin: fetch system-wide data
+            [stats, requestEvaluations, thirtyDayTrend, recentLogins, recentActivityLogs] = await Promise.all([
+                dashboard.getUserStats(),
+                dashboard.getRequestEvaluationStats(),
+                dashboard.getThirtyDayTrend(),
+                dashboard.getRecentLogins(),
+                dashboard.getRecentActivityLogs()
+            ]);
+        } else if (user) {
+            // Non-admin: fetch user-specific data
+            [stats, requestEvaluations, thirtyDayTrend, recentActivityLogs] = await Promise.all([
+                dashboard.getUserRequestStats(user.empName),
+                dashboard.getUserRequestEvaluationStats(user.empName),
+                dashboard.getUserThirtyDayTrend(user.empName),
+                dashboard.getUserRecentActivityLogs(user.empName)
+            ]);
+            recentLogins = []; // Non-admins don't see recent logins
+        } else {
+            throw new Error('User information is required');
+        }
 
         // Generate sparkline data (last 10 values - using current value for all)
         const generateSparklines = (currentValue) => {
@@ -26,20 +41,49 @@ export async function getDashboardStats() {
             totalUsers: 0,
             activeUsers: 0,
             pendingRequests: 0,
-            requestsLast24h: 0
+            requestsLast24h: 0,
+            // For non-admin, these become totalRequests, activeRequests, etc.
+            totalRequests: 0,
+            activeRequests: 0
         };
 
-        return {
-            stats: {
-                ...userStats,
+        // Transform stats for non-admin users
+        let transformedStats = stats;
+        if (!isAdmin) {
+            transformedStats = {
+                totalUsers: stats.totalRequests || 0,
+                activeUsers: stats.activeRequests || 0,
+                pendingRequests: stats.pendingRequests || 0,
+                requestsLast24h: stats.requestsLast24h || 0,
                 sparklines: {
-                    totalUsers: generateSparklines(userStats.totalUsers),
-                    activeUsers: generateSparklines(userStats.activeUsers),
-                    pendingRequests: generateSparklines(userStats.pendingRequests),
-                    requestsLast24h: generateSparklines(userStats.requestsLast24h)
+                    totalUsers: generateSparklines(stats.totalRequests || 0),
+                    activeUsers: generateSparklines(stats.activeRequests || 0),
+                    pendingRequests: generateSparklines(stats.pendingRequests || 0),
+                    requestsLast24h: generateSparklines(stats.requestsLast24h || 0)
+                },
+                percentChanges: {
+                    totalUsers: 0,
+                    activeUsers: 0,
+                    pendingRequests: 0,
+                    requestsLast24h: 0
+                }
+            };
+        } else {
+            // Admin stats
+            transformedStats = {
+                ...stats,
+                sparklines: {
+                    totalUsers: generateSparklines(stats.totalUsers),
+                    activeUsers: generateSparklines(stats.activeUsers),
+                    pendingRequests: generateSparklines(stats.pendingRequests),
+                    requestsLast24h: generateSparklines(stats.requestsLast24h)
                 },
                 percentChanges
-            },
+            };
+        }
+
+        return {
+            stats: transformedStats,
             requestEvaluations,
             thirtyDayTrend,
             recentLogins,
