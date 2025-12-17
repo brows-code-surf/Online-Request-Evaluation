@@ -8,6 +8,7 @@ import HeaderNavBar from '@/app/_components/headerNavBar';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
+import PurchaseRequestList from './_components/PurchaseRequestList';
 import SuccessModal from '@/app/(main)/_components/successModal';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
@@ -20,7 +21,8 @@ import {
   reviewPurchaseRequest,
   approvePurchaseRequest,
   receivePurchaseRequest,
-  rejectPurchaseRequest
+  rejectPurchaseRequest,
+  postPurchaseRequest
 } from './_actions';
 
 function PurchaseRequestContent() {
@@ -51,16 +53,31 @@ function PurchaseRequestContent() {
       const data = await getAllPurchaseRequests(filters, user);
       if (data.success) {
         setPurchaseRequests(data.purchaseRequests);
+        const approvalsData = data.purchaseRequests.map(pr => ({
+          ...pr,
+          id: pr.referenceNo,
+          title: `${pr.company} - ${pr.requestType}`,
+          requester: pr.requestedBy,
+          status: pr.isPosted ? 'POSTED' : pr.requestStatus,
+          requestDate: pr.dateRequested,
+          department: pr.company,
+          isRead: pr.isRead ? 'READ' : 'NOT READ',
+          isRush: pr.isRush
+        }));
+        setApprovals(approvalsData);
         // Update selectedPurchaseRequest to match refreshed data or leave as is if not found
         if (selectedPurchaseRequest) {
-          const refreshedSelected = data.purchaseRequests.find(pr => pr.referenceNo === selectedPurchaseRequest.header?.referenceNo);
+          const refreshedSelected = approvalsData.find(approval => approval.id === selectedPurchaseRequest.id);
           if (refreshedSelected) {
-            setSelectedPurchaseRequest({ header: refreshedSelected, details: purchaseRequestDetails });
+            setSelectedPurchaseRequest(refreshedSelected);
           }
         }
+        return { success: true, approvalsData };
       }
+      return { success: false };
     } catch (error) {
       console.error('Failed to reload purchase requests:', error);
+      return { success: false };
     }
   };
 
@@ -72,30 +89,33 @@ function PurchaseRequestContent() {
       try {
         const result = await getAllPurchaseRequests({}, user);
         if (result.success) {
-          setPurchaseRequests(result.purchaseRequests);
-          // Format data for ContentLeftPanel
-          const formattedApprovals = result.purchaseRequests.map(pr => ({
+          const purchaseRequestsData = result.purchaseRequests;
+          setPurchaseRequests(purchaseRequestsData);
+          const approvalsData = purchaseRequestsData.map(pr => ({
+            ...pr,
             id: pr.referenceNo,
             title: `${pr.company} - ${pr.requestType}`,
             requester: pr.requestedBy,
-            status: pr.requestStatus,
+            status: pr.isPosted ? 'POSTED' : pr.requestStatus,
             requestDate: pr.dateRequested,
             department: pr.company,
             isRead: pr.isRead ? 'READ' : 'NOT READ',
             isRush: pr.isRush
           }));
-          setApprovals(formattedApprovals);
+          setApprovals(approvalsData);
 
-          if (formattedApprovals.length > 0 && !selectedPurchaseRequest) {
-            const id = searchParams.get('id');
-            let selectApproval = formattedApprovals[0];
+          const id = searchParams.get('id');
+          let selectApproval = null;
+          if (purchaseRequestsData.length > 0 && !selectedPurchaseRequest) {
+            selectApproval = purchaseRequestsData[0];
             if (id) {
-              const urlSelected = formattedApprovals.find(approval => approval.id === id);
+              const urlSelected = purchaseRequestsData.find(pr => pr.referenceNo === id);
               if (urlSelected) {
                 selectApproval = urlSelected;
               }
             }
-            setSelectedPurchaseRequest({ header: result.purchaseRequests.find(pr => pr.referenceNo === selectApproval.id), details: [] });
+            const approvalSelected = approvalsData.find(approval => approval.id === selectApproval.referenceNo);
+            setSelectedPurchaseRequest(approvalSelected);
           }
         }
       } catch (error) {
@@ -120,14 +140,14 @@ function PurchaseRequestContent() {
 
   useEffect(() => {
     const loadDetails = async () => {
-      if (selectedPurchaseRequest?.header?.referenceNo) {
+      if (selectedPurchaseRequest?.referenceNo) {
         setDetailsLoading(true);
         try {
-          const details = await getPurchaseRequestByReferenceNo(selectedPurchaseRequest.header.referenceNo, user);
-          if (details.success) {
-            setPurchaseRequestDetails(details.purchaseRequest.details);
-            setSelectedPurchaseRequest(details.purchaseRequest);
-          }
+        const details = await getPurchaseRequestByReferenceNo(selectedPurchaseRequest.referenceNo, user);
+        if (details.success) {
+          setPurchaseRequestDetails(details.purchaseRequest.details);
+          setSelectedPurchaseRequest({ ...selectedPurchaseRequest, details: details.purchaseRequest.details });
+        }
         } catch (error) {
           console.error('Failed to load purchase request details:', error);
           setPurchaseRequestDetails([]);
@@ -137,44 +157,25 @@ function PurchaseRequestContent() {
       }
     };
     loadDetails();
-  }, [selectedPurchaseRequest?.header?.referenceNo]);
+  }, [selectedPurchaseRequest?.referenceNo]);
 
   // Handle URL parameter changes to select purchase request
   useEffect(() => {
     const id = searchParams.get('id');
-    if (id && purchaseRequests.length > 0) {
-      const urlSelected = purchaseRequests.find(pr => pr.referenceNo === id);
-      if (urlSelected && urlSelected.referenceNo !== selectedPurchaseRequest?.header?.referenceNo) {
-        setSelectedPurchaseRequest({ header: urlSelected, details: [] });
+    if (id && approvals.length > 0) {
+      const urlSelected = approvals.find(approval => approval.id === id);
+      if (urlSelected && urlSelected.id !== selectedPurchaseRequest?.id) {
+        setSelectedPurchaseRequest(urlSelected);
       }
     }
-  }, [searchParams, purchaseRequests, selectedPurchaseRequest?.header?.referenceNo]);
+  }, [searchParams, approvals, selectedPurchaseRequest?.id]);
+
+
 
   // Handle purchase request selection without redundant loading
-  const handleSelectPurchaseRequest = async (approval) => {
-    const pr = purchaseRequests.find(p => p.referenceNo === approval.id);
-    if (pr) {
-      setDetailsLoading(true);
-      try {
-        const details = await getPurchaseRequestByReferenceNo(pr.referenceNo, user);
-        if (details.success) {
-          setSelectedPurchaseRequest(details.purchaseRequest);
-          setPurchaseRequestDetails(details.purchaseRequest.details);
-        } else {
-          setSelectedPurchaseRequest({ header: pr, details: [] });
-          setPurchaseRequestDetails([]);
-        }
-      } catch (error) {
-        console.error('Failed to load purchase request details:', error);
-        setSelectedPurchaseRequest({ header: pr, details: [] });
-        setPurchaseRequestDetails([]);
-      } finally {
-        setDetailsLoading(false);
-      }
-    }
+  const handleSelectPurchaseRequest = (approval) => {
+    setSelectedPurchaseRequest(approval);
     setCurrentView('list');
-    // Update URL with selected id to persist selection
-    router.replace(`?id=${encodeURIComponent(approval.id)}`);
   };
 
   // Intersection Observer for Add Item button visibility
@@ -241,7 +242,13 @@ function PurchaseRequestContent() {
         });
         setShowSuccessModal(true);
         setCurrentView('list');
-        await reloadPurchaseRequestsData();
+        const reloadResult = await reloadPurchaseRequestsData();
+        if (reloadResult.success) {
+          const newSelected = reloadResult.approvalsData.find(approval => approval.id === result.referenceNo);
+          if (newSelected) {
+            setSelectedPurchaseRequest(newSelected);
+          }
+        }
       } else {
         toast.error('Failed to create purchase request: ' + result.message);
       }
@@ -331,8 +338,30 @@ function PurchaseRequestContent() {
     }
   };
 
+  const handlePostPurchaseRequest = async (referenceNo) => {
+    try {
+      const result = await postPurchaseRequest(referenceNo, user?.empName);
+      if (result.success) {
+        setSuccessMessage({
+          title: 'Purchase Request Posted',
+          message: 'The purchase request has been posted and notifications have been sent.'
+        });
+        setShowSuccessModal(true);
+        setSelectedPurchaseRequest(null);
+        await reloadPurchaseRequestsData();
+      } else {
+        toast.error('Failed to post purchase request: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error posting purchase request:', error);
+      toast.error('Failed to post purchase request');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
+      case 'POSTED':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'FOR CONFIRMATION':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'FOR REQUEST APPROVAL':
@@ -375,11 +404,11 @@ function PurchaseRequestContent() {
           sortBy={sortBy}
           onSortByChange={setSortBy}
           approvals={filteredApprovals}
-          selectedApprovalId={selectedPurchaseRequest?.header?.referenceNo}
+          selectedApprovalId={selectedPurchaseRequest?.id}
           onApprovalSelect={handleSelectPurchaseRequest}
           getStatusColor={getStatusColor}
           filterType="purchase-request"
-          enableReadStatus={true}
+          enableReadStatus={false}
           isLoading={loading}
         />
 
@@ -429,19 +458,23 @@ function PurchaseRequestContent() {
                     onApprove={handleApprovePurchaseRequest}
                     onReceive={handleReceivePurchaseRequest}
                     onReject={handleRejectPurchaseRequest}
+                    onPost={handlePostPurchaseRequest}
                     loading={false}
                   />
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-lg font-medium">Select a purchase request to view details</p>
-                  <p className="text-sm mt-2">Choose a request from the left panel to see its details and take actions.</p>
-                </div>
+              <div className="p-6">
+                <PurchaseRequestList
+                  purchaseRequests={purchaseRequests}
+                  onPurchaseRequestClick={(pr) => {
+                    const approval = approvals.find(a => a.id === pr.referenceNo);
+                    if (approval) {
+                      handleSelectPurchaseRequest(approval);
+                    }
+                  }}
+                  loading={loading}
+                />
               </div>
             )}
           </div>

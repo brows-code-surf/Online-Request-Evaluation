@@ -30,7 +30,7 @@ class RequestEvaluation {
                 return [];
             }
 
-            const query = `SELECT 
+            const query = `SELECT
                             PRD.REFERENCENO,
                             PRH.REQUESTEDBY as requestedBy,
                             PRH.COMPANY as company,
@@ -39,7 +39,7 @@ class RequestEvaluation {
                             PRD.ITEMNMBR,
                             PRD.ITEMDESC,
                             PRD.UOFM,
-                            (PRD.QUANTITY + PRD.QUANTITYADJ) - PRD.QUANTITYCANCEL as QUANTITY,
+                            ISNULL(PRD.QUANTITY, 0) + ISNULL(PRD.QUANTITYADJ, 0) - ISNULL(PRD.QUANTITYCANCEL, 0) as QUANTITY,
                             PRD.BUDGETNAME,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,

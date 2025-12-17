@@ -2,13 +2,8 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { useAuth } from '../../../../utils/authContext';
-import { getNextReferenceNumber, generateItemNumber } from '../_actions';
-
-const REQUEST_TYPE_OPTIONS = [
-  { value: 'CAPEX', label: 'CAPEX - Capital Expenditure' },
-  { value: 'OPEX', label: 'OPEX - Operating Expenditure' },
-  { value: 'REVENUE', label: 'REVENUE - Revenue Generating' }
-];
+import { getNextReferenceNumber, generateItemNumber, getFilteredUsersForPurchaseRequest } from '../_actions';
+import ConfirmModal from '@/app/(main)/_components/confirmModal';
 
 const BUDGET_OPTIONS = [
   'IT Equipment',
@@ -31,6 +26,17 @@ const UNIT_OF_MEASURE_OPTIONS = [
   'Set',
   'Unit',
   'Other'
+];
+
+const COMPANY_OPTIONS = [
+  'SANTEH',
+  'FISHTA',
+  'AGRIJUAN',
+  'PETCHOLA',
+  'PETONE',
+  'FEEDPRO',
+  'ASPARE',
+  'TATEH'
 ];
 
 const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
@@ -63,20 +69,26 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     }]
   });
   const [errors, setErrors] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Get users for dropdowns
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const loadInitialData = async () => {
-      // In a real app, you'd fetch users from an API
-      // For now, we'll use mock data
-      setUsers([
-        { empName: 'John Doe', email: 'john@example.com' },
-        { empName: 'Jane Smith', email: 'jane@example.com' },
-        { empName: 'Mike Johnson', email: 'mike@example.com' },
-        { empName: 'Sarah Wilson', email: 'sarah@example.com' }
-      ]);
+      // Fetch filtered users from database (excluding Production Rank & File and Union Members)
+      try {
+        const usersResult = await getFilteredUsersForPurchaseRequest();
+        if (usersResult.success) {
+          setUsers(usersResult.data);
+        } else {
+          // Fallback to empty array if API fails
+          setUsers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setUsers([]);
+      }
 
       // Get next reference number from database
       try {
@@ -86,13 +98,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         } else {
           // Fallback to timestamp if API fails
           const timestamp = Date.now();
-          setFormData(prev => ({ ...prev, referenceNo: `SCPRO-${timestamp}` }));
+          setFormData(prev => ({ ...prev, referenceNo: `OPR-${timestamp}` }));
         }
       } catch (error) {
         console.error('Error getting reference number:', error);
         // Fallback to timestamp if API fails
         const timestamp = Date.now();
-        setFormData(prev => ({ ...prev, referenceNo: `SCPRO-${timestamp}` }));
+        setFormData(prev => ({ ...prev, referenceNo: `OPR-${timestamp}` }));
       }
     };
 
@@ -172,9 +184,10 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     if (!formData.company.trim()) {
       newErrors.company = 'Company is required';
     }
-    if (!formData.reviewer.trim()) {
-      newErrors.reviewer = 'Reviewer is required';
-    }
+    // Reviewer is now optional
+    // if (!formData.reviewer.trim()) {
+    //   newErrors.reviewer = 'Reviewer is required';
+    // }
     if (!formData.approver.trim()) {
       newErrors.approver = 'Approver is required';
     }
@@ -215,8 +228,15 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       return;
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
+
     // Prepare data for submission
     const headerData = {
+      referenceNo: formData.referenceNo,
       company: formData.company,
       requestType: formData.requestType,
       locationCode: formData.locationCode,
@@ -262,9 +282,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <input
                 type="text"
                 value={formData.referenceNo}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-500'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-500'
+                  }`}
                 placeholder="Auto-generated reference number"
                 disabled={true}
                 readOnly
@@ -276,16 +295,20 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                 Company <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.company}
                 onChange={(e) => handleHeaderChange('company', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.company ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                }`}
-                placeholder="Enter company name"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.company ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                  }`}
                 disabled={loading}
-              />
+              >
+                <option value="">Select company</option>
+                {COMPANY_OPTIONS.map(company => (
+                  <option key={company} value={company} className={darkMode ? 'bg-gray-700' : ''}>
+                    {company}
+                  </option>
+                ))}
+              </select>
               {errors.company && <p className="mt-1 text-sm text-red-600">{errors.company}</p>}
             </div>
 
@@ -299,9 +322,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <input
                 type="text"
                 value={formData.locationCode}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.locationCode ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-500')
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.locationCode ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-500')
+                  }`}
                 placeholder="Auto-filled from user location"
                 disabled={true}
               />
@@ -330,14 +352,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
             {/* Reviewer */}
             <div>
               <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Reviewer <span className="text-red-500">*</span>
+                Reviewer
               </label>
               <select
                 value={formData.reviewer}
                 onChange={(e) => handleHeaderChange('reviewer', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.reviewer ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.reviewer ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                  }`}
                 disabled={loading}
               >
                 <option value="">Select reviewer</option>
@@ -358,9 +379,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <select
                 value={formData.approver}
                 onChange={(e) => handleHeaderChange('approver', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.approver ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.approver ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                  }`}
                 disabled={loading}
               >
                 <option value="">Select approver</option>
@@ -381,9 +401,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <select
                 value={formData.addressedTo}
                 onChange={(e) => handleHeaderChange('addressedTo', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.addressedTo ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.addressedTo ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                  }`}
                 disabled={loading}
               >
                 <option value="">Select recipient</option>
@@ -404,9 +423,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               <textarea
                 value={formData.remarks}
                 onChange={(e) => handleHeaderChange('remarks', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'
+                  }`}
                 rows={3}
                 placeholder="Enter any additional remarks..."
                 disabled={loading}
@@ -457,10 +475,9 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     value={item.itemNumber}
                     readOnly
                     onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
-                    placeholder="Enter item number"
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    placeholder="Automated Item Number"
                     disabled={loading}
                   />
                   {errors[`items.${index}.itemNumber`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemNumber`]}</p>}
@@ -475,9 +492,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     type="text"
                     value={item.itemDescription}
                     onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
                     placeholder="Enter item description"
                     disabled={loading}
                   />
@@ -492,9 +508,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   <select
                     value={item.unitOfMeasure}
                     onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
                     disabled={loading}
                   >
                     <option value="">Select UOM</option>
@@ -516,9 +531,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     step="0.01"
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
                     placeholder="0.00"
                     disabled={loading}
                   />
@@ -533,9 +547,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   <select
                     value={item.budgetName}
                     onChange={(e) => handleItemChange(index, 'budgetName', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
                     disabled={loading}
                   >
                     <option value="">Select budget</option>
@@ -555,9 +568,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     type="date"
                     value={formatDateForInput(item.dateNeeded)}
                     onChange={(e) => handleItemChange(index, 'dateNeeded', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
                     disabled={loading}
                   />
                   {errors[`items.${index}.dateNeeded`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.dateNeeded`]}</p>}
@@ -571,9 +583,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   <textarea
                     value={item.remarks}
                     onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
+                      }`}
                     rows={2}
                     placeholder="Enter item-specific remarks..."
                     disabled={loading}
@@ -610,6 +621,17 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
           </button>
         </div>
       </form>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Create Purchase Request"
+        message={`Are you sure you want to create this purchase request? This will save the request as a draft and you can post it later to send notifications to the ${formData.reviewer ? 'reviewer' : 'approver'}.`}
+        confirmButtonText="Create Request"
+        onConfirm={handleConfirmSubmit}
+        onCancel={() => setShowConfirmModal(false)}
+        isLoading={loading}
+      />
     </div>
   );
 });

@@ -14,6 +14,7 @@ export async function getAllUsers() {
       employeeID: user.employeeID,
       department: user.department,
       jobTitle: user.jobTitle,
+      jobLevel: user.jobLevel,
       location: user.location,
       dateRequested: user.dateRequested || new Date().toISOString(),
       status: user.status

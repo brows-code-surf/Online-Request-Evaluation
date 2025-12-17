@@ -314,6 +314,10 @@ function RequestEvaluationContent() {
                                                 <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.department}</p>
                                             </div>
                                             <div>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Job Level</p>
+                                                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.jobLevel}</p>
+                                            </div>
+                                            <div>
                                                 <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Request Date</p>
                                                 <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{new Date(selectedApproval.requestDate).toLocaleDateString()}</p>
                                             </div>

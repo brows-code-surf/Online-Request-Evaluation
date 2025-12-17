@@ -37,9 +37,9 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
     if (!headerData.locationCode || !headerData.locationCode.trim()) {
       return { success: false, message: 'Location code is required' };
     }
-    if (!headerData.reviewer || !headerData.reviewer.trim()) {
-      return { success: false, message: 'Reviewer is required' };
-    }
+    // if (!headerData.reviewer || !headerData.reviewer.trim()) {
+    //   return { success: false, message: 'Reviewer is required' };
+    // }
     if (!headerData.approver || !headerData.approver.trim()) {
       return { success: false, message: 'Approver is required' };
     }
@@ -75,15 +75,42 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
 
     const referenceNo = await PurchaseRequest.createPurchaseRequest(headerData, detailsData, creatorName);
 
-    // Send notifications asynchronously
-    notifyReviewersOfNewPR(referenceNo, headerData, detailsData, creatorName).catch(notificationError => {
-      console.error('Error sending reviewer notifications:', notificationError);
-    });
+    // Note: Notifications are no longer sent here - they will be sent when the request is posted
 
     return { success: true, referenceNo, message: 'Purchase request created successfully' };
   } catch (error) {
     console.error('Error creating purchase request:', error);
     return { success: false, message: 'Failed to create purchase request' };
+  }
+}
+
+export async function postPurchaseRequest(referenceNo, posterName) {
+  try {
+    const result = await PurchaseRequest.postPurchaseRequest(referenceNo, posterName);
+
+    if (result.success) {
+      // Send notifications asynchronously after posting
+      const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo);
+      if (pr) {
+        // Check if reviewer is specified
+        if (pr.header.reviewer && pr.header.reviewer.trim()) {
+          // Reviewer exists, send to reviewer first
+          notifyReviewersOfNewPR(referenceNo, pr.header, pr.details, pr.header.createdBy).catch(notificationError => {
+            console.error('Error sending reviewer notifications:', notificationError);
+          });
+        } else {
+          // No reviewer specified, send directly to approver
+          notifyApproversOfNewPR(referenceNo, pr.header, pr.details, pr.header.createdBy).catch(notificationError => {
+            console.error('Error sending approver notifications:', notificationError);
+          });
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error posting purchase request:', error);
+    return { success: false, message: 'Failed to post purchase request' };
   }
 }
 
@@ -224,6 +251,31 @@ export async function generateItemNumber(itemDescription) {
   }
 }
 
+export async function getFilteredUsersForPurchaseRequest() {
+  try {
+    const users = await UserProfile.getAllUsers();
+    // Filter out users with job level "Production Rank & File" or "Union Members"
+    const filteredUsers = users.filter(user =>
+      user.jobLevel !== 'Production Rank & File' &&
+      user.jobLevel !== 'Union Members'
+    );
+
+    return {
+      success: true,
+      data: filteredUsers.map(user => ({
+        empName: user.empName,
+        email: user.email
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching filtered users:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch users'
+    };
+  }
+}
+
 // Notification helper functions
 async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, creatorName) {
   try {
@@ -238,7 +290,7 @@ async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, crea
         subject: `New Purchase Request ${referenceNo} Requires Review`,
         title: `Purchase Request ${referenceNo}`,
         companyName: 'SANTEH',
-        greeting: `Hello ${reviewerUser.empName}`,
+        greeting: `Hello `,
         name: reviewerUser.empName,
         body: `A new purchase request has been created and requires your review.<br><br>
               <strong>Reference No:</strong> ${referenceNo}<br>
@@ -248,7 +300,7 @@ async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, crea
               <strong>Items:</strong> ${detailsData.length}<br><br>
               Please review this request as soon as possible.`,
         buttonText: 'Review Request',
-        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/purchase-request`,
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
         companyEmail: 'support@santeh.com',
         companyPhone: '+1 (555) 123-4567',
         unsubscribeUrl: '#',
@@ -262,7 +314,7 @@ async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, crea
         'New Purchase Request Review',
         `Purchase Request ${referenceNo} created by ${creatorName} requires your review`,
         reviewerUser.empName,
-        '/purchase-request'
+        `/request-evaluation?id=${referenceNo}`
       );
 
       await notification.save(creatorName);
@@ -284,7 +336,7 @@ async function notifyApproverOfReviewedPR(referenceNo, pr, reviewerName) {
         subject: `Purchase Request ${referenceNo} Reviewed - Approval Required`,
         title: `Purchase Request ${referenceNo}`,
         companyName: 'SANTEH',
-        greeting: `Hello ${approverUser.empName}`,
+        greeting: `Hello `,
         name: approverUser.empName,
         body: `Purchase request ${referenceNo} has been reviewed by ${reviewerName} and now requires your approval.<br><br>
               <strong>Reference No:</strong> ${referenceNo}<br>
@@ -292,7 +344,7 @@ async function notifyApproverOfReviewedPR(referenceNo, pr, reviewerName) {
               <strong>Request Type:</strong> ${pr.header.requestType}<br><br>
               Please review and approve this request.`,
         buttonText: 'Approve Request',
-        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/purchase-request`,
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
         companyEmail: 'support@santeh.com',
         companyPhone: '+1 (555) 123-4567',
         unsubscribeUrl: '#',
@@ -305,7 +357,7 @@ async function notifyApproverOfReviewedPR(referenceNo, pr, reviewerName) {
         'Purchase Request Approval',
         `Purchase Request ${referenceNo} reviewed by ${reviewerName} - requires your approval`,
         approverUser.empName,
-        '/purchase-request'
+        `/request-evaluation?id=${referenceNo}`
       );
 
       await notification.save(reviewerName);
@@ -327,7 +379,7 @@ async function notifyReceiverOfApprovedPR(referenceNo, pr, approverName) {
         subject: `Purchase Request ${referenceNo} Approved - Action Required`,
         title: `Purchase Request ${referenceNo}`,
         companyName: 'SANTEH',
-        greeting: `Hello ${receiverUser.empName}`,
+        greeting: `Hello `,
         name: receiverUser.empName,
         body: `Purchase request ${referenceNo} has been approved by ${approverName} and is now ready for processing.<br><br>
               <strong>Reference No:</strong> ${referenceNo}<br>
@@ -370,7 +422,7 @@ async function notifyRequesterOfReceivedPR(referenceNo, pr, receiverName) {
         subject: `Purchase Request ${referenceNo} Completed`,
         title: `Purchase Request ${referenceNo}`,
         companyName: 'SANTEH',
-        greeting: `Hello ${requesterUser.empName}`,
+        greeting: `Hello `,
         name: requesterUser.empName,
         body: `Your purchase request ${referenceNo} has been completed and received by ${receiverName}.<br><br>
               <strong>Reference No:</strong> ${referenceNo}<br>
@@ -413,7 +465,7 @@ async function notifyRequesterOfRejectedPR(referenceNo, pr, rejectorName, reason
         subject: `Purchase Request ${referenceNo} Rejected`,
         title: `Purchase Request ${referenceNo}`,
         companyName: 'SANTEH',
-        greeting: `Hello ${requesterUser.empName}`,
+        greeting: `Hello `,
         name: requesterUser.empName,
         body: `Your purchase request ${referenceNo} has been rejected by ${rejectorName}.<br><br>
               <strong>Reference No:</strong> ${referenceNo}<br>
@@ -442,6 +494,54 @@ async function notifyRequesterOfRejectedPR(referenceNo, pr, rejectorName, reason
     }
   } catch (error) {
     console.error('Error notifying requester of rejection:', error);
+    throw error;
+  }
+}
+
+async function notifyApproversOfNewPR(referenceNo, headerData, detailsData, creatorName) {
+  try {
+    // Get approver user details
+    const allUsers = await UserProfile.getAllUsers();
+    const approverUser = allUsers.find(user => user.empName.toUpperCase() === headerData.approver.toUpperCase());
+
+    if (approverUser) {
+      // Send email
+      const emailData = {
+        email: approverUser.email,
+        subject: `New Purchase Request ${referenceNo} Requires Approval`,
+        title: `Purchase Request ${referenceNo}`,
+        companyName: 'SANTEH',
+        greeting: `Hello `,
+        name: approverUser.empName,
+        body: `A new purchase request has been created and requires your approval.<br><br>
+              <strong>Reference No:</strong> ${referenceNo}<br>
+              <strong>Company:</strong> ${headerData.company}<br>
+              <strong>Request Type:</strong> ${headerData.requestType}<br>
+              <strong>Created by:</strong> ${creatorName}<br>
+              <strong>Items:</strong> ${detailsData.length}<br><br>
+              Please review and approve this request as soon as possible.`,
+        buttonText: 'Review Request',
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
+        companyEmail: 'support@santeh.com',
+        companyPhone: '+1 (555) 123-4567',
+        unsubscribeUrl: '#',
+        preferencesUrl: '#'
+      };
+
+      await sendEmailWithTemplate(emailData);
+
+      // Send notification
+      const notification = new Notification(
+        'New Purchase Request Approval',
+        `Purchase Request ${referenceNo} created by ${creatorName} requires your approval`,
+        approverUser.empName,
+        `/request-evaluation?id=${referenceNo}`
+      );
+
+      await notification.save(creatorName);
+    }
+  } catch (error) {
+    console.error('Error notifying approver:', error);
     throw error;
   }
 }

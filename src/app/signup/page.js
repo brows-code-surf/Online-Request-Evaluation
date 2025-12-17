@@ -5,7 +5,7 @@ import Loader from '../_components/loader';
 import { createUser, sendConfirmationEmail, checkEmailExists, checkEmployeeIDExists, sendNotification } from './_actions';
 import { ToastContainer, toast } from 'react-toastify';
 import LoaderButton from '../_components/loaderButton'
-import { JobTitles, Departments } from '../../utils/jobConstants';
+import { JobTitles, Departments, JobLevel } from '../../utils/jobConstants';
 import { Location } from '../../utils/locationConstants';
 import { generatePassword } from '../../utils/generatePassword';
 
@@ -28,6 +28,7 @@ export default function Signup() {
 
         const job = JobTitles.find(j => j.id === jobId);
         const jobTitle = job ? job.value : '';
+        const jobLevel = job ? JobLevel.find(jl => jl.id === job.jobLevelId)?.value : '';
 
         const departmentName = job
             ? Departments.find(d => d.id === job.departmentId)?.value
@@ -36,7 +37,8 @@ export default function Signup() {
         setSelectedDepartment(departmentName);
         setFormData(prev => ({
             ...prev,
-            jobTitle: jobTitle
+            jobTitle: jobTitle,
+            jobLevel: jobLevel
         }));
     };
 
@@ -46,6 +48,7 @@ export default function Signup() {
         location: '',
         department: '',
         jobTitle: '',
+        jobLevel: '',
         employeeid: ''
     });
 
@@ -184,7 +187,7 @@ export default function Signup() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
+        <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
             <Loader loading={loading} />
             <ToastContainer
                 position="top-center"
@@ -195,10 +198,10 @@ export default function Signup() {
                 pauseOnHover
                 theme="colored"
             />
-            <div className="max-w-2xl w-full p-10 bg-white rounded-lg shadow-lg">
-                <div className="flex items-center justify-between mb-8">
+            <div className="max-w-2xl w-full p-8 sm:p-10 bg-white rounded-xl shadow-2xl border border-gray-100">
+                <div className="flex items-center justify-between mb-10">
                     <button
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-50"
                         onClick={() => router.back()}
                     >
                         <svg
@@ -213,19 +216,19 @@ export default function Signup() {
                         </svg>
                     </button>
 
-                    <h2 className="text-3xl font-bold text-gray-900 text-center flex-1">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center flex-1">
                         Request Account
                     </h2>
 
                     <div className="w-6" />
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="flex space-x-4">
-                        <div className="flex-1">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
                             <label
                                 htmlFor="name"
-                                className="block text-sm font-medium text-gray-700"
+                                className="block text-sm font-semibold text-gray-800 mb-3"
                             >
                                 Full Name
                             </label>
@@ -236,14 +239,14 @@ export default function Signup() {
                                 value={formData.fullName}
                                 onChange={handleChange}
                                 required
-                                className="mt-1 text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400"
                             />
                         </div>
 
-                        <div className="flex-1">
+                        <div>
                             <label
                                 htmlFor="jobTitle"
-                                className="block text-sm font-medium text-gray-700"
+                                className="block text-sm font-semibold text-gray-800 mb-3"
                             >
                                 Job Title
                             </label>
@@ -253,7 +256,7 @@ export default function Signup() {
                                 value={selectedJobId}
                                 onChange={handleJobChange}
                                 required
-                                className="mt-1 text-black block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 appearance-none bg-white"
                             >
                                 <option value="">Select a job</option>
                                 {JobTitles.map((job) => (
@@ -262,76 +265,90 @@ export default function Signup() {
                                     </option>
                                 ))}
                             </select>
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="mt-2 text-xs text-gray-600 font-medium">
                                 Please select your Job Title to fill Department.
                             </p>
                         </div>
                     </div>
-                    <div>
-                        <div className='flex space-x-4'>
-                            <div className="flex-1">
-                                <label htmlFor='department' className="block text-sm font-medium text-gray-700">
-                                    Department
-                                </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor='department' className="block text-sm font-semibold text-gray-800 mb-3">
+                                Department
+                            </label>
+                            <input
+                                id="department"
+                                name="department"
+                                type="text"
+                                value={selectedDepartment}
+                                readOnly
+                                required
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor='jobLevel' className="block text-sm font-semibold text-gray-800 mb-3">
+                                Job Level
+                            </label>
+                            <input
+                                id="jobLevel"
+                                name="jobLevel"
+                                type="text"
+                                value={formData.jobLevel}
+                                readOnly
+                                required
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor='employeeid' className="block text-sm font-semibold text-gray-800 mb-3">
+                                Employee ID
+                            </label>
+                            <div className="relative">
                                 <input
-                                    id="department"
-                                    name="department"
+                                    id="employeeid"
+                                    name="employeeid"
                                     type="text"
-                                    value={selectedDepartment}
-                                    readOnly
-                                    required
-                                    className="mt-1 text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                                    Location
-                                </label>
-                                <select
-                                    id="location"
-                                    name="location"
-                                    value={formData.location}
+                                    value={formData.employeeid}
                                     onChange={handleChange}
                                     required
-                                    className="mt-1 text-black block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
-                                >
-                                    <option value="">Select a location</option>
-                                    {Location.map((loc) => (
-                                        <option key={loc.id} value={loc.value}>
-                                            {loc.value}
-                                        </option>
-                                    ))}
-                                </select>
+                                    className={`mt-1 text-black block w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 ${employeeIdError ? 'border-red-500' : 'border-gray-300'
+                                        }`}
+                                />
+                                {employeeIdChecking && (
+                                    <span className="absolute right-4 top-4 text-gray-500 text-sm font-medium">
+                                        Checking...
+                                    </span>
+                                )}
                             </div>
-                        </div>
-                    </div>
-                    <div>
-                        <label htmlFor='employeeid' className="block text-sm font-medium text-gray-700">
-                            Employee ID
-                        </label>
-                        <div className="relative">
-                            <input
-                                id="employeeid"
-                                name="employeeid"
-                                type="text"
-                                value={formData.employeeid}
-                                onChange={handleChange}
-                                required
-                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${employeeIdError ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                            />
-                            {employeeIdChecking && (
-                                <span className="absolute right-3 top-3 text-gray-500 text-sm">
-                                    Checking...
-                                </span>
+                            {employeeIdError && (
+                                <p className="mt-2 text-sm text-red-600 font-medium">{employeeIdError}</p>
                             )}
                         </div>
-                        {employeeIdError && (
-                            <p className="mt-1 text-xs text-red-600">{employeeIdError}</p>
-                        )}
+                        <div>
+                            <label htmlFor="location" className="block text-sm font-semibold text-gray-800 mb-3">
+                                Location
+                            </label>
+                            <select
+                                id="location"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                required
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 appearance-none bg-white"
+                            >
+                                <option value="">Select a location</option>
+                                {Location.map((loc) => (
+                                    <option key={loc.id} value={loc.value}>
+                                        {loc.value}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="email" className="block text-sm font-semibold text-gray-800 mb-3">
                             Email
                         </label>
                         <div className="relative">
@@ -342,34 +359,34 @@ export default function Signup() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className={`mt-1 text-black block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black ${emailError ? 'border-red-500' : 'border-gray-300'
+                                className={`mt-1 text-black block w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 ${emailError ? 'border-red-500' : 'border-gray-300'
                                     }`}
                             />
                             {emailChecking && (
-                                <span className="absolute right-3 top-3 text-gray-500 text-sm">
+                                <span className="absolute right-4 top-4 text-gray-500 text-sm font-medium">
                                     Checking...
                                 </span>
                             )}
                         </div>
                         {emailError && (
-                            <p className="mt-1 text-xs text-red-600">{emailError}</p>
+                            <p className="mt-2 text-sm text-red-600 font-medium">{emailError}</p>
                         )}
                     </div>
                     <div>
                         {loading ? (
-                            <div className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black">
+                            <div className="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600">
                                 <LoaderButton loading={loading} />
                             </div>
                         ) : (
                             <button
                                 type="submit"
                                 disabled={emailError !== '' || employeeIdError !== ''}
-                                className="w-full flex justify-center py-2 px-4 border border-blue-500 rounded-md shadow-sm text-sm font-medium text-blue-700 hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex justify-center py-4 px-4 border-2 border-blue-500 rounded-lg shadow-sm text-sm font-semibold text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 Sign up
                             </button>
                         )}
-                        <p className="mt-1 text-xs text-gray-500">Account will be reviewed after signing up</p>
+                        <p className="mt-3 text-xs text-gray-600 font-medium text-center">Account will be reviewed after signing up</p>
                     </div>
                 </form>
             </div>

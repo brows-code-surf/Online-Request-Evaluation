@@ -51,10 +51,10 @@ export const UserAccount = {
       const hashedPassword = await bcrypt.hash(formData.password, 10);
 
       const query = `
-        INSERT INTO [SYSTEM.USERACCOUNT.1] 
-        (EMPLOYEENAME, EMAIL, PASSWORDHASH, LOCATION, DEPARTMENT, JOBTITLE, EMPLOYEEIDNO, DATEREQUESTED, IS_APPROVED) 
-        VALUES 
-        (@name, @email, @pass, @loc, @dept, @job, @empid, GETDATE(), @status)
+        INSERT INTO [SYSTEM.USERACCOUNT.1]
+        (EMPLOYEENAME, EMAIL, PASSWORDHASH, LOCATION, DEPARTMENT, JOBTITLE, JOBLEVEL, EMPLOYEEIDNO, DATEREQUESTED, IS_APPROVED)
+        VALUES
+        (@name, @email, @pass, @loc, @dept, @job, @joblevel, @empid, GETDATE(), @status)
       `;
 
       const params = {
@@ -64,6 +64,7 @@ export const UserAccount = {
         loc: formData.location,
         dept: formData.department,
         job: formData.jobTitle,
+        joblevel: formData.jobLevel,
         empid: formData.employeeid,
         daterequested: new Date(),
         status: 'PENDING'
@@ -76,6 +77,7 @@ export const UserAccount = {
         .input('loc', params.loc)
         .input('dept', params.dept)
         .input('job', params.job)
+        .input('joblevel', params.joblevel)
         .input('empid', params.empid)
         .input('daterequested', params.daterequested)
         .input('status', params.status)

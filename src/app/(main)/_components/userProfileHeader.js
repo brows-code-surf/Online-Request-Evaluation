@@ -1,6 +1,6 @@
 'use client';
 
-import { JobTitles, Departments } from '../../../utils/jobConstants';
+import { JobTitles, Departments, JobLevel } from '../../../utils/jobConstants';
 import { Location } from '../../../utils/locationConstants';
 import { useAuth } from '../../../utils/authContext';
 
@@ -119,6 +119,21 @@ export default function UserProfileHeader({ profileData, isEditing, isUserAdmin,
               )}
             </div>
 
+            {/* Job Level */}
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Job Level
+              </label>
+              <input
+                type="text"
+                name="jobLevel"
+                value={profileData.jobLevel}
+                readOnly
+                onChange={onProfileChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'text-white bg-gray-700' : 'text-black'} border-gray-300`}
+              />
+            </div>
+
             {/* Location */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -157,6 +172,10 @@ export default function UserProfileHeader({ profileData, isEditing, isUserAdmin,
             <div>
               <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>DEPARTMENT</p>
               <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{profileData.department}</p>
+            </div>
+            <div>
+              <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>JOB LEVEL</p>
+              <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{profileData.jobLevel}</p>
             </div>
             <div>
               <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>LOCATION</p>

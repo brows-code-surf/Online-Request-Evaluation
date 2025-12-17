@@ -15,6 +15,7 @@ export class AccountApprovalModel {
           LOCATION as location,
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
+          JOBLEVEL as jobLevel,
           EMPLOYEEIDNO as employeeId,
           IS_APPROVED as isApproved,
           DATEREQUESTED as requestDate,
@@ -39,6 +40,7 @@ export class AccountApprovalModel {
         remarks: record.remarks,
         department: record.department,
         jobTitle: record.jobTitle,
+        jobLevel: record.jobLevel,
         location: record.location,
         description: `Request for new employee account creation for ${record.department} department.`,
         attachments: []

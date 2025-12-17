@@ -7,7 +7,18 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Initialize darkMode from localStorage if available
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('darkMode');
+        return stored ? JSON.parse(stored) : false;
+      } catch (error) {
+        return false;
+      }
+    }
+    return false;
+  });
 
   useEffect(() => {
     // Check if user is already logged in
@@ -29,6 +40,17 @@ export function AuthProvider({ children }) {
     }
     setLoading(false);
   }, []);
+
+  // Persist darkMode to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('darkMode', JSON.stringify(darkMode));
+      } catch (error) {
+        console.error('Error saving dark mode to localStorage:', error);
+      }
+    }
+  }, [darkMode]);
 
   const loadDarkModeSetting = async (employeeID) => {
     if (!employeeID) return;

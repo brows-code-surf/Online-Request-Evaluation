@@ -1,4 +1,3 @@
-// constants.js
 
 export const Departments = [
   { id: 1, value: "Engineering" },

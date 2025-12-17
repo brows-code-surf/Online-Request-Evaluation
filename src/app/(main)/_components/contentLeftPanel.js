@@ -207,6 +207,7 @@ export default function ContentLeftPanel({
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
                                 <option value="all">Select Status</option>
+                                <option value="POSTED">Posted</option>
                                 <option value="FOR CONFIRMATION">For Confirmation</option>
                                 <option value="FOR REQUEST APPROVAL">For Request Approval</option>
                                 <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>

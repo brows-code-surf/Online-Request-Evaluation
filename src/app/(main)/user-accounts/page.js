@@ -9,7 +9,7 @@ import { useAuth } from '../../../utils/authContext';
 import UserProfileHeader from '../_components/userProfileHeader';
 import UserPassword from '../_components/userPassword';
 import { getUserProfile, updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive } from './_actions';
-import { JobTitles, Departments } from '@/utils/jobConstants';
+import { JobTitles, Departments, JobLevel } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
@@ -50,6 +50,7 @@ function UserAccountsContent() {
         employeeID: '',
         jobTitle: '',
         department: '',
+        jobLevel: '',
         location: ''
     });
 
@@ -97,6 +98,7 @@ function UserAccountsContent() {
             employeeID: userData.employeeID || '',
             jobTitle: userData.jobTitle || '',
             department: userData.department || '',
+            jobLevel: userData.jobLevel || '',
             location: userData.location || ''
         });
     };
@@ -159,10 +161,15 @@ function UserAccountsContent() {
             ? Departments.find(d => d.id === job.departmentId)?.value
             : '';
 
+        const jobLevelName = job
+            ? JobLevel.find(l => l.id === job.jobLevelId)?.value
+            : '';
+
         setProfileData(prev => ({
             ...prev,
             jobTitle: jobValue,
-            department: departmentName
+            department: departmentName,
+            jobLevel: jobLevelName
         }));
     };
 
@@ -211,6 +218,7 @@ function UserAccountsContent() {
                             email: profileData.email,
                             jobTitle: profileData.jobTitle,
                             department: profileData.department,
+                            jobLevel: profileData.jobLevel,
                             location: profileData.location
                         }
                         : u
@@ -223,6 +231,7 @@ function UserAccountsContent() {
                     email: profileData.email,
                     jobTitle: profileData.jobTitle,
                     department: profileData.department,
+                    jobLevel: profileData.jobLevel,
                     location: profileData.location
                 } : null);
 
@@ -394,6 +403,7 @@ function UserAccountsContent() {
             const matchesSearch = u.requester.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toString().includes(searchQuery) ||
                 u.department.toLowerCase().includes(searchQuery.toLowerCase()) || u.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                u.jobLevel?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 u.status.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = filterStatus === 'all' || u.status === filterStatus;
             return matchesSearch && matchesStatus;
@@ -431,6 +441,7 @@ function UserAccountsContent() {
                         email: data.email,
                         jobTitle: data.jobTitle,
                         department: data.department,
+                        jobLevel: data.jobLevel,
                         location: data.location
                     }
                     : u
@@ -444,6 +455,7 @@ function UserAccountsContent() {
                     email: data.email,
                     jobTitle: data.jobTitle,
                     department: data.department,
+                    jobLevel: data.jobLevel,
                     location: data.location
                 } : null);
             }

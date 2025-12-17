@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useAuth } from '../../../../utils/authContext';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
+import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
+import { postPurchaseRequest } from '../_actions';
 
 const STATUS_OPTIONS = [
+  { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
   { value: 'FOR CONFIRMATION', label: 'For Confirmation', color: 'bg-blue-100 text-blue-800' },
   { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time', color: 'bg-orange-100 text-orange-800' },
@@ -28,11 +31,14 @@ export default function PurchaseRequestDetails({
   onApprove,
   onReceive,
   onReject,
+  onPost,
   loading = false
 }) {
   const { user, darkMode } = useAuth();
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   if (!purchaseRequest) return null;
 
@@ -56,42 +62,54 @@ export default function PurchaseRequestDetails({
   };
 
   const canReview = () => {
-    return purchaseRequest.header.requestStatus === 'FOR CONFIRMATION' &&
-           purchaseRequest.header.reviewer?.toUpperCase() === user?.empName?.toUpperCase();
+    return purchaseRequest.requestStatus === 'FOR CONFIRMATION' &&
+           purchaseRequest.reviewer?.toUpperCase() === user?.empName?.toUpperCase();
   };
 
   const canApprove = () => {
-    return purchaseRequest.header.requestStatus === 'FOR REQUEST APPROVAL' &&
-           purchaseRequest.header.approver?.toUpperCase() === user?.empName?.toUpperCase();
+    return purchaseRequest.requestStatus === 'FOR REQUEST APPROVAL' &&
+           purchaseRequest.approver?.toUpperCase() === user?.empName?.toUpperCase();
   };
 
   const canReceive = () => {
-    return purchaseRequest.header.requestStatus === 'FOR PURCHASING LEAD TIME' &&
-           purchaseRequest.header.addressedTo?.toUpperCase() === user?.empName?.toUpperCase();
+    return purchaseRequest.requestStatus === 'FOR PURCHASING LEAD TIME' &&
+           purchaseRequest.addressedTo?.toUpperCase() === user?.empName?.toUpperCase();
   };
 
   const canReject = () => {
-    return (purchaseRequest.header.requestStatus === 'FOR CONFIRMATION' &&
-            purchaseRequest.header.reviewer?.toUpperCase() === user?.empName?.toUpperCase()) ||
-           (purchaseRequest.header.requestStatus === 'FOR REQUEST APPROVAL' &&
-            purchaseRequest.header.approver?.toUpperCase() === user?.empName?.toUpperCase());
+    return (purchaseRequest.requestStatus === 'FOR CONFIRMATION' &&
+            purchaseRequest.reviewer?.toUpperCase() === user?.empName?.toUpperCase()) ||
+           (purchaseRequest.requestStatus === 'FOR REQUEST APPROVAL' &&
+            purchaseRequest.approver?.toUpperCase() === user?.empName?.toUpperCase());
+  };
+
+  const canPost = () => {
+    return purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() &&
+           purchaseRequest.requestStatus === 'FOR CONFIRMATION';
   };
 
   const handleAction = async (action, reason = '') => {
+    // Show confirmation for post action
+    if (action === 'post') {
+      setPendingAction('post');
+      setShowConfirmModal(true);
+      return;
+    }
+
     setActionLoading(true);
     try {
       switch (action) {
         case 'review':
-          await onReview(purchaseRequest.header.referenceNo);
+          await onReview(purchaseRequest.referenceNo);
           break;
         case 'approve':
-          await onApprove(purchaseRequest.header.referenceNo);
+          await onApprove(purchaseRequest.referenceNo);
           break;
         case 'receive':
-          await onReceive(purchaseRequest.header.referenceNo);
+          await onReceive(purchaseRequest.referenceNo);
           break;
         case 'reject':
-          await onReject(purchaseRequest.header.referenceNo, reason);
+          await onReject(purchaseRequest.referenceNo, reason);
           setShowRejectModal(false);
           break;
       }
@@ -102,8 +120,29 @@ export default function PurchaseRequestDetails({
     }
   };
 
+  const handleConfirmAction = async () => {
+    setShowConfirmModal(false);
+    setActionLoading(true);
+
+    try {
+      if (pendingAction === 'post' && onPost) {
+        await onPost(purchaseRequest.referenceNo);
+      }
+    } catch (error) {
+      console.error(`Error ${pendingAction}ing purchase request:`, error);
+    } finally {
+      setActionLoading(false);
+      setPendingAction(null);
+    }
+  };
+
   const getWorkflowStep = () => {
-    switch (purchaseRequest.header.requestStatus) {
+    // Check if request is posted first
+    if (purchaseRequest.isPosted) {
+      return 'Posted - Awaiting Workflow';
+    }
+
+    switch (purchaseRequest.requestStatus) {
       case 'FOR CONFIRMATION':
         return 'Waiting for Review';
       case 'FOR REQUEST APPROVAL':
@@ -126,12 +165,12 @@ export default function PurchaseRequestDetails({
         <div className="bg-gradient-to-r from-blue-600 to-green-300 px-8 py-6 rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold text-white">
-              Purchase Request {purchaseRequest.header.referenceNo}
+              Purchase Request {purchaseRequest.referenceNo}
             </h2>
             <p className="text-blue-100 mt-1">
               {getWorkflowStep()}
             </p>
-            {purchaseRequest.header.isRush && (
+            {purchaseRequest.isRush && (
               <div className="flex items-center mt-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                   <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -153,87 +192,87 @@ export default function PurchaseRequestDetails({
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Reference No</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-mono`}>{purchaseRequest.header.referenceNo}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-mono`}>{purchaseRequest.referenceNo}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Company</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.company}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.company}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Request Type</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.requestType}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.requestType}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Status</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(purchaseRequest.header.requestStatus)}`}>
-                    {purchaseRequest.header.requestStatus}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(purchaseRequest.requestStatus)}`}>
+                    {purchaseRequest.requestStatus}
                   </span>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Location Code</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.locationCode}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.locationCode}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Requested</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.header.dateRequested)}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateRequested)}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Requested By</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.requestedBy}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.requestedBy}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Reviewer</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.reviewer || '-'}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.reviewer || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Approver</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.approver || '-'}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.approver || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Addressed To</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.addressedTo || '-'}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.addressedTo || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Reviewed</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.header.dateReviewed)}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateReviewed)}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Approved</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.header.dateApproved)}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateApproved)}</p>
                 </div>
               </div>
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Received</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.header.dateReceived)}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateReceived)}</p>
                 </div>
               </div>
               <div className="md:col-span-3">
                 <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Remarks</label>
                 <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2 min-h-[60px]`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.header.remarks || 'No remarks'}</p>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.remarks || 'No remarks'}</p>
                 </div>
               </div>
             </div>
@@ -259,7 +298,7 @@ export default function PurchaseRequestDetails({
                   </tr>
                 </thead>
                 <tbody className={`${darkMode ? 'bg-gray-600 divide-gray-500' : 'bg-white divide-gray-200'} divide-y`}>
-                  {purchaseRequest.details.map((item, index) => (
+                  {purchaseRequest.details && purchaseRequest.details.map((item, index) => (
                     <tr key={item.id} className={darkMode ? 'hover:bg-gray-500' : 'hover:bg-gray-50'}>
                       <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {item.itemNumber}
@@ -295,7 +334,7 @@ export default function PurchaseRequestDetails({
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-              {purchaseRequest.details.map((item, index) => (
+              {purchaseRequest.details && purchaseRequest.details.map((item, index) => (
                 <div key={item.id} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
@@ -356,6 +395,23 @@ export default function PurchaseRequestDetails({
             >
               Close
             </button>
+
+            {canPost() && (
+              <button
+                onClick={() => handleAction('post')}
+                disabled={loading || actionLoading}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+              >
+                {actionLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Posting...
+                  </div>
+                ) : (
+                  'Post Request'
+                )}
+              </button>
+            )}
 
             {canReject() && (
               <button
@@ -439,6 +495,18 @@ export default function PurchaseRequestDetails({
           message="Please provide a reason for rejecting this purchase request:"
         />
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Post Purchase Request"
+        message={`Are you sure you want to post this purchase request? This will send notifications to the ${purchaseRequest.reviewer ? 'reviewer' : 'approver'} and start the approval workflow.`}
+        confirmButtonText="Post Request"
+        confirmButtonColor="purple"
+        onConfirm={handleConfirmAction}
+        onCancel={() => setShowConfirmModal(false)}
+        isLoading={actionLoading}
+      />
     </div>
   );
 }

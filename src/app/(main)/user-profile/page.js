@@ -8,7 +8,7 @@ import { useAuth } from '../../../utils/authContext';
 import UserProfileHeader from '../_components/userProfileHeader';
 import UserPassword from '../_components/userPassword';
 import { getUserProfile, updateUserProfile, changePassword } from './_actions';
-import { JobTitles, Departments } from '@/utils/jobConstants';
+import { JobTitles, Departments, JobLevel } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 
 function UserProfileContent() {
@@ -30,6 +30,7 @@ function UserProfileContent() {
         employeeID: '',
         jobTitle: '',
         department: '',
+        jobLevel: '',
         location: ''
     });
 
@@ -50,19 +51,40 @@ function UserProfileContent() {
     const fetchUserProfile = async () => {
         setPageLoading(true);
         try {
-            if (user) {
-                setProfileData({
-                    empName: user.empName || '',
-                    email: user.email || '',
-                    employeeID: user.employeeID || '',
-                    jobTitle: user.jobTitle || '',
-                    department: user.department || '',
-                    location: user.location || '',
-                    phone: user.phone || '',
-                    dateOfBirth: user.dateOfBirth || '',
-                    address: user.address || '',
-                });
-                console.log('User profile loaded:', user);
+            if (user?.email) {
+                // Fetch complete profile data from database
+                const result = await getUserProfile(user.email);
+                if (result.success) {
+                    const profile = result.data;
+                    setProfileData({
+                        empName: profile.empName || '',
+                        email: profile.email || '',
+                        employeeID: profile.employeeID || '',
+                        jobTitle: profile.jobTitle || '',
+                        department: profile.department || '',
+                        jobLevel: profile.jobLevel || '',
+                        location: profile.location || '',
+                        phone: profile.phone || '',
+                        dateOfBirth: profile.dateOfBirth || '',
+                        address: profile.address || '',
+                    });
+                    console.log('User profile loaded:', profile);
+                } else {
+                    // Fallback to authContext user data
+                    setProfileData({
+                        empName: user.empName || '',
+                        email: user.email || '',
+                        employeeID: user.employeeID || '',
+                        jobTitle: user.jobTitle || '',
+                        department: user.department || '',
+                        jobLevel: user.jobLevel || '',
+                        location: user.location || '',
+                        phone: user.phone || '',
+                        dateOfBirth: user.dateOfBirth || '',
+                        address: user.address || '',
+                    });
+                    console.log('User profile loaded from authContext:', user);
+                }
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -123,15 +145,20 @@ function UserProfileContent() {
     const handleJobChange = (e) => {
         const jobValue = e.target.value;
         const job = JobTitles.find(j => j.value === jobValue);
-        
+
         const departmentName = job
             ? Departments.find(d => d.id === job.departmentId)?.value
+            : '';
+
+        const jobLevelName = job
+            ? JobLevel.find(l => l.id === job.jobLevelId)?.value
             : '';
 
         setProfileData(prev => ({
             ...prev,
             jobTitle: jobValue,
-            department: departmentName
+            department: departmentName,
+            jobLevel: jobLevelName
         }));
     };
 
@@ -176,6 +203,7 @@ function UserProfileContent() {
                         employeeID: updatedUser.employeeID || '',
                         jobTitle: updatedUser.jobTitle || '',
                         department: updatedUser.department || '',
+                        jobLevel: updatedUser.jobLevel || '',
                         location: updatedUser.location || '',
                         phone: updatedUser.phone || '',
                         dateOfBirth: updatedUser.dateOfBirth || '',

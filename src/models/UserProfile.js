@@ -14,6 +14,7 @@ class UserProfile {
           EMPLOYEEIDNO as employeeID,
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
+          JOBLEVEL as jobLevel,
           LOCATION as location
         FROM [SYSTEM.USERACCOUNT.1]
         WHERE EMAIL = @email
@@ -46,6 +47,7 @@ class UserProfile {
           EMPLOYEEIDNO as employeeID,
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
+          JOBLEVEL as jobLevel,
           LOCATION as location
         FROM [SYSTEM.USERACCOUNT.1]
         WHERE EMPLOYEEIDNO = @employeeID
@@ -78,6 +80,7 @@ class UserProfile {
           EMPLOYEEIDNO as employeeID,
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
+          JOBLEVEL as jobLevel,
           LOCATION as location,
           DATEREQUESTED as dateRequested,
           STATUS as status
@@ -104,6 +107,7 @@ class UserProfile {
                 EMPLOYEENAME = @employeeName,
                 EMAIL = @email,
                 JOBTITLE = @jobTitle,
+                JOBLEVEL = @jobLevel,
                 DEPARTMENT = @department,
                 LOCATION = @location,
                 MODIFIEDBY = @modifiedBy,
@@ -116,6 +120,7 @@ class UserProfile {
                 .input('employeeName', profileData.empName || null)
                 .input('email', profileData.email || null)
                 .input('jobTitle', profileData.jobTitle || null)
+                .input('jobLevel', profileData.jobLevel || null)
                 .input('department', profileData.department || null)
                 .input('location', profileData.location || null)
                 .input('modifiedBy', modifiedByEmployeeID || null)
@@ -259,8 +264,7 @@ class UserProfile {
 
             const query = `
                 SELECT
-                    IS_DARK_MODE as isDarkMode,
-                    IS_EMAIL_NOTIFICATION as isEmailNotification
+                    IS_DARK_MODE as isDarkMode
                 FROM [SYSTEM.USERACCOUNT.1]
                 WHERE EMPLOYEEIDNO = @employeeID
             `;
@@ -275,8 +279,7 @@ class UserProfile {
 
             const settings = result.recordset[0];
             return {
-                isDarkMode: settings.isDarkMode || 0,
-                isEmailNotification: settings.isEmailNotification || 1
+                isDarkMode: settings.isDarkMode || 0
             };
         } catch (error) {
             console.error('Error fetching user settings:', error);
