@@ -95,19 +95,19 @@ class RequestEvaluation {
             // Dynamic WHERE condition based on request status - strict role matching
             switch (requestStatus.toLowerCase()) {
                 case 'for confirmation':
-                    query += ` PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION'`;
+                    query += ` PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1`;
                     break;
                 case 'for request approval':
-                    query += ` PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL'`;
+                    query += ` PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1`;
                     break;
                 case 'for purchasing lead time':
-                    query += ` PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME'`;
+                    query += ` PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1`;
                     break;
                 default:
                     // Show requests where user is assigned and status matches their role
-                    query += ` ((PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION') 
-                              OR (PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL') 
-                              OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME'))`;
+                    query += ` ((PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1)
+                              OR (PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1)
+                              OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1))`;
             }
 
             // Dynamic filters
@@ -524,25 +524,28 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CASE
-                        WHEN ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
-                        WHEN ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
-                        ELSE 'OTHER'
+                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
                     END as status,
                     COUNT(*) as count
-                FROM [PURCHASE.REQUESTDETAILS.1]
+                FROM [PURCHASE.REQUESTDETAILS.1] PRD
+                INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
                 GROUP BY
                     CASE
-                        WHEN ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
-                        WHEN ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
-                        ELSE 'OTHER'
+                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
                     END
                 ORDER BY status
             `;
@@ -627,13 +630,14 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CASE
-                        WHEN PRD.ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN PRD.ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN PRD.ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN PRD.ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN PRD.ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
-                        WHEN PRD.ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
-                        ELSE 'OTHER'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
                     END as status,
                     COUNT(*) as count
                 FROM [PURCHASE.REQUESTDETAILS.1] PRD
@@ -644,13 +648,14 @@ class RequestEvaluation {
                 OR PRH.ADDRESSEDTO = @createdBy
                 GROUP BY
                     CASE
-                        WHEN PRD.ITEMSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN PRD.ITEMSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN PRD.ITEMSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN PRD.ITEMSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN PRD.ITEMSTATUS = 'APPROVED' THEN 'APPROVED'
-                        WHEN PRD.ITEMSTATUS = 'REJECTED' THEN 'REJECTED'
-                        ELSE 'OTHER'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
                     END
                 ORDER BY status
             `;

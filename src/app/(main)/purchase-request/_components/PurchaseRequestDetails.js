@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '../../../../utils/authContext';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
-import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
-import { postPurchaseRequest } from '../_actions';
 
 const STATUS_OPTIONS = [
   { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
@@ -26,17 +24,19 @@ const ITEM_STATUS_OPTIONS = [
 
 export default function PurchaseRequestDetails({
   purchaseRequest,
-  onClose,
   onReview,
   onApprove,
   onReceive,
   onReject,
   onPost,
+  onCancel,
+  onEdit,
   loading = false
 }) {
   const { user, darkMode } = useAuth();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -61,31 +61,9 @@ export default function PurchaseRequestDetails({
     return statusOption ? statusOption.color : 'bg-gray-100 text-gray-800';
   };
 
-  const canReview = () => {
-    return purchaseRequest.requestStatus === 'FOR CONFIRMATION' &&
-           purchaseRequest.reviewer?.toUpperCase() === user?.empName?.toUpperCase();
-  };
-
-  const canApprove = () => {
-    return purchaseRequest.requestStatus === 'FOR REQUEST APPROVAL' &&
-           purchaseRequest.approver?.toUpperCase() === user?.empName?.toUpperCase();
-  };
-
-  const canReceive = () => {
-    return purchaseRequest.requestStatus === 'FOR PURCHASING LEAD TIME' &&
-           purchaseRequest.addressedTo?.toUpperCase() === user?.empName?.toUpperCase();
-  };
-
-  const canReject = () => {
-    return (purchaseRequest.requestStatus === 'FOR CONFIRMATION' &&
-            purchaseRequest.reviewer?.toUpperCase() === user?.empName?.toUpperCase()) ||
-           (purchaseRequest.requestStatus === 'FOR REQUEST APPROVAL' &&
-            purchaseRequest.approver?.toUpperCase() === user?.empName?.toUpperCase());
-  };
-
   const canPost = () => {
     return purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() &&
-           purchaseRequest.requestStatus === 'FOR CONFIRMATION';
+      purchaseRequest.requestStatus === 'FOR CONFIRMATION' || 'FOR POSTING';
   };
 
   const handleAction = async (action, reason = '') => {
@@ -136,353 +114,213 @@ export default function PurchaseRequestDetails({
     }
   };
 
-  const getWorkflowStep = () => {
-    // Check if request is posted first
-    if (purchaseRequest.isPosted) {
-      return 'Posted - Awaiting Workflow';
-    }
+  const handleCancelConfirm = async () => {
+    setShowCancelModal(false);
+    setActionLoading(true);
 
-    switch (purchaseRequest.requestStatus) {
-      case 'FOR CONFIRMATION':
-        return 'Waiting for Review';
-      case 'FOR REQUEST APPROVAL':
-        return 'Waiting for Approval';
-      case 'FOR PURCHASING LEAD TIME':
-        return 'Ready for Processing';
-      case 'COMPLETED':
-        return 'Completed';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return 'Unknown Status';
+    try {
+      if (onCancel) {
+        await onCancel(purchaseRequest.referenceNo);
+      }
+    } catch (error) {
+      console.error('Error canceling purchase request:', error);
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const getDateRequested = () => {
+    return `Requested on ${formatDate(purchaseRequest.dateRequested)}`;
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="bg-gradient-to-r from-blue-600 to-green-300 px-8 py-6 rounded-t-2xl">
-          <div>
-            <h2 className="text-2xl font-bold text-white">
-              Purchase Request {purchaseRequest.referenceNo}
-            </h2>
-            <p className="text-blue-100 mt-1">
-              {getWorkflowStep()}
-            </p>
-            {purchaseRequest.isRush && (
-              <div className="flex items-center mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  RUSH REQUEST
+      <div className={`p-4 rounded-lg`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+              {purchaseRequest.company} {purchaseRequest.referenceNo}
+            </h1>
+            <div className="flex items-center gap-3">
+              {purchaseRequest.isRush && (
+                <span className={`text-xs px-4 py-2 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
+                  {purchaseRequest.isRush ? 'RUSH' : ''}
                 </span>
-              </div>
+              )}
+              <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusBadge(purchaseRequest.requestStatus)}`}>
+                {purchaseRequest.requestStatus}
+              </span>
+              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {getDateRequested()}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+              <button
+                onClick={() => onEdit && onEdit(purchaseRequest)}
+                disabled={loading || actionLoading}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                Edit Request
+              </button>
             )}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="px-8 py-8 space-y-6">
-          {/* Header Information */}
-          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-6`}>
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Header Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Reference No</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-mono`}>{purchaseRequest.referenceNo}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Company</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.company}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Request Type</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.requestType}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Status</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(purchaseRequest.requestStatus)}`}>
-                    {purchaseRequest.requestStatus}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Location Code</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.locationCode}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Requested</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateRequested)}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Requested By</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.requestedBy}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Reviewer</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.reviewer || '-'}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Approver</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.approver || '-'}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Addressed To</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.addressedTo || '-'}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Reviewed</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateReviewed)}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Approved</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateApproved)}</p>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Date Received</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(purchaseRequest.dateReceived)}</p>
-                </div>
-              </div>
-              <div className="md:col-span-3">
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Remarks</label>
-                <div className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'} rounded px-3 py-2 min-h-[60px]`}>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.remarks || 'No remarks'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Item Details */}
-          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-6`}>
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Item Details</h3>
-
-            {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full">
-                <thead className={`${darkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
-                  <tr>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Item No</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Description</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>UOM</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Quantity</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Budget</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Date Needed</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Status</th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className={`${darkMode ? 'bg-gray-600 divide-gray-500' : 'bg-white divide-gray-200'} divide-y`}>
-                  {purchaseRequest.details && purchaseRequest.details.map((item, index) => (
-                    <tr key={item.id} className={darkMode ? 'hover:bg-gray-500' : 'hover:bg-gray-50'}>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {item.itemNumber}
-                      </td>
-                      <td className={`px-4 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} max-w-xs truncate`}>
-                        {item.itemDescription}
-                      </td>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {item.unitOfMeasure}
-                      </td>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {item.quantity}
-                      </td>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {item.budgetName}
-                      </td>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {formatDate(item.dateNeeded)}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(item.itemStatus, 'item')}`}>
-                          {item.itemStatus}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} max-w-xs truncate`}>
-                        {item.remarks || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
-              {purchaseRequest.details && purchaseRequest.details.map((item, index) => (
-                <div key={item.id} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(item.itemStatus, 'item')}`}>
-                      {item.itemStatus}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Item No</span>
-                        <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemNumber}</p>
-                      </div>
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>UOM</span>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure}</p>
-                      </div>
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Quantity</span>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.quantity}</p>
-                      </div>
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Budget</span>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetName}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider block mb-1`}>Description</span>
-                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.itemDescription}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Date Needed</span>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{formatDate(item.dateNeeded)}</p>
-                      </div>
-                      <div>
-                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Remarks</span>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className={`px-8 py-6 border-t ${darkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gray-50'} rounded-b-2xl`}>
-          <div className="flex flex-col sm:flex-row gap-4 justify-end">
-            <button
-              onClick={onClose}
-              disabled={loading || actionLoading}
-              className={`px-6 py-3 ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50`}
-            >
-              Close
-            </button>
-
             {canPost() && (
               <button
                 onClick={() => handleAction('post')}
                 disabled={loading || actionLoading}
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {actionLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Posting...
-                  </div>
-                ) : (
-                  'Post Request'
-                )}
+                Post Request
               </button>
             )}
-
-            {canReject() && (
+            {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
               <button
-                onClick={() => setShowRejectModal(true)}
+                onClick={() => setShowCancelModal(true)}
                 disabled={loading || actionLoading}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {actionLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Rejecting...
-                  </div>
-                ) : (
-                  'Reject'
-                )}
-              </button>
-            )}
-
-            {canReview() && (
-              <button
-                onClick={() => handleAction('review')}
-                disabled={loading || actionLoading}
-                className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {actionLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Reviewing...
-                  </div>
-                ) : (
-                  'Review'
-                )}
-              </button>
-            )}
-
-            {canApprove() && (
-              <button
-                onClick={() => handleAction('approve')}
-                disabled={loading || actionLoading}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {actionLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Approving...
-                  </div>
-                ) : (
-                  'Approve'
-                )}
-              </button>
-            )}
-
-            {canReceive() && (
-              <button
-                onClick={() => handleAction('receive')}
-                disabled={loading || actionLoading}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {actionLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Receiving...
-                  </div>
-                ) : (
-                  'Receive'
-                )}
+                Cancel Request
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Content */}
+      <div>
+        {/* Request Header Info */}
+        <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg mb-6 border`}>
+          <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Information</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Requested By</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.requestedBy}</p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reference Number</p>
+              <p className="text-lg font-semibold text-blue-600">{purchaseRequest.referenceNo}</p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Company</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.company}</p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Location</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.locationCode}</p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {purchaseRequest.reviewer || '-'}
+                {purchaseRequest.dateReviewed ? (
+                  <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-500'} ml-2`}>
+                    [REVIEWED: {formatDate(purchaseRequest.dateReviewed)}]
+                  </span>
+                ) : (
+                  <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                    [PENDING]
+                  </span>
+                )}
+              </p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Approver</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {purchaseRequest.approver || '-'}
+                {purchaseRequest.dateApproved ? (
+                  <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-500'} ml-2`}>
+                    [APPROVED: {formatDate(purchaseRequest.dateApproved)}]
+                  </span>
+                ) : (
+                  <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                    [PENDING]
+                  </span>
+                )}
+              </p>
+            </div>
+            <div>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Addressed To</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {purchaseRequest.addressedTo || '-'}
+                {purchaseRequest.dateReceived ? (
+                  <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-500'} ml-2`}>
+                    [RECEIVED: {formatDate(purchaseRequest.dateReceived)}]
+                  </span>
+                ) : (
+                  <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                    [PENDING]
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Remarks */}
+        {purchaseRequest.remarks && (
+          <div className="mb-6">
+            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Remarks</h3>
+            <p className={`leading-relaxed p-4 rounded-lg border ${darkMode ? 'text-gray-300 bg-gray-800 border-gray-600' : 'text-gray-700 bg-gray-50 border-gray-200'}`}>
+              {purchaseRequest.remarks}
+            </p>
+          </div>
+        )}
+
+        {/* Items Table */}
+        <div className="mb-6">
+          <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Items</h3>
+          <div className={`overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
+            <table className="w-full">
+              <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                <tr>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Code</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Description</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>UOFM</th>
+                  <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Name</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Date Needed</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseRequest.details && purchaseRequest.details.length > 0 ? (
+                  purchaseRequest.details.map((item, index) => (
+                    <tr key={index} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition`}>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemNumber || '-'}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemDescription || '-'}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure || '-'}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.quantity || 0}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetName || '-'}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
+                        {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
+                      </td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No items found for this request
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+
+      {(purchaseRequest.requestStatus === 'COMPLETED' || purchaseRequest.requestStatus === 'APPROVED' || purchaseRequest.requestStatus === 'REJECTED') && (
+        <div className={`pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} text-center`}>
+            This request has been {purchaseRequest.requestStatus.toLowerCase()}.
+          </p>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (
@@ -502,9 +340,21 @@ export default function PurchaseRequestDetails({
         title="Post Purchase Request"
         message={`Are you sure you want to post this purchase request? This will send notifications to the ${purchaseRequest.reviewer ? 'reviewer' : 'approver'} and start the approval workflow.`}
         confirmButtonText="Post Request"
-        confirmButtonColor="purple"
+        confirmButtonColor="green"
         onConfirm={handleConfirmAction}
         onCancel={() => setShowConfirmModal(false)}
+        isLoading={actionLoading}
+      />
+
+      {/* Cancel Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        title="Cancel Purchase Request"
+        message="Are you sure you want to cancel this purchase request? This action cannot be undone and will mark the request as cancelled."
+        confirmButtonText="Cancel Request"
+        confirmButtonColor="red"
+        onConfirm={handleCancelConfirm}
+        onCancel={() => setShowCancelModal(false)}
         isLoading={actionLoading}
       />
     </div>

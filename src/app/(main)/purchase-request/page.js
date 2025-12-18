@@ -8,7 +8,7 @@ import HeaderNavBar from '@/app/_components/headerNavBar';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
-import PurchaseRequestList from './_components/PurchaseRequestList';
+
 import SuccessModal from '@/app/(main)/_components/successModal';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
@@ -18,11 +18,9 @@ import {
   getAllPurchaseRequests,
   getPurchaseRequestByReferenceNo,
   createPurchaseRequest,
-  reviewPurchaseRequest,
-  approvePurchaseRequest,
-  receivePurchaseRequest,
-  rejectPurchaseRequest,
-  postPurchaseRequest
+  updatePurchaseRequest,
+  postPurchaseRequest,
+  cancelPurchaseRequest
 } from './_actions';
 
 function PurchaseRequestContent() {
@@ -30,6 +28,7 @@ function PurchaseRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const formRef = useRef(null);
+  const loadingRef = useRef(false);
 
   const [purchaseRequests, setPurchaseRequests] = useState([]);
   const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState(null);
@@ -41,7 +40,7 @@ function PurchaseRequestContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('');
-  const [currentView, setCurrentView] = useState('list'); // 'list', 'create'
+  const [currentView, setCurrentView] = useState('list'); // 'list', 'create', 'edit'
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [addItemButtonVisible, setAddItemButtonVisible] = useState(true);
@@ -56,9 +55,9 @@ function PurchaseRequestContent() {
         const approvalsData = data.purchaseRequests.map(pr => ({
           ...pr,
           id: pr.referenceNo,
-          title: `${pr.company} - ${pr.requestType}`,
+          title: `${pr.company} - ${pr.requestStatus}`,
           requester: pr.requestedBy,
-          status: pr.isPosted ? 'POSTED' : pr.requestStatus,
+          status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
           requestDate: pr.dateRequested,
           department: pr.company,
           isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -94,9 +93,9 @@ function PurchaseRequestContent() {
           const approvalsData = purchaseRequestsData.map(pr => ({
             ...pr,
             id: pr.referenceNo,
-            title: `${pr.company} - ${pr.requestType}`,
+            title: `${pr.company} - ${pr.requestStatus}`,
             requester: pr.requestedBy,
-            status: pr.isPosted ? 'POSTED' : pr.requestStatus,
+            status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
             requestDate: pr.dateRequested,
             department: pr.company,
             isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -104,18 +103,21 @@ function PurchaseRequestContent() {
           }));
           setApprovals(approvalsData);
 
-          const id = searchParams.get('id');
-          let selectApproval = null;
-          if (purchaseRequestsData.length > 0 && !selectedPurchaseRequest) {
-            selectApproval = purchaseRequestsData[0];
-            if (id) {
-              const urlSelected = purchaseRequestsData.find(pr => pr.referenceNo === id);
-              if (urlSelected) {
-                selectApproval = urlSelected;
+          // Only set initial selection if we don't have one already
+          if (!selectedPurchaseRequest) {
+            const id = searchParams.get('id');
+            let selectApproval = null;
+            if (purchaseRequestsData.length > 0) {
+              selectApproval = purchaseRequestsData[0];
+              if (id) {
+                const urlSelected = purchaseRequestsData.find(pr => pr.referenceNo === id);
+                if (urlSelected) {
+                  selectApproval = urlSelected;
+                }
               }
+              const approvalSelected = approvalsData.find(approval => approval.id === selectApproval.referenceNo);
+              setSelectedPurchaseRequest(approvalSelected);
             }
-            const approvalSelected = approvalsData.find(approval => approval.id === selectApproval.referenceNo);
-            setSelectedPurchaseRequest(approvalSelected);
           }
         }
       } catch (error) {
@@ -126,7 +128,7 @@ function PurchaseRequestContent() {
     };
 
     loadPurchaseRequests();
-  }, [user?.empName]);
+  }, [user?.empName]); // Removed selectedPurchaseRequest from dependencies
 
   // Handle sidebar open event
   useEffect(() => {
@@ -140,22 +142,28 @@ function PurchaseRequestContent() {
 
   useEffect(() => {
     const loadDetails = async () => {
-      if (selectedPurchaseRequest?.referenceNo) {
-        setDetailsLoading(true);
-        try {
+      // Prevent concurrent loads
+      if (loadingRef.current || !selectedPurchaseRequest?.referenceNo) return;
+
+      loadingRef.current = true;
+      setDetailsLoading(true);
+
+      try {
         const details = await getPurchaseRequestByReferenceNo(selectedPurchaseRequest.referenceNo, user);
+        // Only update if this is still the selected request
         if (details.success) {
           setPurchaseRequestDetails(details.purchaseRequest.details);
           setSelectedPurchaseRequest({ ...selectedPurchaseRequest, details: details.purchaseRequest.details });
         }
-        } catch (error) {
-          console.error('Failed to load purchase request details:', error);
-          setPurchaseRequestDetails([]);
-        } finally {
-          setDetailsLoading(false);
-        }
+      } catch (error) {
+        console.error('Failed to load purchase request details:', error);
+        setPurchaseRequestDetails([]);
+      } finally {
+        setDetailsLoading(false);
+        loadingRef.current = false;
       }
     };
+
     loadDetails();
   }, [selectedPurchaseRequest?.referenceNo]);
 
@@ -174,13 +182,21 @@ function PurchaseRequestContent() {
 
   // Handle purchase request selection without redundant loading
   const handleSelectPurchaseRequest = (approval) => {
-    setSelectedPurchaseRequest(approval);
+    // Always update the selection, even if it's the same request
+    // This ensures the component re-renders and shows details properly
+    setSelectedPurchaseRequest(prev => {
+      // If it's the same request, force a re-render by creating a new object
+      if (prev?.id === approval.id) {
+        return { ...prev, _forceUpdate: Date.now() };
+      }
+      return approval;
+    });
     setCurrentView('list');
   };
 
   // Intersection Observer for Add Item button visibility
   useEffect(() => {
-    if (currentView !== 'create') return;
+    if (currentView !== 'create' && currentView !== 'edit') return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -215,9 +231,15 @@ function PurchaseRequestContent() {
         [approval.requester, approval.title, approval.id, approval.status, approval.isRush, approval.department].some(field =>
           field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
         );
-        
-       const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
-                (filterStatus === 'RUSH' ? approval.isRush : approval.status === filterStatus);
+
+      // Extract request status from title (format: "COMPANY - REQUESTSTATUS")
+      const titleParts = approval.title.split(' - ');
+      const requestStatus = titleParts.length > 1 ? titleParts[1] : '';
+
+      const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
+                (filterStatus === 'RUSH' ? approval.isRush :
+                 filterStatus === 'POSTED' || filterStatus === 'NOT POSTED' ? approval.status === filterStatus :
+                 requestStatus === filterStatus);
 
       return matchesSearch && matchesStatus;
     })
@@ -236,9 +258,14 @@ function PurchaseRequestContent() {
     try {
       const result = await createPurchaseRequest(headerData, detailsData, user?.empName);
       if (result.success) {
+        let message = `Purchase request ${result.referenceNo} has been created successfully.`;
+        if (result.referenceNumberChanged) {
+          message += `\n\nNote: The reference number was automatically changed from ${result.originalReferenceNo} to ${result.referenceNo} due to a conflict with another request.`;
+        }
+
         setSuccessMessage({
           title: 'Purchase Request Created',
-          message: `Purchase request ${result.referenceNo} has been created successfully.`
+          message: message
         });
         setShowSuccessModal(true);
         setCurrentView('list');
@@ -255,86 +282,6 @@ function PurchaseRequestContent() {
     } catch (error) {
       console.error('Error creating purchase request:', error);
       toast.error('Failed to create purchase request');
-    }
-  };
-
-  const handleReviewPurchaseRequest = async (referenceNo) => {
-    try {
-      const result = await reviewPurchaseRequest(referenceNo, user?.empName);
-      if (result.success) {
-        setSuccessMessage({
-          title: 'Purchase Request Reviewed',
-          message: 'The purchase request has been reviewed and moved to the next stage.'
-        });
-        setShowSuccessModal(true);
-        setSelectedPurchaseRequest(null);
-        await reloadPurchaseRequestsData();
-      } else {
-        toast.error('Failed to review purchase request: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error reviewing purchase request:', error);
-      toast.error('Failed to review purchase request');
-    }
-  };
-
-  const handleApprovePurchaseRequest = async (referenceNo) => {
-    try {
-      const result = await approvePurchaseRequest(referenceNo, user?.empName);
-      if (result.success) {
-        setSuccessMessage({
-          title: 'Purchase Request Approved',
-          message: 'The purchase request has been approved and moved to the next stage.'
-        });
-        setShowSuccessModal(true);
-        setSelectedPurchaseRequest(null);
-        await reloadPurchaseRequestsData();
-      } else {
-        toast.error('Failed to approve purchase request: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error approving purchase request:', error);
-      toast.error('Failed to approve purchase request');
-    }
-  };
-
-  const handleReceivePurchaseRequest = async (referenceNo) => {
-    try {
-      const result = await receivePurchaseRequest(referenceNo, user?.empName);
-      if (result.success) {
-        setSuccessMessage({
-          title: 'Purchase Request Received',
-          message: 'The purchase request has been received and marked as completed.'
-        });
-        setShowSuccessModal(true);
-        setSelectedPurchaseRequest(null);
-        await reloadPurchaseRequestsData();
-      } else {
-        toast.error('Failed to receive purchase request: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error receiving purchase request:', error);
-      toast.error('Failed to receive purchase request');
-    }
-  };
-
-  const handleRejectPurchaseRequest = async (referenceNo, reason) => {
-    try {
-      const result = await rejectPurchaseRequest(referenceNo, user?.empName, reason);
-      if (result.success) {
-        setSuccessMessage({
-          title: 'Purchase Request Rejected',
-          message: 'The purchase request has been rejected.'
-        });
-        setShowSuccessModal(true);
-        setSelectedPurchaseRequest(null);
-        await reloadPurchaseRequestsData();
-      } else {
-        toast.error('Failed to reject purchase request: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error rejecting purchase request:', error);
-      toast.error('Failed to reject purchase request');
     }
   };
 
@@ -355,6 +302,57 @@ function PurchaseRequestContent() {
     } catch (error) {
       console.error('Error posting purchase request:', error);
       toast.error('Failed to post purchase request');
+    }
+  };
+
+  const handleCancelPurchaseRequest = async (referenceNo) => {
+    try {
+      const result = await cancelPurchaseRequest(referenceNo, user?.empName);
+      if (result.success) {
+        setSuccessMessage({
+          title: 'Purchase Request Cancelled',
+          message: 'The purchase request has been cancelled successfully.'
+        });
+        setShowSuccessModal(true);
+        setSelectedPurchaseRequest(null);
+        await reloadPurchaseRequestsData();
+      } else {
+        toast.error('Failed to cancel purchase request: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error canceling purchase request:', error);
+      toast.error('Failed to cancel purchase request');
+    }
+  };
+
+  const handleEditPurchaseRequest = (purchaseRequest) => {
+    // Switch to create view with edit data
+    setCurrentView('edit');
+    // The form will receive the editData prop
+  };
+
+  const handleUpdatePurchaseRequest = async (headerData, detailsData) => {
+    try {
+      const result = await updatePurchaseRequest(selectedPurchaseRequest.referenceNo, headerData, detailsData, user?.empName);
+      if (result.success) {
+        setSuccessMessage({
+          title: 'Purchase Request Updated',
+          message: `Purchase request ${selectedPurchaseRequest.referenceNo} has been updated successfully.`
+        });
+        setShowSuccessModal(true);
+        setCurrentView('list');
+        await reloadPurchaseRequestsData();
+        // Keep the updated request selected
+        const updatedSelected = approvals.find(approval => approval.id === selectedPurchaseRequest.referenceNo);
+        if (updatedSelected) {
+          setSelectedPurchaseRequest(updatedSelected);
+        }
+      } else {
+        toast.error('Failed to update purchase request: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error updating purchase request:', error);
+      toast.error('Failed to update purchase request');
     }
   };
 
@@ -420,15 +418,15 @@ function PurchaseRequestContent() {
           />
 
           {/* Create Form Header */}
-          {currentView === 'create' && (
+          {(currentView === 'create' || currentView === 'edit') && (
             <div className={`p-6 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Create Purchase Request
+                    {currentView === 'edit' ? 'Edit Purchase Request' : 'Create Purchase Request'}
                   </h1>
                   <p className={`text-md ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
-                    Fill in the details to create a new purchase request
+                    {currentView === 'edit' ? 'Update the purchase request details' : 'Fill in the details to create a new purchase request'}
                   </p>
                 </div>
               </div>
@@ -437,13 +435,14 @@ function PurchaseRequestContent() {
 
           {/* Main Content Area */}
           <div className="flex-1 overflow-y-auto">
-            {currentView === 'create' ? (
+            {(currentView === 'create' || currentView === 'edit') ? (
               <div className="p-6">
                 <PurchaseRequestForm
                   ref={formRef}
-                  onSubmit={handleCreatePurchaseRequest}
+                  onSubmit={currentView === 'edit' ? handleUpdatePurchaseRequest : handleCreatePurchaseRequest}
                   onCancel={() => setCurrentView('list')}
                   loading={false}
+                  editData={currentView === 'edit' ? selectedPurchaseRequest : null}
                 />
               </div>
             ) : selectedPurchaseRequest ? (
@@ -454,33 +453,28 @@ function PurchaseRequestContent() {
                   <PurchaseRequestDetails
                     purchaseRequest={selectedPurchaseRequest}
                     onClose={() => setSelectedPurchaseRequest(null)}
-                    onReview={handleReviewPurchaseRequest}
-                    onApprove={handleApprovePurchaseRequest}
-                    onReceive={handleReceivePurchaseRequest}
-                    onReject={handleRejectPurchaseRequest}
                     onPost={handlePostPurchaseRequest}
+                    onCancel={handleCancelPurchaseRequest}
+                    onEdit={handleEditPurchaseRequest}
                     loading={false}
                   />
                 )}
               </div>
             ) : (
-              <div className="p-6">
-                <PurchaseRequestList
-                  purchaseRequests={purchaseRequests}
-                  onPurchaseRequestClick={(pr) => {
-                    const approval = approvals.find(a => a.id === pr.referenceNo);
-                    if (approval) {
-                      handleSelectPurchaseRequest(approval);
-                    }
-                  }}
-                  loading={loading}
-                />
+              <div className="flex items-center justify-center h-full">
+                <div className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-lg font-medium">Select a purchase request to view details</p>
+                  <p className="text-sm mt-2">Click on any request from the list on the left to see its details.</p>
+                </div>
               </div>
             )}
           </div>
 
           {/* Floating Add Item Button (only when form Add Item button is not visible) */}
-          {currentView === 'create' && !addItemButtonVisible && (
+          {(currentView === 'create' || currentView === 'edit') && !addItemButtonVisible && (
             <button
               onClick={() => formRef.current?.addItem()}
               className="fixed bottom-24 right-6 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 z-50"
@@ -492,8 +486,8 @@ function PurchaseRequestContent() {
             </button>
           )}
 
-          {/* Floating Action Button - Only show when not creating */}
-          {currentView !== 'create' && (
+          {/* Floating Action Button - Only show when not creating or editing */}
+          {currentView !== 'create' && currentView !== 'edit' && (
             <button
               onClick={() => setCurrentView('create')}
               className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 z-50"

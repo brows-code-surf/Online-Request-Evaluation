@@ -12,7 +12,7 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
         if (isAdmin) {
             // Admin: fetch system-wide data
             [stats, requestEvaluations, requestTrend, recentLogins, recentActivityLogs] = await Promise.all([
-                dashboard.getUserStats(),
+                dashboard.getUserStats(null), // Pass null for admin to get all users' requests
                 dashboard.getRequestEvaluationStats(),
                 dashboard.getThirtyDayTrend(days),
                 dashboard.getRecentLogins(),

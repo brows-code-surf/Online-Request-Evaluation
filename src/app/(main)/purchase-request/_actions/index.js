@@ -73,11 +73,17 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
       }
     }
 
-    const referenceNo = await PurchaseRequest.createPurchaseRequest(headerData, detailsData, creatorName);
+    const result = await PurchaseRequest.createPurchaseRequest(headerData, detailsData, creatorName);
 
     // Note: Notifications are no longer sent here - they will be sent when the request is posted
 
-    return { success: true, referenceNo, message: 'Purchase request created successfully' };
+    return {
+        success: true,
+        referenceNo: result.referenceNo,
+        referenceNumberChanged: result.referenceNumberChanged,
+        originalReferenceNo: result.originalReferenceNo,
+        message: 'Purchase request created successfully'
+    };
   } catch (error) {
     console.error('Error creating purchase request:', error);
     return { success: false, message: 'Failed to create purchase request' };
@@ -114,110 +120,23 @@ export async function postPurchaseRequest(referenceNo, posterName) {
   }
 }
 
-export async function reviewPurchaseRequest(referenceNo, userName) {
+export async function updatePurchaseRequest(referenceNo, headerData, detailsData, updaterName) {
   try {
-    // Check if user is the assigned reviewer
-    const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, { empName: userName });
-    if (pr.header.reviewer.toUpperCase() !== userName.toUpperCase()) {
-      return { success: false, message: 'You are not authorized to review this purchase request' };
-    }
-
-    const success = await PurchaseRequest.updatePurchaseRequestStatus(referenceNo, 'review', userName);
-
-    if (success) {
-      // Notify approver
-      notifyApproverOfReviewedPR(referenceNo, pr, userName).catch(notificationError => {
-        console.error('Error sending approver notification:', notificationError);
-      });
-
-      return { success: true, message: 'Purchase request reviewed successfully' };
-    } else {
-      return { success: false, message: 'Failed to review purchase request' };
-    }
+    const result = await PurchaseRequest.updatePurchaseRequest(referenceNo, headerData, detailsData, updaterName);
+    return result;
   } catch (error) {
-    console.error('Error reviewing purchase request:', error);
-    return { success: false, message: 'Failed to review purchase request' };
+    console.error('Error updating purchase request:', error);
+    return { success: false, message: 'Failed to update purchase request' };
   }
 }
 
-export async function approvePurchaseRequest(referenceNo, userName) {
+export async function cancelPurchaseRequest(referenceNo, cancellerName) {
   try {
-    // Check if user is the assigned approver
-    const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, { empName: userName });
-    if (pr.header.approver.toUpperCase() !== userName.toUpperCase()) {
-      return { success: false, message: 'You are not authorized to approve this purchase request' };
-    }
-
-    const success = await PurchaseRequest.updatePurchaseRequestStatus(referenceNo, 'approve', userName);
-
-    if (success) {
-      // Notify receiver
-      notifyReceiverOfApprovedPR(referenceNo, pr, userName).catch(notificationError => {
-        console.error('Error sending receiver notification:', notificationError);
-      });
-
-      return { success: true, message: 'Purchase request approved successfully' };
-    } else {
-      return { success: false, message: 'Failed to approve purchase request' };
-    }
+    const result = await PurchaseRequest.cancelPurchaseRequest(referenceNo, cancellerName);
+    return result;
   } catch (error) {
-    console.error('Error approving purchase request:', error);
-    return { success: false, message: 'Failed to approve purchase request' };
-  }
-}
-
-export async function receivePurchaseRequest(referenceNo, userName) {
-  try {
-    // Check if user is the assigned receiver
-    const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, { empName: userName });
-    if (pr.header.addressedTo.toUpperCase() !== userName.toUpperCase()) {
-      return { success: false, message: 'You are not authorized to receive this purchase request' };
-    }
-
-    const success = await PurchaseRequest.updatePurchaseRequestStatus(referenceNo, 'receive', userName);
-
-    if (success) {
-      // Notify requester
-      notifyRequesterOfReceivedPR(referenceNo, pr, userName).catch(notificationError => {
-        console.error('Error sending requester notification:', notificationError);
-      });
-
-      return { success: true, message: 'Purchase request received successfully' };
-    } else {
-      return { success: false, message: 'Failed to receive purchase request' };
-    }
-  } catch (error) {
-    console.error('Error receiving purchase request:', error);
-    return { success: false, message: 'Failed to receive purchase request' };
-  }
-}
-
-export async function rejectPurchaseRequest(referenceNo, userName, reason) {
-  try {
-    // Check if user has permission to reject (reviewer or approver)
-    const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, { empName: userName });
-    const canReject = pr.header.reviewer.toUpperCase() === userName.toUpperCase() ||
-                     pr.header.approver.toUpperCase() === userName.toUpperCase();
-
-    if (!canReject) {
-      return { success: false, message: 'You are not authorized to reject this purchase request' };
-    }
-
-    const success = await PurchaseRequest.updatePurchaseRequestStatus(referenceNo, 'reject', userName, reason);
-
-    if (success) {
-      // Notify requester of rejection
-      notifyRequesterOfRejectedPR(referenceNo, pr, userName, reason).catch(notificationError => {
-        console.error('Error sending rejection notification:', notificationError);
-      });
-
-      return { success: true, message: 'Purchase request rejected successfully' };
-    } else {
-      return { success: false, message: 'Failed to reject purchase request' };
-    }
-  } catch (error) {
-    console.error('Error rejecting purchase request:', error);
-    return { success: false, message: 'Failed to reject purchase request' };
+    console.error('Error canceling purchase request:', error);
+    return { success: false, message: 'Failed to cancel purchase request' };
   }
 }
 

@@ -58,7 +58,7 @@ export default function ContentLeftPanel({
         }
     };
 
-    const handleApprovalSelect = (approval) => {
+    const handleApprovalSelect = (approval, isDoubleClick = false) => {
         onApprovalSelect(approval);
         if (enableReadStatus && approval.isRead === 'NOT READ' && onMarkAsRead) {
             onMarkAsRead(approval.id);
@@ -67,6 +67,10 @@ export default function ContentLeftPanel({
         if (window.innerWidth < 768) {
             onSidebarClose();
         }
+    };
+
+    const handleApprovalDoubleClick = (approval) => {
+        handleApprovalSelect(approval, true);
     };
 
     return (
@@ -208,6 +212,7 @@ export default function ContentLeftPanel({
                             >
                                 <option value="all">Select Status</option>
                                 <option value="POSTED">Posted</option>
+                                <option value="NOT POSTED">Not Posted</option>
                                 <option value="FOR CONFIRMATION">For Confirmation</option>
                                 <option value="FOR REQUEST APPROVAL">For Request Approval</option>
                                 <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
@@ -238,6 +243,7 @@ export default function ContentLeftPanel({
                             <div
                                 key={approval.id}
                                 onClick={() => handleApprovalSelect(approval)}
+                                onDoubleClick={() => handleApprovalDoubleClick(approval)}
                                 className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} cursor-pointer transition-all ${selectedApprovalId === approval.id
                                     ? (darkMode ? 'bg-blue-900/50 border-r-2 border-r-blue-300' : 'bg-blue-50 border-r-2 border-r-blue-200')
                                     : enableReadStatus && approval.isRead === 'NOT READ'
@@ -279,7 +285,7 @@ export default function ContentLeftPanel({
                                             {approval.jobTitle}
                                         </p>
                                     )}
-                                    {requestEvalApprovalPage && approval.id && (
+                                    {(requestEvalApprovalPage || filterType === 'purchase-request') && approval.id && (
                                         <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.id}
                                         </p>

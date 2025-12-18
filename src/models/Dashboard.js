@@ -28,7 +28,7 @@ class Dashboard {
     }
 
     // Server action to get user stats
-    async getUserStats() {
+    async getUserStats(user = null) {
         let gdbConnection;
         let sfcConnection;
         try {
@@ -46,19 +46,31 @@ class Dashboard {
             const activeUsersResult = await gdbConnection.request().query(activeUsersQuery);
             const activeUsers = activeUsersResult.recordset[0].count;
 
-            // Pending requests (FOR CONFIRMATION, FOR REQUEST APPROVAL, FOR PURCHASING LEAD TIME) from SFC
+            // Pending requests (FOR CONFIRMATION, FOR REQUEST APPROVAL, FOR PURCHASING LEAD TIME) from SFC - only posted requests
             const pendingRequestsQuery = `
       SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
       FROM [PURCHASE.REQUESTHEADER.1] PRH
-      INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-      WHERE PRD.ITEMSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+      WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
     `;
             const pendingRequestsResult = await sfcConnection.request().query(pendingRequestsQuery);
             const pendingRequests = pendingRequestsResult.recordset[0].count;
 
-            // Requests in last 24 hours from SFC
-            const requestsLast24hQuery = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE DATEREQUESTED >= DATEADD(HOUR, -24, GETDATE())`;
-            const requestsLast24hResult = await sfcConnection.request().query(requestsLast24hQuery);
+            // Requests in last 24 hours from SFC - user-specific if user provided, otherwise all users
+            let requestsLast24hQuery;
+            let requestsLast24hResult;
+
+            if (user && user.empName) {
+                // User-specific: count requests created by this user in last 24 hours
+                requestsLast24hQuery = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE CREATEDBY = @userName AND DATEREQUESTED >= DATEADD(HOUR, -24, GETDATE())`;
+                requestsLast24hResult = await sfcConnection.request()
+                    .input('userName', user.empName)
+                    .query(requestsLast24hQuery);
+            } else {
+                // Admin: count all requests in last 24 hours
+                requestsLast24hQuery = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE DATEREQUESTED >= DATEADD(HOUR, -24, GETDATE())`;
+                requestsLast24hResult = await sfcConnection.request().query(requestsLast24hQuery);
+            }
+
             const requestsLast24h = requestsLast24hResult.recordset[0].count;
 
             return {
@@ -145,25 +157,25 @@ class Dashboard {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Total requests by user (both created and assigned for evaluation)
+            // Total requests by user (both created and assigned for evaluation) - only posted requests
             const totalRequestsQuery = `
                 SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE CREATEDBY = @createdBy
+                WHERE IS_POSTED = 1 AND (CREATEDBY = @createdBy
                 OR REVIEWER = @createdBy
                 OR APPROVER = @createdBy
-                OR ADDRESSEDTO = @createdBy
+                OR ADDRESSEDTO = @createdBy)
             `;
             const totalRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
                 .query(totalRequestsQuery);
             const totalRequests = totalRequestsResult.recordset[0].count;
 
-            // Active requests (not completed/cancelled) - for requests user created or is assigned to
+            // Active requests (not completed/cancelled) - for requests user created or is assigned to - only posted requests
             const activeRequestsQuery = `
                 SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
                 INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE (PRH.CREATEDBY = @createdBy OR PRH.REVIEWER = @createdBy OR PRH.APPROVER = @createdBy OR PRH.ADDRESSEDTO = @createdBy)
+                WHERE PRH.IS_POSTED = 1 AND (PRH.CREATEDBY = @createdBy OR PRH.REVIEWER = @createdBy OR PRH.APPROVER = @createdBy OR PRH.ADDRESSEDTO = @createdBy)
                 AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
             `;
             const activeRequestsResult = await connection.request()
@@ -176,10 +188,11 @@ class Dashboard {
                 SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
                 INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE ((PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION')
+                WHERE ((PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR POSTING')
+                    OR (PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION')
                     OR (PRH.APPROVER = @createdBy AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL')
                     OR (PRH.ADDRESSEDTO = @createdBy AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME'))
-                AND PRD.ITEMSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                AND PRD.ITEMSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
             `;
             const pendingRequestsResult = await connection.request()
                 .input('createdBy', createdBy)

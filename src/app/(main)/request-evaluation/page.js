@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/authContext';
 import HeaderNavBar from '../../_components/headerNavBar';
@@ -19,6 +19,7 @@ function RequestEvaluationContent() {
     const { user, darkMode } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const loadingRef = useRef(false);
     const [selectedApproval, setSelectedApproval] = useState(null);
     const [approvalDetails, setApprovalDetails] = useState([]);
     const [approvals, setApprovals] = useState([]);
@@ -79,7 +80,9 @@ function RequestEvaluationContent() {
                 };
                 const data = await fetchEvaluationLeftPanel(user?.empName, 'all', filters);
                 setApprovals(data);
-                if (data.length > 0 && !selectedApproval) {
+
+                // Only set initial selection if we don't have one already
+                if (!selectedApproval && data.length > 0) {
                     const id = searchParams.get('id');
                     let selectApproval = data[0];
                     if (id) {
@@ -98,7 +101,7 @@ function RequestEvaluationContent() {
         };
 
         loadApprovals();
-    }, [user?.empName, filterDepartment, filterLocation, filterStartDate, filterEndDate]);
+    }, [user?.empName, filterDepartment, filterLocation, filterStartDate, filterEndDate]); // Removed selectedApproval from dependencies
 
     // Initialize filter status based on user's available statuses
     useEffect(() => {
@@ -121,19 +124,25 @@ function RequestEvaluationContent() {
 
     useEffect(() => {
         const loadDetails = async () => {
-            if (selectedApproval) {
-                setDetailsLoading(true);
-                try {
-                    const details = await fetchEvaluationDetails(selectedApproval.id);
-                    setApprovalDetails(details);
-                } catch (error) {
-                    console.error('Failed to load approval details:', error);
-                    setApprovalDetails([]);
-                } finally {
-                    setDetailsLoading(false);
-                }
+            // Prevent concurrent loads
+            if (loadingRef.current || !selectedApproval) return;
+
+            loadingRef.current = true;
+            setDetailsLoading(true);
+
+            try {
+                const details = await fetchEvaluationDetails(selectedApproval.id);
+                // Only update if this is still the selected approval
+                setApprovalDetails(details);
+            } catch (error) {
+                console.error('Failed to load approval details:', error);
+                setApprovalDetails([]);
+            } finally {
+                setDetailsLoading(false);
+                loadingRef.current = false;
             }
         };
+
         loadDetails();
     }, [selectedApproval?.id]);
 

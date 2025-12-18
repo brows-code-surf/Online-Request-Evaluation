@@ -36,7 +36,7 @@ export async function sendEmailWithTemplate(emailData) {
     );
 
   const mailOptions = {
-    from: process.env.GMAIL_USER,
+    from: `"${process.env.GMAIL_SENDER_NAME || 'SANTEH System'}" <${process.env.GMAIL_USER}>`,
     to: emailData.email,
     subject: emailData.subject,
     html: htmlContent
