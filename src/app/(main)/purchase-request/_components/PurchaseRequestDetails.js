@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../../utils/authContext';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
@@ -37,8 +37,27 @@ export default function PurchaseRequestDetails({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowActionMenu(false);
+      }
+    };
+
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionMenu]);
 
   if (!purchaseRequest) return null;
 
@@ -62,8 +81,9 @@ export default function PurchaseRequestDetails({
   };
 
   const canPost = () => {
-    return purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() &&
-      purchaseRequest.requestStatus === 'FOR CONFIRMATION' || 'FOR POSTING';
+    return !purchaseRequest.isPosted &&
+      purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() &&
+      (purchaseRequest.requestStatus === 'FOR CONFIRMATION' || purchaseRequest.requestStatus === 'FOR POSTING');
   };
 
   const handleAction = async (action, reason = '') => {
@@ -156,34 +176,156 @@ export default function PurchaseRequestDetails({
               </span>
             </div>
           </div>
-          <div className="flex gap-2">
-            {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+          <div className="relative">
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex gap-3">
+              {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                <button
+                  onClick={() => onEdit && onEdit(purchaseRequest)}
+                  disabled={loading || actionLoading}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
+                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
+                  aria-label="Edit purchase request"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+              {canPost() && (
+                <button
+                  onClick={() => handleAction('post')}
+                  disabled={loading || actionLoading}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
+                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
+                  aria-label="Post purchase request"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  Post
+                </button>
+              )}
+              {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={loading || actionLoading}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
+                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
+                  aria-label="Cancel purchase request"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="sm:hidden" ref={menuRef}>
               <button
-                onClick={() => onEdit && onEdit(purchaseRequest)}
+                onClick={() => setShowActionMenu(!showActionMenu)}
+                className={`inline-flex items-center justify-center p-3 rounded-lg border transition-all duration-200 ease-in-out ${
+                  darkMode
+                    ? 'border-gray-600 hover:bg-gray-700 hover:border-gray-500 focus:bg-gray-700 focus:border-gray-500 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900'
+                    : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white'
+                } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none ${
+                  actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                }`}
                 disabled={loading || actionLoading}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                aria-label="More actions"
+                aria-expanded={showActionMenu}
+                aria-haspopup="menu"
               >
-                Edit Request
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+                </svg>
               </button>
-            )}
-            {canPost() && (
-              <button
-                onClick={() => handleAction('post')}
-                disabled={loading || actionLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                Post Request
-              </button>
-            )}
-            {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
-              <button
-                onClick={() => setShowCancelModal(true)}
-                disabled={loading || actionLoading}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                Cancel Request
-              </button>
-            )}
+
+              {/* Mobile dropdown menu */}
+              {showActionMenu && (
+                <div
+                  className={`absolute right-0 mt-3 w-56 ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} rounded-lg shadow-xl border z-50`}
+                  role="menu"
+                  aria-orientation="vertical"
+                >
+                  {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                    <button
+                      onClick={() => {
+                        onEdit && onEdit(purchaseRequest);
+                        setShowActionMenu(false);
+                      }}
+                      disabled={loading || actionLoading}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
+                        darkMode
+                          ? 'text-amber-400 hover:bg-amber-900/20 hover:text-amber-300 focus:bg-amber-900/20 focus:text-amber-300'
+                          : 'text-amber-700 hover:bg-amber-50 hover:text-amber-800 focus:bg-amber-50 focus:text-amber-800'
+                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 ${
+                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                      role="menuitem"
+                      aria-label="Edit purchase request"
+                    >
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span className="truncate">Edit Request</span>
+                    </button>
+                  )}
+                  {canPost() && (
+                    <button
+                      onClick={() => {
+                        handleAction('post');
+                        setShowActionMenu(false);
+                      }}
+                      disabled={loading || actionLoading}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
+                        darkMode
+                          ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
+                          : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
+                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${
+                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                      role="menuitem"
+                      aria-label="Post purchase request"
+                    >
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      <span className="truncate">Post Request</span>
+                    </button>
+                  )}
+                  {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                    <button
+                      onClick={() => {
+                        setShowCancelModal(true);
+                        setShowActionMenu(false);
+                      }}
+                      disabled={loading || actionLoading}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
+                        darkMode
+                          ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-red-300'
+                          : 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800'
+                      } last:rounded-b-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 ${
+                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                      role="menuitem"
+                      aria-label="Cancel purchase request"
+                    >
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="truncate">Cancel Request</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

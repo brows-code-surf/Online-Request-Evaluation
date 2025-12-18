@@ -9,13 +9,13 @@ import { loginUser } from './_actions';
 
 export default function Login() {
     const router = useRouter()
-    const { login } = useAuth()
+    const { user, loading, login } = useAuth()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
-    const [loading, setLoading] = useState(false)
+    const [loginLoading, setLoginLoading] = useState(false)
     const [rateLimitTimer, setRateLimitTimer] = useState(0)
 
     useEffect(() => {
@@ -34,10 +34,25 @@ export default function Login() {
         return () => clearInterval(interval);
     }, [rateLimitTimer]);
 
+    useEffect(() => {
+        if (user && !loading) {
+            router.push('/dashboard')
+        }
+    }, [user, loading, router]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (user) {
+                router.push('/dashboard')
+            }
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [user, router]);
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
-        setLoading(true)
+        setLoginLoading(true)
 
         try {
             const result = await loginUser(email, password)
@@ -51,7 +66,7 @@ export default function Login() {
                         setRateLimitTimer(parseInt(match[1]) * 60);
                     }
                 }
-                setLoading(false)
+                setLoginLoading(false)
                 return
             }
 
@@ -59,7 +74,7 @@ export default function Login() {
         } catch (err) {
             setError('Login failed. Please try again.')
             console.error(err)
-            setLoading(false)
+            setLoginLoading(false)
         }
     }
 
@@ -69,9 +84,13 @@ export default function Login() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    if (loading) {
+        return <Loader loading={true} />
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
-            <Loader loading={loading} />
+            <Loader loading={loginLoading} />
             <div className="max-w-md w-full p-8 sm:p-10 bg-white rounded-xl shadow-2xl border border-gray-100">
                 <div className="text-center mb-10">
                     <div className="flex justify-center mb-6">
@@ -139,12 +158,12 @@ export default function Login() {
                     <div className="space-y-4">
                         <button
                             type="submit"
-                            disabled={loading || rateLimitTimer > 0}
+                            disabled={loginLoading || rateLimitTimer > 0}
                             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                         >
                             {rateLimitTimer > 0
                                 ? `Try again in ${formatTime(rateLimitTimer)}`
-                                : loading
+                                : loginLoading
                                 ? 'Signing in...'
                                 : 'Sign In'
                             }

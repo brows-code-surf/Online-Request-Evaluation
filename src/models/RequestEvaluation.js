@@ -20,11 +20,11 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
-            
+
             // Check if tables exist
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
             const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
-            
+
             if (!headerExists || !detailsExists) {
                 console.warn('PURCHASE.REQUESTDETAILS.1 or PURCHASE.REQUESTHEADER.1 table not found.');
                 return [];
@@ -61,7 +61,7 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
-            
+
             // Check if table exists
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
             if (!headerExists) {
@@ -69,16 +69,16 @@ class RequestEvaluation {
                 return [];
             }
 
-            let query = `SELECT 
+            let query = `SELECT
                             prh.REFERENCENO as id,
-                            prh.REQUESTTYPE as title, 
-                            prh.REQUESTEDBY as requester, 
-                            prh.REQUESTSTATUS as status, 
-                            prh.DATEREQUESTED as requestDate, 
-                            prh.COMPANY as department, 
-                            prh.LOCNCODE as location, 
+                            prh.REQUESTTYPE as title,
+                            prh.REQUESTEDBY as requester,
+                            prh.REQUESTSTATUS as status,
+                            prh.DATEREQUESTED as requestDate,
+                            prh.COMPANY as department,
+                            prh.LOCNCODE as location,
                             prh.REMARKS as description,
-                            CASE 
+                            CASE
                             WHEN PRH.IS_RUSH = 0 THEN ''
                             WHEN PRH.IS_RUSH = 1 THEN 'RUSH'
                             end as isRush,
@@ -107,7 +107,7 @@ class RequestEvaluation {
                     // Show requests where user is assigned and status matches their role
                     query += ` ((PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1)
                               OR (PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1)
-                              OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1))`;
+                              OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1))`; // Also show user's own requests
             }
 
             // Dynamic filters
@@ -158,7 +158,7 @@ class RequestEvaluation {
             connection = await connectToDatabase(process.env.DB_SFC);
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
             if (!headerExists) return null;
-            
+
             const query = `SELECT REQUESTSTATUS FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
             const result = await connection.request()
                 .input('referenceNo', referenceNo)
@@ -176,7 +176,7 @@ class RequestEvaluation {
             connection = await connectToDatabase(process.env.DB_SFC);
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
             if (!headerExists) return null;
-            
+
             const query = `SELECT APPROVER, ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
             const result = await connection.request()
                 .input('referenceNo', referenceNo)
@@ -228,18 +228,18 @@ class RequestEvaluation {
             requestHeader.input('referenceNo', referenceNo);
             requestHeader.input('approverName', approverName);
             requestHeader.input('newStatus', newStatus);
-            
+
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
             // Update request details with new status
             const detailsUpdateQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] 
                                        SET ITEMSTATUS = @newStatus 
                                        WHERE REFERENCENO = @referenceNo`;
-            
+
             const requestDetails = connection.request();
             requestDetails.input('referenceNo', referenceNo);
             requestDetails.input('newStatus', newStatus);
-            
+
             const resultDetails = await requestDetails.query(detailsUpdateQuery);
 
             // Create notification for the next approver with improved error handling
@@ -367,14 +367,14 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
-            
+
             const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
                                       SET REQUESTSTATUS = 'REJECTED'
                                       WHERE REFERENCENO = @referenceNo`;
 
             const requestHeader = connection.request();
             requestHeader.input('referenceNo', referenceNo);
-            
+
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
             // Update request details status to REJECTED
@@ -382,11 +382,11 @@ class RequestEvaluation {
                                        SET ITEMSTATUS = 'REJECTED',
                                        ADJCANCELREMARKS = @rejectionReason
                                        WHERE REFERENCENO = @referenceNo`;
-            
+
             const requestDetails = connection.request();
             requestDetails.input('referenceNo', referenceNo);
             requestDetails.input('rejectionReason', rejectionReason);
-            
+
             const resultDetails = await requestDetails.query(detailsUpdateQuery);
 
             return {
@@ -404,13 +404,13 @@ class RequestEvaluation {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
-            
+
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
             if (!headerExists) {
                 console.warn('PURCHASE.REQUESTHEADER.1 table not found. Returning default status.');
                 return ['FOR CONFIRMATION'];
             }
-            
+
             // Check which roles the user has and return corresponding statuses
             const query = `SELECT 
                             CASE 
@@ -421,16 +421,16 @@ class RequestEvaluation {
                                 WHEN EXISTS (SELECT 1 FROM [PURCHASE.REQUESTHEADER.1] WHERE ADDRESSEDTO = @userName) 
                                     THEN 'FOR PURCHASING LEAD TIME'
                             END as status`;
-            
+
             const result = await connection.request()
                 .input('userName', userName)
                 .query(query);
-            
+
             // Get distinct statuses user has access to
             const statuses = result.recordset
                 .map(row => row.status)
                 .filter(status => status !== null && status !== undefined);
-            
+
             return [...new Set(statuses)];
         } catch (error) {
             console.error('Error fetching user available statuses:', error);
@@ -441,13 +441,13 @@ class RequestEvaluation {
     static async getRequestApproversEmails(referenceNo, requestStatus) {
         let sfcConnection;
         let gdbConnection;
-        try{
+        try {
             sfcConnection = await connectToDatabase(process.env.DB_SFC);
             gdbConnection = await connectToDatabase(process.env.DB_NAME); // Connect to GDB
-            
+
             const headerExists = await this.checkTableExists(sfcConnection, 'PURCHASE.REQUESTHEADER.1');
             const userExists = await this.checkTableExists(gdbConnection, 'SYSTEM.USERACCOUNT.1');
-            
+
             if (!userExists || !headerExists) {
                 console.warn('Required tables not found.');
                 return null;
@@ -455,7 +455,7 @@ class RequestEvaluation {
 
             // Get the approver/addressedTo person from SFC database
             let approverFieldQuery = `SELECT `;
-            
+
             switch (requestStatus.toUpperCase()) {
                 case 'FOR CONFIRMATION':
                     approverFieldQuery += `APPROVER as employeeName FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
@@ -470,7 +470,7 @@ class RequestEvaluation {
             const approverResult = await sfcConnection.request()
                 .input('referenceNo', referenceNo)
                 .query(approverFieldQuery);
-            
+
             if (approverResult.recordset.length === 0) {
                 console.warn('No approver found for reference:', referenceNo);
                 return null;
@@ -485,7 +485,7 @@ class RequestEvaluation {
                 .query(userQuery);
 
             return userResult.recordset.length > 0 ? userResult.recordset[0] : null;
-        }catch(error){
+        } catch (error) {
             console.error('Error fetching request approvers emails:', error);
             return null;
         }
@@ -613,49 +613,44 @@ class RequestEvaluation {
 
     // User-specific methods for non-admin dashboard
 
-    // Get user's request evaluation status breakdown (for requests they created or are assigned to)
+    // Get user's request evaluation status breakdown (for requests they created)
     static async getUserRequestEvaluationStatusBreakdown(createdBy) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             // Check if tables exist
-            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
             const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
-            if (!detailsExists || !headerExists) {
-                console.warn('Required tables not found.');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found.');
                 return [];
             }
 
             const query = `
                 SELECT
                     CASE
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR POSTING' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN PRH.REQUESTSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN PRH.REQUESTSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END as status,
-                    COUNT(*) as count
-                FROM [PURCHASE.REQUESTDETAILS.1] PRD
-                INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
-                WHERE PRH.CREATEDBY = @createdBy
-                OR PRH.REVIEWER = @createdBy
-                OR PRH.APPROVER = @createdBy
-                OR PRH.ADDRESSEDTO = @createdBy
+                    COUNT(DISTINCT PRH.REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1] PRH
+                WHERE PRH.REQUESTEDBY = @createdBy
                 GROUP BY
                     CASE
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR POSTING' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN PRH.REQUESTSTATUS = 'APPROVED' THEN 'APPROVED'
+                        WHEN PRH.REQUESTSTATUS = 'REJECTED' THEN 'REJECTED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END
                 ORDER BY status
             `;
@@ -670,7 +665,7 @@ class RequestEvaluation {
         }
     }
 
-    // Get user's requests trend for specified number of days (for requests they created or are assigned to)
+    // Get user's requests trend for specified number of days (for requests they created)
     static async getUserThirtyDayRequestsTrend(createdBy, days = 30) {
         let connection;
         try {
@@ -686,10 +681,10 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CAST(DATEREQUESTED AS DATE) as requestDate,
-                    COUNT(*) as requestCount
+                    COUNT(DISTINCT ROWID) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                AND (CREATEDBY = @createdBy OR REVIEWER = @createdBy OR APPROVER = @createdBy OR ADDRESSEDTO = @createdBy)
+                AND REQUESTEDBY = @createdBy
                 GROUP BY CAST(DATEREQUESTED AS DATE)
                 ORDER BY CAST(DATEREQUESTED AS DATE)
             `;

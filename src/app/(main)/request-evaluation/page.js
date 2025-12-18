@@ -110,11 +110,12 @@ function RequestEvaluationContent() {
                 try {
                     const availableStatuses = await fetchUserAvailableStatuses(user.empName);
                     if (availableStatuses && availableStatuses.length > 0) {
-                        setFilterStatus(availableStatuses[0]);
+                        // For request-evaluation page, set filter to 'all' to show all relevant requests
+                        setFilterStatus('all');
                     }
                 } catch (error) {
                     console.error('Failed to fetch user statuses:', error);
-                    setFilterStatus('FOR CONFIRMATION'); // fallback
+                    setFilterStatus('all'); // fallback
                 }
             }
         };

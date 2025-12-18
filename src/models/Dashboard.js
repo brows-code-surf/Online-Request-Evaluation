@@ -27,6 +27,31 @@ class Dashboard {
         }
     }
 
+    // Server action to get total requests count
+    async getTotalRequests(user = null) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            if (user && user.empName) {
+                // For non-admin users: count requests where REQUESTEDBY = empName
+                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE REQUESTEDBY = @empName`;
+                const result = await connection.request()
+                    .input('empName', user.empName)
+                    .query(query);
+                return result.recordset[0].count;
+            } else {
+                // For admin: count all requests in PURCHASE.REQUESTHEADER.1
+                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1]`;
+                const result = await connection.request().query(query);
+                return result.recordset[0].count;
+            }
+        } catch (error) {
+            console.error('Error fetching total requests:', error);
+            return 0;
+        }
+    }
+
     // Server action to get user stats
     async getUserStats(user = null) {
         let gdbConnection;
@@ -46,11 +71,12 @@ class Dashboard {
             const activeUsersResult = await gdbConnection.request().query(activeUsersQuery);
             const activeUsers = activeUsersResult.recordset[0].count;
 
-            // Pending requests (FOR CONFIRMATION, FOR REQUEST APPROVAL, FOR PURCHASING LEAD TIME) from SFC - only posted requests
+            // Pending requests (FOR CONFIRMATION, FOR REQUEST APPROVAL, FOR PURCHASING LEAD TIME) from SFC
+            // Admin sees all requests, regardless of posted status
             const pendingRequestsQuery = `
       SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
       FROM [PURCHASE.REQUESTHEADER.1] PRH
-      WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+      WHERE PRH.REQUESTSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
     `;
             const pendingRequestsResult = await sfcConnection.request().query(pendingRequestsQuery);
             const pendingRequests = pendingRequestsResult.recordset[0].count;
@@ -157,25 +183,22 @@ class Dashboard {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Total requests by user (both created and assigned for evaluation) - only posted requests
+            // Total requests by user (only requests they created) - only posted requests
             const totalRequestsQuery = `
                 SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE IS_POSTED = 1 AND (CREATEDBY = @createdBy
-                OR REVIEWER = @createdBy
-                OR APPROVER = @createdBy
-                OR ADDRESSEDTO = @createdBy)
+                WHERE IS_POSTED = 1 AND REQUESTEDBY = @createdBy
             `;
             const totalRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
                 .query(totalRequestsQuery);
             const totalRequests = totalRequestsResult.recordset[0].count;
 
-            // Active requests (not completed/cancelled) - for requests user created or is assigned to - only posted requests
+            // Active requests (not completed/cancelled) - for requests user created - only posted requests
             const activeRequestsQuery = `
                 SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
                 INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE PRH.IS_POSTED = 1 AND (PRH.CREATEDBY = @createdBy OR PRH.REVIEWER = @createdBy OR PRH.APPROVER = @createdBy OR PRH.ADDRESSEDTO = @createdBy)
+                WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTEDBY = @createdBy
                 AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
             `;
             const activeRequestsResult = await connection.request()
@@ -183,15 +206,12 @@ class Dashboard {
                 .query(activeRequestsQuery);
             const activeRequests = activeRequestsResult.recordset[0].count;
 
-            // Pending requests for evaluation (assigned to user) - requests they need to act on
+            // Pending requests for evaluation (only for requests user created)
             const pendingRequestsQuery = `
                 SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
                 INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE ((PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR POSTING')
-                    OR (PRH.REVIEWER = @createdBy AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION')
-                    OR (PRH.APPROVER = @createdBy AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL')
-                    OR (PRH.ADDRESSEDTO = @createdBy AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME'))
+                WHERE PRH.REQUESTEDBY = @createdBy
                 AND PRD.ITEMSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
             `;
             const pendingRequestsResult = await connection.request()
@@ -199,10 +219,10 @@ class Dashboard {
                 .query(pendingRequestsQuery);
             const pendingRequests = pendingRequestsResult.recordset[0].count;
 
-            // Requests in last 24 hours (both created and assigned)
+            // Requests in last 24 hours (only for requests user created)
             const requestsLast24hQuery = `
                 SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE (CREATEDBY = @createdBy OR REVIEWER = @createdBy OR APPROVER = @createdBy OR ADDRESSEDTO = @createdBy)
+                WHERE REQUESTEDBY = @createdBy
                 AND DATEREQUESTED >= DATEADD(HOUR, -24, GETDATE())
             `;
             const requestsLast24hResult = await connection.request()
@@ -280,6 +300,203 @@ class Dashboard {
             console.error('Error fetching user recent activity logs:', error);
             return [];
         }
+    }
+
+    // Get historical data for sparklines and percent change calculations
+    async getHistoricalData(user = null, isAdmin = false, statType, days = 10) {
+        let connection;
+        try {
+            if (isAdmin) {
+                connection = await connectToDatabase(statType.includes('Users') ? process.env.DB_NAME : process.env.DB_SFC);
+
+                switch (statType) {
+                    case 'totalUsers':
+                        // Total approved users over time (simplified - we don't have historical user creation dates)
+                        // Return current value for all days as approximation
+                        const currentTotalUsers = await this.getUserStats(null);
+                        return Array.from({ length: days }, (_, i) => ({
+                            date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            value: currentTotalUsers.totalUsers
+                        }));
+
+                    case 'activeUsers':
+                        // Active users (logged in within 30 days) over time
+                        const query = `
+                            SELECT CAST(DATEADD(DAY, -30, GETDATE()) AS DATE) as date, COUNT(*) as count 
+                            FROM [SYSTEM.USERACCOUNT.1]
+                            WHERE IS_APPROVED = 'APPROVED' AND LOGGEDIN >= DATEADD(DAY, -30, GETDATE())
+                        `;
+                        const result = await connection.request().query(query);
+                        const activeUserCount = result.recordset[0]?.count || 0;
+                        
+                        return Array.from({ length: days }, (_, i) => ({
+                            date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            value: activeUserCount
+                        }));
+
+                    case 'pendingRequests':
+                        // Pending requests over time - count requests that were in pending status on each date
+                        const pendingQuery = `
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT PRH.REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1] PRH
+                            WHERE PRH.REQUESTSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                            AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
+                        `;
+                        const pendingResult = await connection.request().query(pendingQuery);
+                        return this._fillMissingDates(pendingResult.recordset, days, 'count');
+
+                    case 'requestsLast24h':
+                        // Daily request counts over time (each day shows total requests created that day)
+                        const requestsQuery = `
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(*) as count
+                            FROM [PURCHASE.REQUESTHEADER.1]
+                            WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
+                        `;
+                        const requestsResult = await connection.request().query(requestsQuery);
+                        return this._fillMissingDates(requestsResult.recordset, days, 'count');
+
+                    default:
+                        return Array.from({ length: days }, (_, i) => ({
+                            date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            value: 0
+                        }));
+                }
+            } else {
+                // User-specific historical data
+                if (!user || !user.empName) {
+                    // Return fallback data if user is not provided
+                    return Array.from({ length: days }, (_, i) => ({
+                        date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        value: 0
+                    }));
+                }
+
+                connection = await connectToDatabase(process.env.DB_SFC);
+
+                switch (statType) {
+                    case 'totalRequests':
+                        // User's total requests created on each day
+                        const totalQuery = `
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1]
+                            WHERE IS_POSTED = 1 AND REQUESTEDBY = @userName
+                            AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
+                        `;
+                        const totalResult = await connection.request()
+                            .input('userName', user.empName)
+                            .query(totalQuery);
+                        return this._fillMissingDates(totalResult.recordset, days, 'count');
+
+                    case 'activeRequests':
+                        // User's active requests created on each day
+                        const activeReqQuery = `
+                            SELECT CAST(PRH.DATEREQUESTED AS DATE) as date, COUNT(DISTINCT PRH.REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1] PRH
+                            INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
+                            WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTEDBY = @userName
+                            AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
+                            AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(PRH.DATEREQUESTED AS DATE)
+                        `;
+                        const activeReqResult = await connection.request()
+                            .input('userName', user.empName)
+                            .query(activeReqQuery);
+                        return this._fillMissingDates(activeReqResult.recordset, days, 'count');
+
+                    case 'pendingRequests':
+                        // User's pending requests created on each day
+                        const userPendingQuery = `
+                            SELECT CAST(PRH.DATEREQUESTED AS DATE) as date, COUNT(DISTINCT PRH.REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1] PRH
+                            INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
+                            WHERE PRH.REQUESTEDBY = @userName
+                            AND PRD.ITEMSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                            AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(PRH.DATEREQUESTED AS DATE)
+                        `;
+                        const userPendingResult = await connection.request()
+                            .input('userName', user.empName)
+                            .query(userPendingQuery);
+                        return this._fillMissingDates(userPendingResult.recordset, days, 'count');
+
+                    case 'requestsLast24h':
+                        // User's daily request activity over time
+                        const userReqQuery = `
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1]
+                            WHERE REQUESTEDBY = @userName
+                            AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
+                        `;
+                        const userReqResult = await connection.request()
+                            .input('userName', user.empName)
+                            .query(userReqQuery);
+                        return this._fillMissingDates(userReqResult.recordset, days, 'count');
+
+                    default:
+                        return Array.from({ length: days }, (_, i) => ({
+                            date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            value: 0
+                        }));
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching historical data for ${statType}:`, error);
+            // Return fallback data
+            return Array.from({ length: days }, (_, i) => ({
+                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                value: 0
+            }));
+        }
+    }
+
+    // Helper method to fill missing dates with zeros
+    _fillMissingDates(recordset, days, countField) {
+        const trendDays = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+
+            const existing = recordset.find(r => {
+                const recordDate = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+                return recordDate === dateStr;
+            });
+            trendDays.push({
+                date: dateStr,
+                value: existing ? existing[countField] : 0
+            });
+        }
+        return trendDays;
+    }
+
+    // Calculate percent change: (today - past7DaysAverage) / past7DaysAverage * 100
+    calculatePercentChange(historicalData) {
+        if (!historicalData || historicalData.length === 0) return 0;
+        
+        const today = historicalData[historicalData.length - 1]?.value || 0;
+        const past7Days = historicalData.slice(-7);
+        
+        // Filter out zero values for a more meaningful average
+        const nonZeroDays = past7Days.filter(item => item.value > 0);
+        
+        // If no non-zero days in past 7, just compare today to yesterday
+        if (nonZeroDays.length === 0) {
+            if (past7Days.length < 2) return 0;
+            const yesterday = past7Days[past7Days.length - 2]?.value || 0;
+            if (yesterday === 0 && today === 0) return 0;
+            if (yesterday === 0) return 100; // New activity today
+            return ((today - yesterday) / yesterday) * 100;
+        }
+        
+        // Calculate average of non-zero days
+        const average = nonZeroDays.reduce((sum, item) => sum + item.value, 0) / nonZeroDays.length;
+        
+        if (average === 0) return 0;
+        return ((today - average) / average) * 100;
     }
 }
 

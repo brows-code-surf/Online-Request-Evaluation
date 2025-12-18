@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { getDashboardStats } from './_actions/index.js';
+import { getDashboardStats, getDashboardTrend } from './_actions/index.js';
 import { Users, Activity, FileText, TrendingUp, User, Calendar } from 'lucide-react';
 import { StatCard } from "./_components/StatCard.js";
 import { ChartCard } from "./_components/ChartCard.js";
@@ -16,25 +16,25 @@ import { useAuth } from '@/utils/authContext';
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-// Client-side function to simulate live updates (no random numbers)
+// Client-side function to handle live updates
 function simulateLiveUpdate(currentData) {
     const newData = { ...currentData };
 
-    // Keep stats the same (no random changes)
+    // Keep stats the same (we'll refetch real data via socket events)
 
-    // Update sparklines (shift and add current value)
+    // Update sparklines by shifting and adding current values
     Object.keys(newData.stats.sparklines).forEach(key => {
-        newData.stats.sparklines[key] = [...newData.stats.sparklines[key]]; // Create a mutable copy
-        newData.stats.sparklines[key].shift();
-        newData.stats.sparklines[key].push(newData.stats[key]);
+        if (newData.stats.sparklines[key] && Array.isArray(newData.stats.sparklines[key])) {
+            newData.stats.sparklines[key] = [...newData.stats.sparklines[key]]; // Create a mutable copy
+            newData.stats.sparklines[key].shift(); // Remove oldest value
+            newData.stats.sparklines[key].push(newData.stats[key]); // Add current value
+        }
     });
 
-    // Keep percent changes the same (no random fluctuations)
+    // Percent changes will be recalculated when data is refetched
+    // Keep request evaluations the same (updated via socket events)
 
-    // Keep request evaluations the same (no random changes)
-
-    // Update 30-day trend (keep existing data for demo purposes)
-    // For live updates, we maintain the same trend data without adding duplicates
+    // Keep 30-day trend the same (updated when date range changes)
 
     return newData;
 }
@@ -47,33 +47,117 @@ export default function DashboardClient() {
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [useCustomRange, setUseCustomRange] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const isUserAdmin = user && isAdmin();
+    const theme = mounted ? darkMode : false;
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Calculate total for percentage calculations
+    const totalRequests = data ? (data.totalRequests || 0) : 0;
+
+    // Custom tooltip for pie chart
+    const CustomPieTooltip = useCallback(({ active, payload }) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            const percentage = ((data.count / totalRequests) * 100).toFixed(1);
+            return (
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-lg`}>
+                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.status}</p>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Count: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.count}</span>
+                    </p>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Percentage: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{percentage}%</span>
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    }, [darkMode, totalRequests]);
+
+    // Custom label for pie slices
+    const renderCustomLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+        if (percent < 0.05) return null; // Don't show labels for slices smaller than 5%
+
+        const RADIAN = Math.PI / 180;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill="white"
+                textAnchor={x > cx ? 'start' : 'end'}
+                dominantBaseline="central"
+                fontSize="12"
+                fontWeight="bold"
+            >
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    }, []);
 
     useEffect(() => {
         async function fetchStats() {
+            setLoading(true);
             try {
                 const statsData = await getDashboardStats(user, isUserAdmin, selectedDateRange);
                 setData(statsData);
             } catch (error) {
                 console.error('Error fetching stats:', error);
-            } finally {
-                setLoading(false);
+                setData(null);
             }
         }
         fetchStats();
-
-        // Live updates every 5 seconds
-        const interval = setInterval(() => {
-            setData(prevData => {
-                if (prevData) {
-                    return simulateLiveUpdate(prevData);
-                }
-                return prevData;
-            });
-        }, 5000);
-
-        return () => clearInterval(interval);
     }, [user, isUserAdmin, selectedDateRange]);
+
+    // Separate effect for trend data when date range changes
+    useEffect(() => {
+        async function fetchTrend() {
+            if (!data) return;
+
+            try {
+                const trendData = await getDashboardTrend(user, isUserAdmin, selectedDateRange);
+
+                setData(prev => ({
+                    ...prev,
+                    thirtyDayTrend: trendData
+                }));
+            } catch (error) {
+                console.error('Error fetching trend:', error);
+            }
+        }
+        fetchTrend();
+    }, [selectedDateRange]); // Only refetch when date range changes
+
+    // Check if data is complete to determine loading state
+    const isDataComplete = data &&
+        data.stats &&
+        data.stats.sparklines &&
+        data.stats.sparklines.totalUsers &&
+        data.stats.sparklines.activeUsers &&
+        data.stats.sparklines.pendingRequests &&
+        data.stats.sparklines.requestsLast24h &&
+        data.stats.percentChanges &&
+        data.thirtyDayTrend &&
+        Array.isArray(data.thirtyDayTrend) &&
+        data.thirtyDayTrend.length > 0 &&
+        data.requestEvaluations &&
+        Array.isArray(data.requestEvaluations) &&
+        data.recentActivityLogs &&
+        Array.isArray(data.recentActivityLogs);
+
+    // Update loading state based on data completeness
+    useEffect(() => {
+        if (isDataComplete) {
+            setLoading(false);
+        }
+    }, [isDataComplete]);
 
     // Socket listeners for real-time updates
     useSocketMultiple("dashboard-broadcast", {
@@ -111,21 +195,12 @@ export default function DashboardClient() {
         }
     });
 
-    if (loading || !data) {
-        return (
-            <div className={`min-h-screen mt-15 ${darkMode ? 'bg-gray-900 dark' : 'bg-white'}`}>
-                <HeaderNavBar />
-                <SkeletonDashboard />
-            </div>
-        );
-    }
-
     // Prepare chart data
-    const pieChartData = data.requestEvaluations.length > 0 ? data.requestEvaluations : [{ status: 'No Data', count: 1 }];
+    const pieChartData = data ? (data.requestEvaluations.length > 0 ? data.requestEvaluations : [{ status: 'No Data', count: 1 }]) : [{ status: 'Loading', count: 1 }];
 
     // Filter line chart data based on selected date range
     const getFilteredLineChartData = () => {
-        if (!data.thirtyDayTrend || data.thirtyDayTrend.length === 0) {
+        if (!data || !data.thirtyDayTrend || data.thirtyDayTrend.length === 0) {
             return [{ date: new Date().toISOString().split('T')[0], requests: 0 }];
         }
 
@@ -158,55 +233,17 @@ export default function DashboardClient() {
         return `${selectedDateRange}-Day Requests Trend`;
     };
 
-    // Calculate total for percentage calculations
-    const totalRequests = pieChartData.reduce((sum, item) => sum + item.count, 0);
-
-    // Custom tooltip for pie chart
-    const CustomPieTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            const percentage = ((data.count / totalRequests) * 100).toFixed(1);
-            return (
-                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-lg`}>
-                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.status}</p>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Count: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.count}</span>
-                    </p>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Percentage: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{percentage}%</span>
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
-
-    // Custom label for pie slices
-    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-        if (percent < 0.05) return null; // Don't show labels for slices smaller than 5%
-
-        const RADIAN = Math.PI / 180;
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+    if (loading || !data) {
         return (
-            <text
-                x={x}
-                y={y}
-                fill="white"
-                textAnchor={x > cx ? 'start' : 'end'}
-                dominantBaseline="central"
-                fontSize="12"
-                fontWeight="bold"
-            >
-                {`${(percent * 100).toFixed(0)}%`}
-            </text>
+            <div className={`min-h-screen mt-15 ${theme ? 'bg-gray-900 dark' : 'bg-white'}`}>
+                <HeaderNavBar />
+                <SkeletonDashboard />
+            </div>
         );
-    };
+    }
 
     return (
-        <div className={`min-h-screen mt-15 ${darkMode ? 'bg-gray-900 dark' : 'bg-white'}`}>
+        <div className={`min-h-screen mt-15 ${theme ? 'bg-gray-900 dark' : 'bg-white'}`}>
             <HeaderNavBar />
             {/* Main Content - Scrollable */}
             <div className="overflow-y-auto">
@@ -280,7 +317,7 @@ export default function DashboardClient() {
                                                     <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip content={<CustomPieTooltip />} />
+                                            <Tooltip content={CustomPieTooltip} />
                                             <Legend
                                                 verticalAlign="bottom"
                                                 height={36}
@@ -412,7 +449,7 @@ export default function DashboardClient() {
                                                     <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip content={<CustomPieTooltip />} />
+                                            <Tooltip content={CustomPieTooltip} />
                                             <Legend
                                                 verticalAlign="bottom"
                                                 height={36}
