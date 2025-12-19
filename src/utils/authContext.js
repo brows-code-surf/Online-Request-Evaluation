@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { clearSessionActivity } from '@/utils/sessionTimeout';
 
 const AuthContext = createContext();
 
@@ -76,6 +77,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('user');
+    clearSessionActivity();
     setUser(null);
   };
 

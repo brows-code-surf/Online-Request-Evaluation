@@ -40,6 +40,16 @@ function RequestEvaluationContent() {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
 
+    // Helper function to format date
+    const formatDate = (date) => {
+        if (!date) return '-';
+        return new Date(date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
     // Function to reload approvals data without page refresh
     const reloadApprovalsData = async () => {
         try {
@@ -311,7 +321,7 @@ function RequestEvaluationContent() {
             if (filterStatus && user?.empName) {
                 reloadApprovalsData();
             }
-        }, 30000); // 20 seconds(20000)
+        }, 100000); // 20 seconds(20000)
 
         return () => clearInterval(pollInterval);
     }, [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]);
@@ -406,19 +416,84 @@ function RequestEvaluationContent() {
                                                 <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.requester}</p>
                                             </div>
                                             <div>
-                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Company</p>
-                                                <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.department}</p>
-                                            </div>
-                                            <div>
-                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Location</p>
-                                                <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.location}</p>
-                                            </div>
-                                            <div>
-                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Request Type</p>
-                                                <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.title}</p>
+                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Company / Location</p>
+                                                <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.department} - {selectedApproval.location}</p>
                                             </div>
                                         </div>
+                                        {/* Approval Status */}
+                                        {(approvalDetails.length > 0) && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                                                {/* Show Reviewer Info only when status is FOR REQUEST APPROVAL */}
+                                                {approvalDetails[0]?.REQUESTSTATUS === 'FOR REQUEST APPROVAL' && (
+                                                    <>
+                                                        <div>
+                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
+                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                {approvalDetails[0]?.REVIEWER ? (
+                                                                    <>
+                                                                        {approvalDetails[0].REVIEWER}
+                                                                        {approvalDetails[0]?.DATEREVIEWED ? (
+                                                                            <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                                                [REVIEWED: {formatDate(approvalDetails[0].DATEREVIEWED)}]
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                                                                                [PENDING]
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <span className={`text-sm ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                                        [No Reviewer Assigned]
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div></div>
+                                                        <div></div>
+                                                    </>
+                                                )}
+
+                                                {/* Show both Reviewer and Approver Info when status is FOR PURCHASING LEAD TIME */}
+                                                {approvalDetails[0]?.REQUESTSTATUS === 'FOR PURCHASING LEAD TIME' && (
+                                                    <>
+                                                        <div>
+                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
+                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                {approvalDetails[0]?.REVIEWER}
+                                                                {approvalDetails[0]?.DATEREVIEWED ? (
+                                                                    <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                                        [REVIEWED: {formatDate(approvalDetails[0].DATEREVIEWED)}]
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                                        [No Reviewer Assigned]
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Approver</p>
+                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                {approvalDetails[0]?.APPROVER || '-'}
+                                                                {approvalDetails[0]?.DATEAPPROVED ? (
+                                                                    <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                                        [APPROVED: {formatDate(approvalDetails[0].DATEAPPROVED)}]
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                                                                        [PENDING]
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div></div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
+
 
                                     {/* Remarks */}
                                     {selectedApproval.description && (

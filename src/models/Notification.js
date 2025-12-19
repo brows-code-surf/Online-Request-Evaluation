@@ -8,8 +8,7 @@ export class Notification {
     this.recipient = recipient;
     this.url = url;
     this.createdBy = null;
-    const now = new Date();
-    this.dateCreated = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+    this.dateCreated = new Date().toISOString();
     this.isRead = false;
     this.dateRead = null;
     this.rowId = null;
@@ -55,7 +54,7 @@ export class Notification {
         INSERT INTO [SYSTEM.NOTIFICATION.1]
         (TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED,  URL, IS_READ, DATEREAD)
         VALUES
-        (@title, @description, @recipient, @createdBy, @dateCreated, @url, @isRead, @dateRead)
+        (@title, @description, @recipient, @createdBy, GETDATE(), @url, @isRead, @dateRead)
       `;
 
       const request = connection.request()
@@ -63,7 +62,6 @@ export class Notification {
         .input('description', this.description)
         .input('recipient', this.recipient)
         .input('createdBy', this.createdBy)
-        .input('dateCreated', this.dateCreated)
         .input('url', this.url)
         .input('isRead', this.isRead ? 1 : 0)
         .input('dateRead', this.dateRead);
@@ -172,8 +170,7 @@ export class Notification {
 
       if (result.rowsAffected[0] > 0) {
         this.isRead = true;
-        const now = new Date();
-        this.dateRead = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+        this.dateRead = new Date();
         return {
           success: true,
           message: "Notification marked as read"
@@ -193,7 +190,10 @@ export class Notification {
       connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
-        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, URL, IS_READ, DATEREAD
+        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, 
+               CONVERT(VARCHAR(30), DATECREATED, 121) AS DATECREATED,
+               URL, IS_READ, 
+               CONVERT(VARCHAR(30), DATEREAD, 121) AS DATEREAD
         FROM [SYSTEM.NOTIFICATION.1]
         WHERE RECIPIENT = @recipient
         ORDER BY DATECREATED DESC
@@ -209,11 +209,10 @@ export class Notification {
         const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
         notification.rowId = row.ROWID;
         notification.createdBy = row.CREATEDBY;
-        notification.dateCreated = row.DATECREATED
-          ? new Date(row.DATECREATED).toISOString()
-          : null;
+        // Convert datetime to ISO string, treating as UTC
+        notification.dateCreated = row.DATECREATED ? (typeof row.DATECREATED === 'string' ? row.DATECREATED : new Date(row.DATECREATED).toISOString()) : new Date().toISOString();
         notification.isRead = row.IS_READ === 1;
-        notification.dateRead = row.DATEREAD;
+        notification.dateRead = row.DATEREAD ? (typeof row.DATEREAD === 'string' ? row.DATEREAD : new Date(row.DATEREAD).toISOString()) : null;
         return notification;
       });
 
@@ -253,7 +252,10 @@ export class Notification {
       connection = await connectToDatabase(process.env.DB_NAME);
 
       const query = `
-        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, DATECREATED, URL, IS_READ, DATEREAD
+        SELECT ROWID, TITLE, DESCRIPTION, RECIPIENT, CREATEDBY, 
+               CONVERT(VARCHAR(30), DATECREATED, 121) AS DATECREATED,
+               URL, IS_READ, 
+               CONVERT(VARCHAR(30), DATEREAD, 121) AS DATEREAD
         FROM [SYSTEM.NOTIFICATION.1]
         WHERE ROWID = @rowId
       `;
@@ -270,11 +272,10 @@ export class Notification {
       const notification = new Notification(row.TITLE, row.DESCRIPTION, row.RECIPIENT, row.URL);
       notification.rowId = row.ROWID;
       notification.createdBy = row.CREATEDBY;
-      notification.dateCreated = row.DATECREATED
-        ? new Date(row.DATECREATED).toISOString()
-        : null;
+      // Convert datetime to ISO string, treating as UTC
+      notification.dateCreated = row.DATECREATED ? (typeof row.DATECREATED === 'string' ? row.DATECREATED : new Date(row.DATECREATED).toISOString()) : new Date().toISOString();
       notification.isRead = row.IS_READ === 1;
-      notification.dateRead = row.DATEREAD;
+      notification.dateRead = row.DATEREAD ? (typeof row.DATEREAD === 'string' ? row.DATEREAD : new Date(row.DATEREAD).toISOString()) : null;
 
       return notification;
 

@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '../utils/authContext';
 import TitleUpdater from './_components/titleUpdater';
+import SessionTimeoutWrapper from './_components/sessionTimeoutWrapper';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,9 +36,11 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <TitleUpdater />
-          {children}
-          <TitleUpdater />
+          <SessionTimeoutWrapper>
+            <TitleUpdater />
+            {children}
+            <TitleUpdater />
+          </SessionTimeoutWrapper>
         </AuthProvider>
       </body>
     </html>

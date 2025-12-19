@@ -15,12 +15,43 @@ export const NotificationBell = forwardRef((props, ref) => {
   // Function to format time ago
   const timeAgo = (date) => {
     const now = new Date();
-    const notificationDate = new Date(date);
+    let notificationDate;
+
+    // Handle different input types
+    if (typeof date === 'number') {
+      notificationDate = new Date(date);
+    } else if (typeof date === 'string') {
+      // Ensure ISO string has Z or explicit timezone
+      let dateStr = date;
+      if (!dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-00:')) {
+        // If it looks like an ISO string without timezone, append Z (UTC)
+        if (dateStr.includes('T')) {
+          dateStr = dateStr + 'Z';
+        } else {
+          // If it's a datetime with space, convert and add Z
+          dateStr = dateStr.replace(' ', 'T') + 'Z';
+        }
+      }
+      notificationDate = new Date(dateStr);
+    } else if (date instanceof Date) {
+      notificationDate = date;
+    } else {
+      return 'Invalid date';
+    }
+
+    // Check if the date is valid
+    if (isNaN(notificationDate.getTime())) {
+      return 'Invalid date';
+    }
+
     const diffInSeconds = Math.floor((now - notificationDate) / 1000);
 
-    // Handle future dates or very recent notifications
-    if (diffInSeconds <= 0) {
-      return 'just now';
+    // Handle future dates or very recent dates (within 2 seconds tolerance for clock skew)
+    if (diffInSeconds < 0) {
+      if (diffInSeconds > -2) {
+        return 'just now';
+      }
+      return 'just now'; // Treat anything within reason as 'just now' to handle timezone/clock issues
     }
 
     if (diffInSeconds < 60) {
@@ -111,25 +142,40 @@ export const NotificationBell = forwardRef((props, ref) => {
     <div
       ref={ref}
       className={`
-                absolute
+                fixed
+                sm:absolute
+                bottom-0
+                sm:bottom-auto
                 right-0
-                mt-2
-                w-80
-                max-w-[90vw]
+                sm:right-0
+                left-0
+                sm:left-auto
+                sm:top-full
+                sm:mt-2
+                w-full
+                sm:w-96
+                md:w-80
+                max-h-[70vh]
+                sm:max-h-96
+                sm:rounded-lg
+                rounded-t-lg
+                sm:shadow-xl
+                shadow-2xl
+                sm:border
+                border-t
+                sm:border-t
+                overflow-hidden
                 ${darkMode ? 'bg-gray-800' : 'bg-white'}
-                rounded-lg
-                shadow-xl
-                border
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
                 z-[9999]
               `}
     >
 
-      <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Notifications</h3>
+      <div className={`p-3 sm:p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <h3 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Notifications</h3>
       </div>
 
-      <div className="max-h-80 md:max-h-96 overflow-y-auto">
+      <div className="max-h-[calc(70vh-60px)] sm:max-h-80 md:max-h-96 overflow-y-auto">
         {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(3)].map((_, index) => (
@@ -148,25 +194,25 @@ export const NotificationBell = forwardRef((props, ref) => {
             <div
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
-              className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} cursor-pointer transition ${!notification.isRead ? (darkMode ? "bg-blue-900/50" : "bg-blue-50") : ""
+              className={`px-3 sm:px-4 py-2 sm:py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} cursor-pointer transition ${!notification.isRead ? (darkMode ? "bg-blue-900/50" : "bg-blue-50") : ""
                 }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2 sm:gap-3">
                 <div
-                  className={`w-2 h-2 rounded-full mt-2 ${!notification.isRead ? "bg-blue-600" : (darkMode ? "bg-gray-600" : "bg-gray-300")
+                  className={`w-2 h-2 rounded-full mt-1.5 sm:mt-2 flex-shrink-0 ${!notification.isRead ? "bg-blue-600" : (darkMode ? "bg-gray-600" : "bg-gray-300")
                     }`}
                 ></div>
 
-                <div className="flex-1">
-                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'} font-medium`}>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-800'} font-medium truncate`}>
                     {notification.title}
                   </p>
 
-                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-1`}>
+                  <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-0.5 sm:mt-1 line-clamp-2`}>
                     {notification.description}
                   </p>
 
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5 sm:mt-1`}>
                     {timeAgo(new Date(notification.dateCreated))}
                     {notification.createdBy && ` • by ${notification.createdBy}`}
                   </p>
@@ -181,7 +227,7 @@ export const NotificationBell = forwardRef((props, ref) => {
         )}
       </div>
 
-      <div className={`p-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} text-center`}></div>
+      <div className={`hidden sm:block p-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} text-center`}></div>
     </div>
   );
 });

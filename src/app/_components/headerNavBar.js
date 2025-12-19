@@ -177,7 +177,7 @@ export default function HeaderNavBar() {
           </nav>
 
           {/* Notification Bell */}
-          <div className="relative">
+          <div className="relative z-50">
             <button
               ref={notifButtonRef}
               onClick={() => {

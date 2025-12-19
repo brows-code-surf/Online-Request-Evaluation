@@ -43,7 +43,12 @@ class RequestEvaluation {
                             PRD.BUDGETNAME,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
-                            PRH.IS_READ
+                            PRH.IS_READ,
+                            PRH.REVIEWER,
+                            PRH.DATEREVIEWED,
+                            PRH.APPROVER,
+                            PRH.DATEAPPROVED,
+                            PRH.REQUESTSTATUS
                             FROM [PURCHASE.REQUESTDETAILS.1] PRD
                             INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
                             WHERE PRH.REFERENCENO = @REFERENCENO`;
