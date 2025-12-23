@@ -21,6 +21,7 @@ export default function HeaderNavBar() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -79,6 +80,7 @@ export default function HeaderNavBar() {
   };
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
       await logoutUser();
       logout();
@@ -87,6 +89,8 @@ export default function HeaderNavBar() {
       console.error('Logout error:', error);
       logout();
       router.push('/login');
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -306,12 +310,13 @@ export default function HeaderNavBar() {
                 {/* Logout */}
                 <button
                   onClick={handleLogout}
-                  className={`w-full px-4 py-3 text-red-600 hover:${theme ? 'bg-red-900' : 'bg-red-50'} transition text-sm font-medium text-left`}
+                  disabled={loggingOut}
+                  className={`w-full px-4 py-3 text-red-600 transition text-sm font-medium text-left ${loggingOut ? 'opacity-50 cursor-not-allowed' : ''} ${theme ? 'hover:bg-red-900' : 'hover:bg-red-50'}`}
                 >
                   <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Sign Out
+                  {loggingOut ? 'Logging out...' : 'Sign Out'}
                 </button>
               </div>
             )}

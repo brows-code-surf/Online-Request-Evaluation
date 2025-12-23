@@ -56,3 +56,7 @@ export function broadcastUserAccountUpdate(event, data) {
 export function broadcastUserProfileUpdate(event, data) {
   broadcastFeatureUpdate("user-profile", event, data);
 }
+
+export function broadcastUserAccessUpdate(event, data) {
+  broadcastFeatureUpdate("user-access", event, data);
+}

@@ -226,6 +226,31 @@ export default function Signup() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
+                            <label htmlFor='employeeid' className="block text-sm font-semibold text-gray-800 mb-3">
+                                Employee ID
+                            </label>
+                            <div className="relative">
+                                <input
+                                    id="employeeid"
+                                    name="employeeid"
+                                    type="text"
+                                    value={formData.employeeid}
+                                    onChange={handleChange}
+                                    required
+                                    className={`mt-1 text-black block w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 ${employeeIdError ? 'border-red-500' : 'border-gray-300'
+                                        }`}
+                                />
+                                {employeeIdChecking && (
+                                    <span className="absolute right-4 top-4 text-gray-500 text-sm font-medium">
+                                        Checking...
+                                    </span>
+                                )}
+                            </div>
+                            {employeeIdError && (
+                                <p className="mt-2 text-sm text-red-600 font-medium">{employeeIdError}</p>
+                            )}
+                        </div>
+                        <div>
                             <label
                                 htmlFor="name"
                                 className="block text-sm font-semibold text-gray-800 mb-3"
@@ -242,7 +267,28 @@ export default function Signup() {
                                 className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400"
                             />
                         </div>
-
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor="location" className="block text-sm font-semibold text-gray-800 mb-3">
+                                Location
+                            </label>
+                            <select
+                                id="location"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                required
+                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 appearance-none bg-white"
+                            >
+                                <option value="">Select a location</option>
+                                {Location.map((loc) => (
+                                    <option key={loc.id} value={loc.value}>
+                                        {loc.value}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <div>
                             <label
                                 htmlFor="jobTitle"
@@ -298,53 +344,6 @@ export default function Signup() {
                                 required
                                 className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200"
                             />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor='employeeid' className="block text-sm font-semibold text-gray-800 mb-3">
-                                Employee ID
-                            </label>
-                            <div className="relative">
-                                <input
-                                    id="employeeid"
-                                    name="employeeid"
-                                    type="text"
-                                    value={formData.employeeid}
-                                    onChange={handleChange}
-                                    required
-                                    className={`mt-1 text-black block w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 ${employeeIdError ? 'border-red-500' : 'border-gray-300'
-                                        }`}
-                                />
-                                {employeeIdChecking && (
-                                    <span className="absolute right-4 top-4 text-gray-500 text-sm font-medium">
-                                        Checking...
-                                    </span>
-                                )}
-                            </div>
-                            {employeeIdError && (
-                                <p className="mt-2 text-sm text-red-600 font-medium">{employeeIdError}</p>
-                            )}
-                        </div>
-                        <div>
-                            <label htmlFor="location" className="block text-sm font-semibold text-gray-800 mb-3">
-                                Location
-                            </label>
-                            <select
-                                id="location"
-                                name="location"
-                                value={formData.location}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 text-black block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:ring-opacity-50 transition-all duration-200 hover:border-gray-400 appearance-none bg-white"
-                            >
-                                <option value="">Select a location</option>
-                                {Location.map((loc) => (
-                                    <option key={loc.id} value={loc.value}>
-                                        {loc.value}
-                                    </option>
-                                ))}
-                            </select>
                         </div>
                     </div>
                     <div>

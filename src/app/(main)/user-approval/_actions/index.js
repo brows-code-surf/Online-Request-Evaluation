@@ -3,8 +3,9 @@
 import AccountApprovalModel from '@/models/AccountApproval.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { generatePassword } from '@/utils/generatePassword.js';
-import { broadcastUserApprovalUpdate, broadcastUserAccountUpdate } from '@/app/_actions/socket';
+import { broadcastUserApprovalUpdate, broadcastUserAccountUpdate, broadcastUserAccessUpdate } from '@/app/_actions/socket';
 import Notification from '@/models/Notification';
+import USERACCESS from '@/models/UserAccess.js';
 
 export async function getPendingApprovals() {
     try {
@@ -89,6 +90,50 @@ export async function approveUserAccount(userId, email, name, processedBy) {
             approvedBy: processedBy,
             timestamp: new Date().toISOString()
         });
+
+        // Grant default access permissions to the new user
+        let grantedModules = [];
+        let failedModules = [];
+
+        try {
+            console.log(`Starting to grant default access permissions for user: ${name} (${userId})`);
+            const defaultModules = ['dashboard', 'purchase-request', 'request-evaluation', 'user-profile', 'settings'];
+
+            for (const moduleName of defaultModules) {
+                try {
+                    console.log(`Attempting to grant ${moduleName} access to user ${userId}...`);
+                    const result = await USERACCESS.grantAccess(userId, name, moduleName, processedBy);
+                    console.log(`Successfully granted ${moduleName} access:`, result);
+                    grantedModules.push(moduleName);
+                } catch (accessError) {
+                    console.error(`Failed to grant ${moduleName} access to user ${userId}:`, accessError);
+                    failedModules.push({ module: moduleName, error: accessError.message });
+                }
+            }
+
+            console.log(`Access grant summary for ${name}: ${grantedModules.length} granted, ${failedModules.length} failed`);
+
+            // Only broadcast if at least some access was granted
+            if (grantedModules.length > 0) {
+                await broadcastUserAccessUpdate('user-default-access-granted', {
+                    employeeID: userId,
+                    employeeName: name,
+                    modules: grantedModules,
+                    grantedBy: processedBy,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            if (failedModules.length > 0) {
+                console.error(`Some default access permissions failed for user ${name}:`, failedModules);
+                // Consider throwing an error here if critical modules failed
+                // For now, we'll continue since the account is approved
+            }
+
+        } catch (accessError) {
+            console.error('Critical error granting default access permissions:', accessError);
+            // Don't fail the approval if access granting fails
+        }
 
         return {
             success: true,
