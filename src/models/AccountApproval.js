@@ -101,6 +101,32 @@ export class AccountApprovalModel {
       throw new Error('Failed to reject account: ' + error.message);
     }
   }
+
+  async getAccountById(userId) {
+    let connection;
+    try {
+      connection = await connectToDatabase(process.env.DB_NAME);
+
+      const query = `
+        SELECT ROWID, EMPLOYEEIDNO AS employeeID, EMPLOYEENAME AS employeeName, EMAIL
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE ROWID = @userId
+      `;
+
+      const result = await connection.request()
+        .input('userId', userId)
+        .query(query);
+
+      if (result.recordset.length === 0) {
+        throw new Error('Account not found');
+      }
+
+      return result.recordset[0];
+    } catch (error) {
+      console.error("Get account by ID error:", error);
+      throw new Error('Failed to fetch account: ' + error.message);
+    }
+  }
 }
 
 export default new AccountApprovalModel();

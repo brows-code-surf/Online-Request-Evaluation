@@ -28,6 +28,22 @@ export default function ContentLeftPanel({
     const [lastScrollY, setLastScrollY] = useState(0);
     const touchStartX = useRef(0);
 
+    // Helper function to safely format dates
+    const formatDate = (dateValue) => {
+        if (!dateValue) return 'N/A';
+
+        try {
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) {
+                return 'Invalid Date';
+            }
+            return date.toLocaleDateString();
+        } catch (error) {
+            console.error('Error formatting date:', dateValue, error);
+            return 'Invalid Date';
+        }
+    };
+
     const requestEvalApprovalPage = window.location.pathname === '/request-evaluation';
     const userAccount = window.location.pathname === '/user-accounts';
 
@@ -301,14 +317,14 @@ export default function ContentLeftPanel({
                                     {userAccount && (
                                         <>
                                             <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                {approval.dateRequested ? new Date(approval.dateRequested).toLocaleDateString() : 'N/A'}
+                                                {formatDate(approval.dateRequested)}
                                             </span>
                                             {console.log(approval.dateRequested)}
                                         </>
                                     )}
-                                    {!userAccount && (
+                                    {!userAccount && filterType !== 'accounts' && (
                                         <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {new Date(approval.requestDate).toLocaleDateString()}
+                                            {formatDate(approval.requestDate)}
                                         </span>
                                     )}
                                     <span className={`text-xs ${darkMode ? 'bg-blue-600 text-blue-100' : 'bg-blue-300 text-gray-700'} px-2 py-1 font-semibold rounded`}>

@@ -141,21 +141,26 @@ export async function updateAccess(rowId, hasAccess, modifiedBy) {
 
 // Get available modules in the system
 export async function getAvailableModules() {
-  // Define system modules based on app structure
-  const modules = [
-    { id: 'dashboard', name: 'Dashboard', description: 'Main dashboard and analytics' },
-    { id: 'purchase-request', name: 'Purchase Request', description: 'Create and manage purchase requests' },
-    { id: 'request-evaluation', name: 'Request Evaluation', description: 'Evaluate and process requests' },
-    { id: 'ticket', name: 'Support Tickets', description: 'Create and manage support tickets' },
-    { id: 'user-profile', name: 'User Profile', description: 'Manage personal profile and settings' },
-    { id: 'settings', name: 'Settings', description: 'System settings and configuration' },
-    { id: 'user-accounts', name: 'User Accounts', description: 'Manage user accounts (Admin only)' },
-    { id: 'user-approval', name: 'User Approval', description: 'Approve new user accounts (Admin only)' },
-    { id: 'user-access', name: 'User Access', description: 'Manage user access permissions (Admin only)' }
-  ];
+  try {
+    const MODULE = (await import('@/models/Module.js')).default;
+    const modules = await MODULE.getAllModules();
 
-  return {
-    success: true,
-    data: modules
-  };
+    // Transform to the expected format
+    const formattedModules = modules.map(module => ({
+      id: module.MODULE,
+      name: module.NAME,
+      description: module.DESCRIPTION
+    }));
+
+    return {
+      success: true,
+      data: formattedModules
+    };
+  } catch (error) {
+    console.error('Error fetching available modules:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch modules: ' + error.message
+    };
+  }
 }

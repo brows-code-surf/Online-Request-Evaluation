@@ -17,7 +17,8 @@ export default function ConfirmModal({
     const colorClasses = {
         green: 'bg-green-600 hover:bg-green-700',
         blue: 'bg-blue-600 hover:bg-blue-700',
-        red: 'bg-red-600 hover:bg-red-700'
+        red: 'bg-red-600 hover:bg-red-700',
+        orange: 'bg-orange-600 hover:bg-orange-700'
     };
 
     return (

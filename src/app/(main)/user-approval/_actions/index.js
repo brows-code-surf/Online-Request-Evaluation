@@ -91,22 +91,36 @@ export async function approveUserAccount(userId, email, name, processedBy) {
             timestamp: new Date().toISOString()
         });
 
+        // Get the EMPLOYEEIDNO from the approved account
+        let employeeIdNo;
+        try {
+            const accountDetails = await AccountApprovalModel.getAccountById(userId);
+            employeeIdNo = accountDetails.employeeID;
+            console.log(`Fetched EMPLOYEEIDNO for user ${name}: ${employeeIdNo}`);
+        } catch (fetchError) {
+            console.error('Failed to fetch EMPLOYEEIDNO:', fetchError);
+            return {
+                success: false,
+                message: 'Failed to fetch employee ID: ' + fetchError.message
+            };
+        }
+
         // Grant default access permissions to the new user
         let grantedModules = [];
         let failedModules = [];
 
         try {
-            console.log(`Starting to grant default access permissions for user: ${name} (${userId})`);
+            console.log(`Starting to grant default access permissions for user: ${name} (${employeeIdNo})`);
             const defaultModules = ['dashboard', 'purchase-request', 'request-evaluation', 'user-profile', 'settings'];
 
             for (const moduleName of defaultModules) {
                 try {
-                    console.log(`Attempting to grant ${moduleName} access to user ${userId}...`);
-                    const result = await USERACCESS.grantAccess(userId, name, moduleName, processedBy);
+                    console.log(`Attempting to grant ${moduleName} access to user ${employeeIdNo}...`);
+                    const result = await USERACCESS.grantAccess(employeeIdNo, name, moduleName, processedBy);
                     console.log(`Successfully granted ${moduleName} access:`, result);
                     grantedModules.push(moduleName);
                 } catch (accessError) {
-                    console.error(`Failed to grant ${moduleName} access to user ${userId}:`, accessError);
+                    console.error(`Failed to grant ${moduleName} access to user ${employeeIdNo}:`, accessError);
                     failedModules.push({ module: moduleName, error: accessError.message });
                 }
             }
@@ -116,7 +130,7 @@ export async function approveUserAccount(userId, email, name, processedBy) {
             // Only broadcast if at least some access was granted
             if (grantedModules.length > 0) {
                 await broadcastUserAccessUpdate('user-default-access-granted', {
-                    employeeID: userId,
+                    employeeID: employeeIdNo,
                     employeeName: name,
                     modules: grantedModules,
                     grantedBy: processedBy,

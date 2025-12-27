@@ -18,6 +18,7 @@ export default function HeaderNavBar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserSetupOpen, setIsUserSetupOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -27,8 +28,10 @@ export default function HeaderNavBar() {
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+  const userSetupRef = useRef(null);
   const notifButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
+  const userSetupButtonRef = useRef(null);
   useClickOutside(notifRef, (event) => {
     if (!notifButtonRef.current || !notifButtonRef.current.contains(event.target)) {
       setIsNotificationOpen(false);
@@ -37,6 +40,11 @@ export default function HeaderNavBar() {
   useClickOutside(profileRef, (event) => {
     if (!profileButtonRef.current || !profileButtonRef.current.contains(event.target)) {
       setIsProfileOpen(false);
+    }
+  });
+  useClickOutside(userSetupRef, (event) => {
+    if (!userSetupButtonRef.current || !userSetupButtonRef.current.contains(event.target)) {
+      setIsUserSetupOpen(false);
     }
   });
 
@@ -167,15 +175,74 @@ export default function HeaderNavBar() {
                 >
                   User Account Approvals
                 </Link>
-                <Link
-                  href="/user-accounts"
-                  className={`text-sm font-medium transition ${pathname === '/user-accounts'
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                    }`}
-                >
-                  User Accounts
-                </Link>
+                {/* User Setup Dropdown */}
+                <div className="relative">
+                  <button
+                    ref={userSetupButtonRef}
+                    onClick={() => {
+                      if (isUserSetupOpen) {
+                        setIsUserSetupOpen(false);
+                      } else {
+                        setIsUserSetupOpen(true);
+                        setIsProfileOpen(false);
+                        setIsNotificationOpen(false);
+                      }
+                    }}
+                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/user-accounts' || pathname === '/user-access'
+                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                      : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                      }`}
+                  >
+                    User Setup
+                    <svg
+                      className={`w-4 h-4 transition ${isUserSetupOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* User Setup Dropdown Menu */}
+                  {isUserSetupOpen && (
+                    <div ref={userSetupRef} className={`absolute left-0 mt-2 w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
+                      <div className="py-1">
+                        <Link
+                          href="/user-accounts"
+                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-accounts'
+                            ? 'bg-blue-50 text-blue-600'
+                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                            }`}
+                          onClick={() => setIsUserSetupOpen(false)}
+                        >
+                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                          </svg>
+                          User Accounts
+                        </Link>
+                        <Link
+                          href="/user-access"
+                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-access'
+                            ? 'bg-blue-50 text-blue-600'
+                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                            }`}
+                          onClick={() => setIsUserSetupOpen(false)}
+                        >
+                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          User Access
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </nav>
@@ -369,16 +436,32 @@ export default function HeaderNavBar() {
               >
                 User Account Approvals
               </Link>
-              <Link
-                href="/user-accounts"
-                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-accounts'
-                  ? 'bg-blue-100 text-blue-600'
-                  : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-                  }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                User Accounts
-              </Link>
+              {/* User Setup Mobile Menu */}
+              <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  User Setup
+                </div>
+                <Link
+                  href="/user-accounts"
+                  className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-accounts'
+                    ? 'bg-blue-100 text-blue-600'
+                    : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+                    }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  User Accounts
+                </Link>
+                <Link
+                  href="/user-access"
+                  className={`block px-3 py-2 rounded text-sm font-medium transition mt-1 ${pathname === '/user-access'
+                    ? 'bg-blue-100 text-blue-600'
+                    : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+                    }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  User Access
+                </Link>
+              </div>
             </>
           )}
         </div>
