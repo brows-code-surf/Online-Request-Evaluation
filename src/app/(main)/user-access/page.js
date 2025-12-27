@@ -8,7 +8,7 @@ import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../utils/authContext';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import ConfirmModal from '../_components/confirmModal';
-import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules } from './_actions';
+import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules, updateExistingRecordsToUseEmployeeNames } from './_actions';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
@@ -131,9 +131,9 @@ function UserAccessContent() {
         try {
             let result;
             if (action === 'grant') {
-                result = await grantAccess(selectedUser.employeeID, selectedUser.requester, moduleId, user.employeeID);
+                result = await grantAccess(selectedUser.employeeID, selectedUser.requester, moduleId, user.empName);
             } else {
-                result = await revokeAccess(selectedUser.employeeID, moduleId, user.employeeID);
+                result = await revokeAccess(selectedUser.employeeID, moduleId, user.empName);
             }
 
             if (result.success) {
@@ -147,9 +147,9 @@ function UserAccessContent() {
                         EMPLOYEENAME: selectedUser.requester,
                         MODULE: moduleId,
                         HASACCESS: 1,
-                        CREATEDBY: user.employeeID,
+                        CREATEDBY: user.employeeName,
                         DATECREATED: new Date(),
-                        MODIFIEDBY: user.employeeID,
+                        MODIFIEDBY: user.employeeName,
                         DATEMODIFIED: new Date()
                     };
                     setUserAccess(prev => {
@@ -343,7 +343,9 @@ function UserAccessContent() {
 
                                     {/* User Header */}
                                     <div className={`mb-6 p-4 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                                        <h3 className="text-lg font-semibold mb-2">Managing Access for:</h3>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-lg font-semibold">Managing Access for:</h3>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <p className="text-sm text-gray-500">Name</p>

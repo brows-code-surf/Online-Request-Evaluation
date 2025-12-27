@@ -145,16 +145,60 @@ export async function getAvailableModules() {
     const MODULE = (await import('@/models/Module.js')).default;
     const modules = await MODULE.getAllModules();
 
-    // Transform to the expected format
-    const formattedModules = modules.map(module => ({
-      id: module.MODULE,
-      name: module.NAME,
-      description: module.DESCRIPTION
-    }));
+    // Group modules by parent and children
+    const groupedModules = [];
+    const parentModules = modules.filter(m => !m.SUBMODULE || m.SUBMODULE === null || m.SUBMODULE === '');
+
+    console.log('Total modules:', modules.length);
+    console.log('Parent modules:', parentModules.length);
+
+    parentModules.forEach(parent => {
+      // Add parent module
+      groupedModules.push({
+        id: parent.MODULE,
+        name: parent.NAME,
+        description: parent.DESCRIPTION,
+        isParent: true
+      });
+
+      // Add child modules under this parent
+      const childModules = modules.filter(m => m.SUBMODULE === parent.MODULE || m.SUBMODULE === parent.NAME);
+      console.log(`Child modules for ${parent.NAME}:`, childModules.length);
+
+      childModules.forEach(child => {
+        groupedModules.push({
+          id: child.MODULE,
+          name: `${parent.NAME} > ${child.NAME}`,
+          description: child.DESCRIPTION,
+          isParent: false,
+          parentName: parent.NAME,
+          parentId: parent.MODULE
+        });
+      });
+    });
+
+    // Add any orphaned child modules (children without parents in the list)
+    const allChildModules = modules.filter(m => m.SUBMODULE && m.SUBMODULE !== null && m.SUBMODULE !== '');
+    const processedChildren = groupedModules.filter(m => !m.isParent).map(m => m.id);
+
+    allChildModules.forEach(child => {
+      if (!processedChildren.includes(child.MODULE)) {
+        groupedModules.push({
+          id: child.MODULE,
+          name: `${child.SUBMODULE} > ${child.NAME}`,
+          description: child.DESCRIPTION,
+          isParent: false,
+          parentName: child.SUBMODULE,
+          parentId: child.SUBMODULE
+        });
+      }
+    });
+
+    console.log('Final grouped modules:', groupedModules.length);
 
     return {
       success: true,
-      data: formattedModules
+      data: groupedModules
     };
   } catch (error) {
     console.error('Error fetching available modules:', error);

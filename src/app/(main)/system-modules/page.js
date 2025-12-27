@@ -7,7 +7,7 @@ import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../utils/authContext';
 import ConfirmModal from '../_components/confirmModal';
-import { getAllModules, addModule, updateModule, deactivateModule, activateModule, checkModuleExists } from './_actions';
+import { getAllModules, addModule, updateModule, deactivateModule, activateModule } from './_actions';
 import AddModuleModal from './_components/AddModuleModal';
 import AddSubmoduleModal from './_components/AddSubmoduleModal';
 import EditModuleModal from './_components/EditModuleModal';
@@ -118,9 +118,9 @@ function SystemModulesContent() {
                 }
             }
 
-            if (!formData.name?.trim()) {
-                errors.name = 'Module name is required';
-            }
+            // if (!formData.name?.trim()) {
+            //     errors.name = 'Module name is required';
+            // }
 
             // For submodules being edited, validate submodule name
             if (formData.submodule && !formData.submodulename?.trim()) {
@@ -198,16 +198,6 @@ function SystemModulesContent() {
         setErrorMessage('');
 
         try {
-            // Check if module identifier conflicts with another module
-            const existsResult = await checkModuleExists(formData.module);
-            if (existsResult.success && existsResult.exists) {
-                // Check if it's the same module we're editing
-                if (formData.module !== selectedModule.MODULE) {
-                    setFormErrors({ module: 'A module with this identifier already exists' });
-                    return;
-                }
-            }
-
             const result = await updateModule(selectedModule.ROWID, formData, user.empName);
             if (result.success) {
                 setSuccessMessage('Module updated successfully!');
@@ -380,7 +370,8 @@ function SystemModulesContent() {
         .filter(module => {
             const matchesSearch = module.NAME.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 module.MODULE.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                module.DESCRIPTION.toLowerCase().includes(searchQuery.toLowerCase());
+                (module.DESCRIPTION && module.DESCRIPTION.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (module.SUBMODULE && module.SUBMODULE.toLowerCase().includes(searchQuery.toLowerCase()));
             return matchesSearch;
         })
         .sort((a, b) => {
@@ -561,7 +552,7 @@ function SystemModulesContent() {
                                         </thead>
                                         <tbody className={`${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y divide-gray-200`}>
                                             {paginatedModules.map((module) => (
-                                                <tr key={module.ROWID} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}>
+                                                <tr key={`${module.module_type}-${module.ROWID}`} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}>
                                                     <td className="px-6 py-2 whitespace-nowrap">
                                                         <div className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                                             {module.NAME}

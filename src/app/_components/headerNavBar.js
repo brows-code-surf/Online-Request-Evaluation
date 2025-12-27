@@ -19,6 +19,7 @@ export default function HeaderNavBar() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserSetupOpen, setIsUserSetupOpen] = useState(false);
+  const [isSystemUtilitiesOpen, setIsSystemUtilitiesOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -29,9 +30,11 @@ export default function HeaderNavBar() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
   const userSetupRef = useRef(null);
+  const systemUtilitiesRef = useRef(null);
   const notifButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
   const userSetupButtonRef = useRef(null);
+  const systemUtilitiesButtonRef = useRef(null);
   useClickOutside(notifRef, (event) => {
     if (!notifButtonRef.current || !notifButtonRef.current.contains(event.target)) {
       setIsNotificationOpen(false);
@@ -45,6 +48,11 @@ export default function HeaderNavBar() {
   useClickOutside(userSetupRef, (event) => {
     if (!userSetupButtonRef.current || !userSetupButtonRef.current.contains(event.target)) {
       setIsUserSetupOpen(false);
+    }
+  });
+  useClickOutside(systemUtilitiesRef, (event) => {
+    if (!systemUtilitiesButtonRef.current || !systemUtilitiesButtonRef.current.contains(event.target)) {
+      setIsSystemUtilitiesOpen(false);
     }
   });
 
@@ -166,15 +174,6 @@ export default function HeaderNavBar() {
             </Link>
             {mounted && isUserAdmin && (
               <>
-                <Link
-                  href="/user-approval"
-                  className={`text-sm font-medium transition ${pathname === '/user-approval'
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                    }`}
-                >
-                  User Account Approvals
-                </Link>
                 {/* User Setup Dropdown */}
                 <div className="relative">
                   <button
@@ -188,7 +187,7 @@ export default function HeaderNavBar() {
                         setIsNotificationOpen(false);
                       }
                     }}
-                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/user-accounts' || pathname === '/user-access'
+                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/user-accounts' || pathname === '/user-access' || pathname === '/user-approval'
                       ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
                       : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                       }`}
@@ -211,8 +210,21 @@ export default function HeaderNavBar() {
 
                   {/* User Setup Dropdown Menu */}
                   {isUserSetupOpen && (
-                    <div ref={userSetupRef} className={`absolute left-0 mt-2 w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
+                    <div ref={userSetupRef} className={`absolute left-0 mt-2 w-max min-w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
                       <div className="py-1">
+                        <Link
+                          href="/user-approval"
+                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-approval'
+                            ? 'bg-blue-50 text-blue-600'
+                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                            }`}
+                          onClick={() => setIsUserSetupOpen(false)}
+                        >
+                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          User Account Approvals
+                        </Link>
                         <Link
                           href="/user-accounts"
                           className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-accounts'
@@ -238,6 +250,74 @@ export default function HeaderNavBar() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>
                           User Access
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* System Utilities Dropdown */}
+                <div className="relative">
+                  <button
+                    ref={systemUtilitiesButtonRef}
+                    onClick={() => {
+                      if (isSystemUtilitiesOpen) {
+                        setIsSystemUtilitiesOpen(false);
+                      } else {
+                        setIsSystemUtilitiesOpen(true);
+                        setIsProfileOpen(false);
+                        setIsNotificationOpen(false);
+                      }
+                    }}
+                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/system-modules' || pathname === '/ticket'
+                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                      : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                      }`}
+                  >
+                    System Utilities
+                    <svg
+                      className={`w-4 h-4 transition ${isSystemUtilitiesOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* System Utilities Dropdown Menu */}
+                  {isSystemUtilitiesOpen && (
+                    <div ref={systemUtilitiesRef} className={`absolute left-0 mt-2 w-max min-w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
+                      <div className="py-1">
+                        <Link
+                          href="/system-modules"
+                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/system-modules'
+                            ? 'bg-blue-50 text-blue-600'
+                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                            }`}
+                          onClick={() => setIsSystemUtilitiesOpen(false)}
+                        >
+                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          System Modules
+                        </Link>
+                        <Link
+                          href="/ticket"
+                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/ticket'
+                            ? 'bg-blue-50 text-blue-600'
+                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                            }`}
+                          onClick={() => setIsSystemUtilitiesOpen(false)}
+                        >
+                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          Support Tickets
                         </Link>
                       </div>
                     </div>

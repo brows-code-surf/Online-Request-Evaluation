@@ -19,7 +19,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'parent' as module_type
         FROM [SETTINGS.PARENTMODULE.1]
       `;
@@ -36,7 +36,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'child' as module_type
         FROM [SETTINGS.CHILDMODULE1.1]
       `;
@@ -63,7 +63,7 @@ export const MODULE = {
     try {
       connection = await connectToDatabase();
 
-      // Get parent modules (assuming all are active since no IS_ACTIVE column)
+      // Get active parent modules
       const parentQuery = `
         SELECT
           ROWID,
@@ -75,12 +75,13 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'parent' as module_type
         FROM [SETTINGS.PARENTMODULE.1]
+        WHERE IS_ACTIVE = 1
       `;
 
-      // Get child modules (assuming all are active since no IS_ACTIVE column)
+      // Get active child modules
       const childQuery = `
         SELECT
           ROWID,
@@ -92,9 +93,10 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'child' as module_type
         FROM [SETTINGS.CHILDMODULE1.1]
+        WHERE IS_ACTIVE = 1
       `;
 
       const [parentResult, childResult] = await Promise.all([
@@ -131,7 +133,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'parent' as module_type
         FROM [SETTINGS.PARENTMODULE.1]
         WHERE ROWID = @moduleId
@@ -157,7 +159,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'child' as module_type
         FROM [SETTINGS.CHILDMODULE1.1]
         WHERE ROWID = @moduleId
@@ -196,7 +198,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'parent' as module_type
         FROM [SETTINGS.PARENTMODULE.1]
         WHERE LINK = @moduleIdentifier
@@ -222,7 +224,7 @@ export const MODULE = {
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
-          1 as IS_ACTIVE,
+          IS_ACTIVE,
           'child' as module_type
         FROM [SETTINGS.CHILDMODULE1.1]
         WHERE LINK = @moduleIdentifier
@@ -251,19 +253,6 @@ export const MODULE = {
 
       // Determine if this is a parent or child module
       const isChildModule = moduleData.submodule && moduleData.submodulename;
-
-      // Check if module identifier already exists in both tables
-      const parentCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE LINK = @moduleIdentifier`;
-      const childCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE LINK = @moduleIdentifier`;
-
-      const [parentCheckResult, childCheckResult] = await Promise.all([
-        connection.request().input('moduleIdentifier', moduleData.module).query(parentCheckQuery),
-        connection.request().input('moduleIdentifier', moduleData.module).query(childCheckQuery)
-      ]);
-
-      if (parentCheckResult.recordset.length > 0 || childCheckResult.recordset.length > 0) {
-        throw new Error('Module identifier already exists');
-      }
 
       let insertQuery, result;
 
@@ -332,19 +321,6 @@ export const MODULE = {
 
       if (!isCurrentlyParent && !isCurrentlyChild) {
         throw new Error('Module not found');
-      }
-
-      // Check if module identifier already exists in both tables (excluding current module)
-      const parentDupCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE LINK = @moduleIdentifier AND ROWID != @moduleId`;
-      const childDupCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE LINK = @moduleIdentifier AND ROWID != @moduleId`;
-
-      const [parentDupResult, childDupResult] = await Promise.all([
-        connection.request().input('moduleIdentifier', moduleData.module).input('moduleId', moduleId).query(parentDupCheckQuery),
-        connection.request().input('moduleIdentifier', moduleData.module).input('moduleId', moduleId).query(childDupCheckQuery)
-      ]);
-
-      if (parentDupResult.recordset.length > 0 || childDupResult.recordset.length > 0) {
-        throw new Error('Module identifier already exists');
       }
 
       // Determine if this should be a child module based on form data
@@ -483,14 +459,112 @@ export const MODULE = {
     }
   },
 
-  // Deactivate module (not supported in new table structure - all modules are active)
+  // Deactivate module
   async deactivateModule(moduleId, modifiedBy) {
-    return { success: false, message: "Module deactivation is not supported in the current system configuration" };
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // First, determine which table the module is in
+      const parentCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
+      const childCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
+
+      const [parentCheckResult, childCheckResult] = await Promise.all([
+        connection.request().input('moduleId', moduleId).query(parentCheckQuery),
+        connection.request().input('moduleId', moduleId).query(childCheckQuery)
+      ]);
+
+      const isParent = parentCheckResult.recordset.length > 0;
+      const isChild = childCheckResult.recordset.length > 0;
+
+      if (!isParent && !isChild) {
+        throw new Error('Module not found');
+      }
+
+      let updateQuery, result;
+
+      if (isParent) {
+        updateQuery = `
+          UPDATE [SETTINGS.PARENTMODULE.1]
+          SET IS_ACTIVE = 0, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+          WHERE ROWID = @moduleId
+        `;
+      } else {
+        updateQuery = `
+          UPDATE [SETTINGS.CHILDMODULE1.1]
+          SET IS_ACTIVE = 0, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+          WHERE ROWID = @moduleId
+        `;
+      }
+
+      result = await connection.request()
+        .input('moduleId', moduleId)
+        .input('modifiedBy', modifiedBy)
+        .query(updateQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "Module deactivated successfully" };
+      } else {
+        return { success: false, message: "No module found to deactivate" };
+      }
+    } catch (error) {
+      console.error("Deactivate module error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
   },
 
-  // Activate module (not supported in new table structure - all modules are active)
+  // Activate module
   async activateModule(moduleId, modifiedBy) {
-    return { success: false, message: "Module activation is not supported in the current system configuration" };
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // First, determine which table the module is in
+      const parentCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
+      const childCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
+
+      const [parentCheckResult, childCheckResult] = await Promise.all([
+        connection.request().input('moduleId', moduleId).query(parentCheckQuery),
+        connection.request().input('moduleId', moduleId).query(childCheckQuery)
+      ]);
+
+      const isParent = parentCheckResult.recordset.length > 0;
+      const isChild = childCheckResult.recordset.length > 0;
+
+      if (!isParent && !isChild) {
+        throw new Error('Module not found');
+      }
+
+      let updateQuery, result;
+
+      if (isParent) {
+        updateQuery = `
+          UPDATE [SETTINGS.PARENTMODULE.1]
+          SET IS_ACTIVE = 1, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+          WHERE ROWID = @moduleId
+        `;
+      } else {
+        updateQuery = `
+          UPDATE [SETTINGS.CHILDMODULE1.1]
+          SET IS_ACTIVE = 1, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+          WHERE ROWID = @moduleId
+        `;
+      }
+
+      result = await connection.request()
+        .input('moduleId', moduleId)
+        .input('modifiedBy', modifiedBy)
+        .query(updateQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "Module activated successfully" };
+      } else {
+        return { success: false, message: "No module found to activate" };
+      }
+    } catch (error) {
+      console.error("Activate module error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
   },
 
   // Check if module exists (searches both parent and child tables)
@@ -510,6 +584,29 @@ export const MODULE = {
       return (parentResult.recordset[0].count > 0 || childResult.recordset[0].count > 0);
     } catch (error) {
       console.error("Check module exists error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Get distinct parent modules from child modules table
+  async getDistinctParentModules() {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT DISTINCT
+          PARENTNAME as name,
+          PARENTNAME as identifier
+        FROM [SETTINGS.CHILDMODULE1.1]
+        WHERE IS_ACTIVE = 1
+        ORDER BY PARENTNAME
+      `;
+
+      const result = await connection.request().query(query);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get distinct parent modules error:", error);
       throw new Error('Database error: ' + error.message);
     }
   }

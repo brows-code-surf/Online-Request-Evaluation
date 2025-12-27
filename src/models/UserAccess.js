@@ -243,6 +243,253 @@ export const USERACCESS = {
       console.error("Get accessible modules error:", error);
       throw new Error('Database error: ' + error.message);
     }
+  },
+
+  // Get accessible modules with child module information
+  async getAccessibleModulesWithChildren(employeeId) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Get user's accessible modules
+      const accessQuery = `
+        SELECT ua.MODULE, ua.HASACCESS, ua.CREATEDBY, ua.DATECREATED
+        FROM [SYSTEM.USERACCESS.1] ua
+        WHERE ua.EMPLOYEEID = @employeeId AND ua.HASACCESS = 1
+      `;
+
+      const accessResult = await connection.request()
+        .input('employeeId', employeeId)
+        .query(accessQuery);
+
+      const accessibleModuleIds = accessResult.recordset.map(record => record.MODULE);
+
+      if (accessibleModuleIds.length === 0) {
+        return [];
+      }
+
+      // Get module details for accessible modules
+      const modulesQuery = `
+        SELECT
+          m.module_id,
+          m.module_name,
+          m.module_link,
+          m.parent_name,
+          m.description,
+          m.module_type,
+          m.is_active,
+          ua.CREATEDBY as access_granted_by,
+          ua.DATECREATED as access_granted_date
+        FROM (
+          -- Parent modules
+          SELECT
+            LINK as module_id,
+            PARENTNAME as module_name,
+            LINK as module_link,
+            NULL as parent_name,
+            DESCRIPTION as description,
+            'parent' as module_type,
+            IS_ACTIVE as is_active
+          FROM [SETTINGS.PARENTMODULE.1]
+          WHERE LINK IN (${accessibleModuleIds.map((_, i) => `@module${i}`).join(',')})
+
+          UNION ALL
+
+          -- Child modules
+          SELECT
+            LINK as module_id,
+            CHILDNAME as module_name,
+            LINK as module_link,
+            PARENTNAME as parent_name,
+            DESCRIPTION as description,
+            'child' as module_type,
+            IS_ACTIVE as is_active
+          FROM [SETTINGS.CHILDMODULE1.1]
+          WHERE LINK IN (${accessibleModuleIds.map((_, i) => `@module${i}`).join(',')})
+        ) m
+        INNER JOIN [SYSTEM.USERACCESS.1] ua ON ua.MODULE = m.module_id AND ua.EMPLOYEEID = @employeeId AND ua.HASACCESS = 1
+        WHERE m.is_active = 1
+        ORDER BY
+          CASE WHEN m.parent_name IS NULL THEN 0 ELSE 1 END,
+          m.parent_name,
+          m.module_type DESC,
+          m.module_name
+      `;
+
+      // Prepare the request with all module parameters
+      const request = connection.request().input('employeeId', employeeId);
+      accessibleModuleIds.forEach((moduleId, index) => {
+        request.input(`module${index}`, moduleId);
+      });
+
+      const modulesResult = await request.query(modulesQuery);
+
+      return modulesResult.recordset;
+    } catch (error) {
+      console.error("Get accessible modules with children error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Grant access to parent module and all its child modules
+  async grantAccessWithChildren(employeeId, employeeName, parentModule, createdBy) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Start a transaction
+      const transaction = connection.transaction();
+      await transaction.begin();
+
+      try {
+        // Get all child modules for this parent
+        const childQuery = `
+          SELECT LINK, CHILDNAME
+          FROM [SETTINGS.CHILDMODULE1.1]
+          WHERE PARENTNAME = @parentModule AND IS_ACTIVE = 1
+        `;
+
+        const childResult = await transaction.request()
+          .input('parentModule', parentModule)
+          .query(childQuery);
+
+        const childModules = childResult.recordset;
+
+        // Grant access to parent module
+        await this._grantAccessInTransaction(transaction, employeeId, employeeName, parentModule, createdBy);
+
+        // Grant access to all child modules
+        for (const child of childModules) {
+          await this._grantAccessInTransaction(transaction, employeeId, employeeName, child.LINK, createdBy);
+        }
+
+        await transaction.commit();
+
+        return {
+          success: true,
+          message: `Access granted to parent module and ${childModules.length} child modules`,
+          childModulesCount: childModules.length
+        };
+
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
+
+    } catch (error) {
+      console.error("Grant access with children error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Helper function for granting access within a transaction
+  async _grantAccessInTransaction(transaction, employeeId, employeeName, module, createdBy) {
+    // First check if record exists
+    const existingQuery = `
+      SELECT ROWID, HASACCESS
+      FROM [SYSTEM.USERACCESS.1]
+      WHERE EMPLOYEEID = @employeeId AND MODULE = @module
+    `;
+
+    const existingResult = await transaction.request()
+      .input('employeeId', employeeId)
+      .input('module', module)
+      .query(existingQuery);
+
+    if (existingResult.recordset.length > 0) {
+      // Update existing record
+      const updateQuery = `
+        UPDATE [SYSTEM.USERACCESS.1]
+        SET HASACCESS = 1, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+        WHERE ROWID = @rowId
+      `;
+
+      await transaction.request()
+        .input('modifiedBy', createdBy)
+        .input('rowId', existingResult.recordset[0].ROWID)
+        .query(updateQuery);
+    } else {
+      // Insert new record
+      const insertQuery = `
+        INSERT INTO [SYSTEM.USERACCESS.1]
+        (EMPLOYEEID, EMPLOYEENAME, MODULE, HASACCESS, CREATEDBY, DATECREATED)
+        VALUES
+        (@employeeId, @employeeName, @module, 1, @createdBy, GETDATE())
+      `;
+
+      await transaction.request()
+        .input('employeeId', employeeId)
+        .input('employeeName', employeeName)
+        .input('module', module)
+        .input('createdBy', createdBy)
+        .query(insertQuery);
+    }
+  },
+
+  // Revoke access from parent module and all its child modules
+  async revokeAccessWithChildren(employeeId, parentModule, modifiedBy) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Start a transaction
+      const transaction = connection.transaction();
+      await transaction.begin();
+
+      try {
+        // Get all child modules for this parent
+        const childQuery = `
+          SELECT LINK
+          FROM [SETTINGS.CHILDMODULE1.1]
+          WHERE PARENTNAME = @parentModule AND IS_ACTIVE = 1
+        `;
+
+        const childResult = await transaction.request()
+          .input('parentModule', parentModule)
+          .query(childQuery);
+
+        const childModules = childResult.recordset;
+
+        // Revoke access from parent module
+        await this._revokeAccessInTransaction(transaction, employeeId, parentModule, modifiedBy);
+
+        // Revoke access from all child modules
+        for (const child of childModules) {
+          await this._revokeAccessInTransaction(transaction, employeeId, child.LINK, modifiedBy);
+        }
+
+        await transaction.commit();
+
+        return {
+          success: true,
+          message: `Access revoked from parent module and ${childModules.length} child modules`,
+          childModulesCount: childModules.length
+        };
+
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
+
+    } catch (error) {
+      console.error("Revoke access with children error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Helper function for revoking access within a transaction
+  async _revokeAccessInTransaction(transaction, employeeId, module, modifiedBy) {
+    const query = `
+      UPDATE [SYSTEM.USERACCESS.1]
+      SET HASACCESS = 0, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+      WHERE EMPLOYEEID = @employeeId AND MODULE = @module
+    `;
+
+    await transaction.request()
+      .input('employeeId', employeeId)
+      .input('module', module)
+      .input('modifiedBy', modifiedBy)
+      .query(query);
   }
 };
 

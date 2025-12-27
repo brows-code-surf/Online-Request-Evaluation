@@ -52,12 +52,24 @@ export async function getModuleById(moduleId) {
 
 export async function addModule(moduleData, createdBy) {
   try {
-    // Validate required fields
-    if (!moduleData.name) {
-      return {
-        success: false,
-        message: 'Module name is required'
-      };
+    // Determine if this is a parent or child module
+    const isChildModule = moduleData.submodule && moduleData.submodulename;
+
+    // Validate required fields based on module type
+    if (isChildModule) {
+      if (!moduleData.submodulename) {
+        return {
+          success: false,
+          message: 'Submodule name is required'
+        };
+      }
+    } else {
+      if (!moduleData.name) {
+        return {
+          success: false,
+          message: 'Module name is required'
+        };
+      }
     }
 
     // For parent modules, validate module identifier
@@ -106,12 +118,24 @@ export async function addModule(moduleData, createdBy) {
 
 export async function updateModule(moduleId, moduleData, modifiedBy) {
   try {
-    // Validate required fields
-    if (!moduleData.name) {
-      return {
-        success: false,
-        message: 'Module name is required'
-      };
+    // Determine if this should be a child module based on form data
+    const shouldBeChild = moduleData.submodule && moduleData.submodulename;
+
+    // Validate required fields based on module type
+    if (shouldBeChild) {
+      if (!moduleData.submodulename) {
+        return {
+          success: false,
+          message: 'Submodule name is required'
+        };
+      }
+    } else {
+      if (!moduleData.name) {
+        return {
+          success: false,
+          message: 'Module name is required'
+        };
+      }
     }
 
     // For parent modules, validate module identifier
@@ -196,6 +220,22 @@ export async function checkModuleExists(moduleIdentifier) {
     return {
       success: false,
       message: 'Failed to check module existence: ' + error.message
+    };
+  }
+}
+
+export async function getDistinctParentModules() {
+  try {
+    const parentModules = await MODULE.getDistinctParentModules();
+    return {
+      success: true,
+      data: parentModules
+    };
+  } catch (error) {
+    console.error('Error fetching distinct parent modules:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch distinct parent modules: ' + error.message
     };
   }
 }

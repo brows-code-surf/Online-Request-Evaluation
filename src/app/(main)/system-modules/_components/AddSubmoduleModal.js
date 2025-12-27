@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../utils/authContext';
+import { getDistinctParentModules } from '../_actions';
 
 export default function AddSubmoduleModal({
     isOpen,
@@ -15,9 +16,35 @@ export default function AddSubmoduleModal({
 }) {
     const { darkMode } = useAuth();
     const [inputMode, setInputMode] = useState('dropdown'); // 'dropdown' or 'text'
+    const [parentModules, setParentModules] = useState([]);
+    const [loadingParentModules, setLoadingParentModules] = useState(false);
 
-    // Filter parent modules from the modules prop
-    const parentModules = modules.filter(module => !module.SUBMODULE);
+    // Fetch distinct parent modules when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            const fetchParentModules = async () => {
+                setLoadingParentModules(true);
+                try {
+                    const result = await getDistinctParentModules();
+                    if (result.success) {
+                        setParentModules(result.data);
+                    } else {
+                        console.error('Failed to fetch parent modules:', result.message);
+                        // Fallback to filtering from modules prop
+                        setParentModules(modules.filter(module => !module.SUBMODULE));
+                    }
+                } catch (error) {
+                    console.error('Error fetching parent modules:', error);
+                    // Fallback to filtering from modules prop
+                    setParentModules(modules.filter(module => !module.SUBMODULE));
+                } finally {
+                    setLoadingParentModules(false);
+                }
+            };
+
+            fetchParentModules();
+        }
+    }, [isOpen, modules]);
 
     const handleParentModuleChange = (e) => {
         if (inputMode === 'dropdown') {
@@ -62,12 +89,15 @@ export default function AddSubmoduleModal({
                                         name="submodule"
                                         value={formData.submodule}
                                         onChange={handleParentModuleChange}
+                                        disabled={loadingParentModules}
                                         className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodule ? 'border-red-500' : ''}`}
                                     >
-                                        <option value="">Select a parent module...</option>
-                                        {parentModules.map((module) => (
-                                            <option key={module.ROWID} value={module.MODULE}>
-                                                {module.NAME} ({module.MODULE})
+                                        <option value="">
+                                            {loadingParentModules ? 'Loading parent modules...' : 'Select a parent module...'}
+                                        </option>
+                                        {parentModules.map((module, index) => (
+                                            <option key={`${module.identifier}-${index}`} value={module.identifier}>
+                                                {module.name}
                                             </option>
                                         ))}
                                     </select>
