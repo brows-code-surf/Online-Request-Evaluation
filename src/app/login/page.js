@@ -36,6 +36,8 @@ export default function Login() {
 
     useEffect(() => {
         if (user && !loading) {
+            // Keep loading state until dashboard navigation completes
+            setLoginLoading(true);
             router.push('/dashboard')
         }
     }, [user, loading, router]);
@@ -70,6 +72,15 @@ export default function Login() {
                 return
             }
 
+            // Check if OTP verification is required
+            if (result.requiresOTP === false) {
+                // User doesn't need OTP, log them in directly
+                login(result.user, result.token)
+                setLoginLoading(false)
+                return
+            }
+
+            // OTP is required, redirect to OTP page
             router.push(`/OTP?email=${encodeURIComponent(result.email)}`)
         } catch (err) {
             setError('Login failed. Please try again.')

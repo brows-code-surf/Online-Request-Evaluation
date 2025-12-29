@@ -312,6 +312,14 @@ function RequestEvaluationContent() {
             },
             [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
         ),
+
+        "purchase-request-posted": useCallback(
+            (data) => {
+                console.log("Purchase request posted event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
     });
 
 

@@ -10,6 +10,8 @@ import { getUnreadNotificationCount } from '../_actions/notifications';
 import { useSocketMultiple } from '../../hooks/useSocketMultiple';
 import useClickOutside from '../../utils/useClickOutsideClose';
 import HelpSupportModal from '../(main)/_components/helpSupportModal';
+import SkeletonLoader from './skeletonLoader';
+import { getIconById } from '../../utils/iconConstants';
 
 export default function HeaderNavBar() {
   const router = useRouter();
@@ -24,6 +26,9 @@ export default function HeaderNavBar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [accessibleModules, setAccessibleModules] = useState([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [dynamicDropdowns, setDynamicDropdowns] = useState({});
 
   useEffect(() => setMounted(true), []);
 
@@ -84,6 +89,36 @@ export default function HeaderNavBar() {
     }
   });
 
+  // Fetch accessible modules
+  useEffect(() => {
+    const fetchAccessibleModules = async () => {
+      if (user?.employeeID) {
+        setModulesLoading(true);
+        try {
+          const response = await fetch(`/api/user-access?employeeID=${user.employeeID}`);
+          const data = await response.json();
+          if (data.success) {
+            // console.log('Fetched modules:', data.modules);
+            // console.log('Current pathname:', pathname);
+            setAccessibleModules(data.modules);
+          } else {
+            console.error('API Error:', data.error);
+            setAccessibleModules([]);
+          }
+        } catch (error) {
+          console.error('Error fetching accessible modules:', error);
+          setAccessibleModules([]);
+        } finally {
+          setModulesLoading(false);
+        }
+      }
+    };
+
+    if (mounted && user?.employeeID) {
+      fetchAccessibleModules();
+    }
+  }, [user?.employeeID, mounted, pathname]);
+
   // Extract initials from user name or email
   const getInitials = () => {
     if (user?.empName) {
@@ -113,12 +148,67 @@ export default function HeaderNavBar() {
   const isUserAdmin = user && isAdmin();
   const theme = mounted ? darkMode : false;
 
+  // Helper function to check if a link is active
+  const isLinkActive = (moduleLink) => {
+    if (!moduleLink) return false;
+    // Remove query parameters and hash from pathname for comparison
+    const cleanPathname = pathname.split('?')[0].split('#')[0];
+    const cleanModuleLink = moduleLink.split('?')[0].split('#')[0];
+    return cleanPathname === cleanModuleLink;
+  };
+
+  // Process accessible modules into navigation structure
+  const processModulesForNavigation = () => {
+    if (!accessibleModules.length) return { directLinks: [], dropdowns: [] };
+
+    const directLinks = [];
+    const dropdowns = [];
+    const parentMap = {};
+
+    // Group modules by parent
+    accessibleModules.forEach(module => {
+      if (module.parent_name) {
+        // Child module
+        if (!parentMap[module.parent_name]) {
+          parentMap[module.parent_name] = { children: [], parentInfo: null };
+        }
+        parentMap[module.parent_name].children.push(module);
+      } else {
+        // Parent module - check if it has children
+        if (!parentMap[module.module_name]) {
+          parentMap[module.module_name] = { children: [], parentInfo: module };
+        } else {
+          parentMap[module.module_name].parentInfo = module;
+        }
+      }
+    });
+
+    // Process grouped modules
+    Object.entries(parentMap).forEach(([parentName, { children, parentInfo }]) => {
+      if (children.length > 0) {
+        // Has children - create dropdown
+        dropdowns.push({
+          name: parentName,
+          link: parentInfo?.module_link || '',
+          children: children
+        });
+      } else if (parentInfo) {
+        // No children - direct link
+        directLinks.push(parentInfo);
+      }
+    });
+
+    return { directLinks, dropdowns };
+  };
+
+  const { directLinks, dropdowns } = processModulesForNavigation();
+
   return (
     <header className={`fixed top-0 left-0 right-0 ${theme ? 'bg-gray-800' : 'bg-white'} shadow-md z-50 border-b-[3px] border-blue-600`}>
       <div className="flex items-center justify-between px-6 py-1 max-w-full">
 
         <div className="flex items-center">
-          <Link href="/request-evaluation" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <img src={theme ? "/SANTEH-LOGO/SFC-GRAY.png" : "/SANTEH-LOGO/SFC.png"}
               alt="SANTEH Logo"
               className="w-30 h-10 object-contain"
@@ -145,56 +235,62 @@ export default function HeaderNavBar() {
 
           {/* Navigation - Desktop */}
           <nav className="hidden md:flex gap-6">
-            <Link
-              href="/dashboard"
-              className={`text-sm font-medium transition ${pathname === '/dashboard'
-                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                }`}
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/purchase-request"
-              className={`text-sm font-medium transition ${pathname === '/purchase-request'
-                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                }`}
-            >
-              Purchase Request
-            </Link>
-            <Link
-              href="/request-evaluation"
-              className={`text-sm font-medium transition ${pathname === '/request-evaluation'
-                ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                }`}
-            >
-              Request Evaluation
-            </Link>
-            {mounted && isUserAdmin && (
+            {/* Loading Skeleton */}
+            {modulesLoading ? (
               <>
-                {/* User Setup Dropdown */}
-                <div className="relative">
+                <SkeletonLoader height="h-4" width="w-16" />
+                <SkeletonLoader height="h-4" width="w-20" />
+                <SkeletonLoader height="h-4" width="w-18" />
+                <SkeletonLoader height="h-4" width="w-24" />
+              </>
+            ) : (
+              <>
+                {/* Dynamic Navigation Links */}
+                {directLinks.map((module) => {
+                  const moduleIcon = module.icon ? getIconById(module.icon) : null;
+                  return (
+                    <Link
+                      key={module.module_id}
+                      href={module.module_link}
+                      className={`flex items-center gap-2 text-sm font-medium transition ${isLinkActive(module.module_link)
+                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                        : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                        }`}
+                    >
+                      {moduleIcon && <moduleIcon.icon className="w-4 h-4" />}
+                      {module.module_name}
+                    </Link>
+                  );
+                })}
+
+            {/* Dynamic Dropdowns */}
+            {dropdowns.map((dropdown) => {
+              const isOpen = dynamicDropdowns[dropdown.name] || false;
+              // Find the parent module icon if it exists
+              const parentModule = accessibleModules.find(m => m.module_name === dropdown.name && !m.parent_name);
+              const parentIcon = parentModule?.icon ? getIconById(parentModule.icon) : null;
+
+              return (
+                <div key={dropdown.name} className="relative">
                   <button
-                    ref={userSetupButtonRef}
                     onClick={() => {
-                      if (isUserSetupOpen) {
-                        setIsUserSetupOpen(false);
-                      } else {
-                        setIsUserSetupOpen(true);
-                        setIsProfileOpen(false);
-                        setIsNotificationOpen(false);
-                      }
+                      setDynamicDropdowns(prev => ({
+                        ...prev,
+                        [dropdown.name]: !prev[dropdown.name]
+                      }));
+                      setIsProfileOpen(false);
+                      setIsNotificationOpen(false);
                     }}
-                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/user-accounts' || pathname === '/user-access' || pathname === '/user-approval'
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                      : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
+                    className={`flex items-center gap-2 text-sm font-medium transition ${
+                      dropdown.children.some(child => isLinkActive(child.module_link))
+                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                        : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                       }`}
                   >
-                    User Setup
+                    {parentIcon && <parentIcon.icon className="w-4 h-4" />}
+                    {dropdown.name}
                     <svg
-                      className={`w-4 h-4 transition ${isUserSetupOpen ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 transition ${isOpen ? 'rotate-180' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -208,121 +304,36 @@ export default function HeaderNavBar() {
                     </svg>
                   </button>
 
-                  {/* User Setup Dropdown Menu */}
-                  {isUserSetupOpen && (
-                    <div ref={userSetupRef} className={`absolute left-0 mt-2 w-max min-w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
+                  {/* Dynamic Dropdown Menu */}
+                  {isOpen && (
+                    <div className={`absolute left-0 mt-2 w-max min-w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
                       <div className="py-1">
-                        <Link
-                          href="/user-approval"
-                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-approval'
-                            ? 'bg-blue-50 text-blue-600'
-                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
-                            }`}
-                          onClick={() => setIsUserSetupOpen(false)}
-                        >
-                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          User Account Approvals
-                        </Link>
-                        <Link
-                          href="/user-accounts"
-                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-accounts'
-                            ? 'bg-blue-50 text-blue-600'
-                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
-                            }`}
-                          onClick={() => setIsUserSetupOpen(false)}
-                        >
-                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                          </svg>
-                          User Accounts
-                        </Link>
-                        <Link
-                          href="/user-access"
-                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/user-access'
-                            ? 'bg-blue-50 text-blue-600'
-                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
-                            }`}
-                          onClick={() => setIsUserSetupOpen(false)}
-                        >
-                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          User Access
-                        </Link>
+                        {dropdown.children.map((child) => {
+                          const childIcon = child.icon ? getIconById(child.icon) : null;
+                          return (
+                            <Link
+                              key={child.module_id}
+                              href={child.module_link}
+                              className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition ${isLinkActive(child.module_link)
+                                ? 'bg-blue-50 text-blue-600'
+                                : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
+                                }`}
+                              onClick={() => setDynamicDropdowns(prev => ({
+                                ...prev,
+                                [dropdown.name]: false
+                              }))}
+                            >
+                              {childIcon && <childIcon.icon className="w-4 h-4" />}
+                              {child.module_name}
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
                 </div>
-                {/* System Utilities Dropdown */}
-                <div className="relative">
-                  <button
-                    ref={systemUtilitiesButtonRef}
-                    onClick={() => {
-                      if (isSystemUtilitiesOpen) {
-                        setIsSystemUtilitiesOpen(false);
-                      } else {
-                        setIsSystemUtilitiesOpen(true);
-                        setIsProfileOpen(false);
-                        setIsNotificationOpen(false);
-                      }
-                    }}
-                    className={`flex items-center gap-1 text-sm font-medium transition ${pathname === '/system-modules' || pathname === '/ticket'
-                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                      : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
-                      }`}
-                  >
-                    System Utilities
-                    <svg
-                      className={`w-4 h-4 transition ${isSystemUtilitiesOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* System Utilities Dropdown Menu */}
-                  {isSystemUtilitiesOpen && (
-                    <div ref={systemUtilitiesRef} className={`absolute left-0 mt-2 w-max min-w-48 ${theme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${theme ? 'border-gray-700' : 'border-gray-200'} overflow-hidden z-50`}>
-                      <div className="py-1">
-                        <Link
-                          href="/system-modules"
-                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/system-modules'
-                            ? 'bg-blue-50 text-blue-600'
-                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
-                            }`}
-                          onClick={() => setIsSystemUtilitiesOpen(false)}
-                        >
-                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          System Modules
-                        </Link>
-                        <Link
-                          href="/ticket"
-                          className={`block px-4 py-2 text-sm font-medium transition ${pathname === '/ticket'
-                            ? 'bg-blue-50 text-blue-600'
-                            : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'}`
-                            }`}
-                          onClick={() => setIsSystemUtilitiesOpen(false)}
-                        >
-                          <svg className="w-4 h-4 inline mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                          </svg>
-                          Support Tickets
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              );
+            })}
               </>
             )}
           </nav>
@@ -474,74 +485,66 @@ export default function HeaderNavBar() {
       {/*Mobile View Humburger*/}
       {isMenuOpen && (
         <div className={`md:hidden ${theme ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-3 space-y-3`}>
-          <Link
-            href="/dashboard"
-            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/dashboard'
-              ? 'bg-blue-100 text-blue-600'
-              : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-              }`}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/purchase-request"
-            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/purchase-request'
-              ? 'bg-blue-100 text-blue-600'
-              : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-              }`}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Purchase Request
-          </Link>
-          <Link
-            href="/request-evaluation"
-            className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/request-evaluation'
-              ? 'bg-blue-100 text-blue-600'
-              : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-              }`}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Request Evaluation
-          </Link>
-          {mounted && isUserAdmin && (
+          {/* Loading Skeleton for Mobile */}
+          {modulesLoading ? (
             <>
-              <Link
-                href="/user-approval"
-                className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-approval'
-                  ? 'bg-blue-100 text-blue-600'
-                  : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-                  }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                User Account Approvals
-              </Link>
-              {/* User Setup Mobile Menu */}
+              <SkeletonLoader height="h-4" width="w-20" />
+              <SkeletonLoader height="h-4" width="w-24" />
+              <SkeletonLoader height="h-4" width="w-18" />
+              <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2">
+                <SkeletonLoader height="h-3" width="w-16" className="mb-2" />
+                <SkeletonLoader height="h-4" width="w-22" className="mt-1" />
+                <SkeletonLoader height="h-4" width="w-20" className="mt-1" />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Dynamic Mobile Navigation */}
+              {directLinks.map((module) => {
+                const moduleIcon = module.icon ? getIconById(module.icon) : null;
+                return (
+                  <Link
+                    key={module.module_id}
+                    href={module.module_link}
+                    className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition ${isLinkActive(module.module_link)
+                      ? 'bg-blue-100 text-blue-600'
+                      : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+                      }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {moduleIcon && <moduleIcon.icon className="w-4 h-4" />}
+                    {module.module_name}
+                  </Link>
+                );
+              })}
+
+          {/* Dynamic Mobile Dropdowns */}
+          {dropdowns.map((dropdown) => (
+            <div key={dropdown.name}>
               <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2">
                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  User Setup
+                  {dropdown.name}
                 </div>
-                <Link
-                  href="/user-accounts"
-                  className={`block px-3 py-2 rounded text-sm font-medium transition ${pathname === '/user-accounts'
-                    ? 'bg-blue-100 text-blue-600'
-                    : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-                    }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  User Accounts
-                </Link>
-                <Link
-                  href="/user-access"
-                  className={`block px-3 py-2 rounded text-sm font-medium transition mt-1 ${pathname === '/user-access'
-                    ? 'bg-blue-100 text-blue-600'
-                    : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
-                    }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  User Access
-                </Link>
+                {dropdown.children.map((child) => {
+                  const childIcon = child.icon ? getIconById(child.icon) : null;
+                  return (
+                    <Link
+                      key={child.module_id}
+                      href={child.module_link}
+                      className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition mt-1 ${isLinkActive(child.module_link)
+                        ? 'bg-blue-100 text-blue-600'
+                        : `${theme ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {childIcon && <childIcon.icon className="w-4 h-4" />}
+                      {child.module_name}
+                    </Link>
+                  );
+                })}
               </div>
+            </div>
+          ))}
             </>
           )}
         </div>

@@ -15,6 +15,7 @@ export const MODULE = {
           LINK as MODULE,
           NULL as SUBMODULE,
           DESCRIPTION,
+          ICON,
           CREATEDBY,
           DATECREATED,
           MODIFIEDBY,
@@ -32,6 +33,7 @@ export const MODULE = {
           LINK as MODULE,
           PARENTNAME as SUBMODULE,
           DESCRIPTION,
+          ICON,
           CREATEDBY,
           DATECREATED,
           MODIFIEDBY,
@@ -71,6 +73,7 @@ export const MODULE = {
           LINK as MODULE,
           NULL as SUBMODULE,
           DESCRIPTION,
+          ICON,
           CREATEDBY,
           DATECREATED,
           MODIFIEDBY,
@@ -260,9 +263,9 @@ export const MODULE = {
         // Insert child module
         insertQuery = `
           INSERT INTO [SETTINGS.CHILDMODULE1.1]
-          (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+          (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
           VALUES
-          (@parentName, @childName, @link, @description, @createdBy, GETDATE(), @modifiedBy, GETDATE())
+          (@parentName, @childName, @link, @description, @icon, @createdBy, GETDATE(), @modifiedBy, GETDATE())
         `;
 
         result = await connection.request()
@@ -270,6 +273,7 @@ export const MODULE = {
           .input('childName', moduleData.submodulename)
           .input('link', moduleData.module)
           .input('description', moduleData.description || null)
+          .input('icon', moduleData.icon || null)
           .input('createdBy', createdBy)
           .input('modifiedBy', createdBy)
           .query(insertQuery);
@@ -277,15 +281,16 @@ export const MODULE = {
         // Insert parent module
         insertQuery = `
           INSERT INTO [SETTINGS.PARENTMODULE.1]
-          (PARENTNAME, LINK, DESCRIPTION, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+          (PARENTNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
           VALUES
-          (@parentName, @link, @description, @createdBy, GETDATE(), @modifiedBy, GETDATE())
+          (@parentName, @link, @description, @icon, @createdBy, GETDATE(), @modifiedBy, GETDATE())
         `;
 
         result = await connection.request()
           .input('parentName', moduleData.name)
           .input('link', moduleData.module)
           .input('description', moduleData.description || null)
+          .input('icon', moduleData.icon || null)
           .input('createdBy', createdBy)
           .input('modifiedBy', createdBy)
           .query(insertQuery);
@@ -334,7 +339,7 @@ export const MODULE = {
           // Update existing child module
           updateQuery = `
             UPDATE [SETTINGS.CHILDMODULE1.1]
-            SET PARENTNAME = @parentName, CHILDNAME = @childName, LINK = @link, DESCRIPTION = @description,
+            SET PARENTNAME = @parentName, CHILDNAME = @childName, LINK = @link, DESCRIPTION = @description, ICON = @icon,
             MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
             WHERE ROWID = @moduleId
           `;
@@ -344,6 +349,7 @@ export const MODULE = {
             .input('childName', moduleData.submodulename)
             .input('link', moduleData.module)
             .input('description', moduleData.description || null)
+            .input('icon', moduleData.icon || null)
             .input('modifiedBy', modifiedBy)
             .input('moduleId', moduleId)
             .query(updateQuery);
@@ -351,7 +357,7 @@ export const MODULE = {
           // Convert parent module to child module (move to child table)
           // First, get the current parent module data
           const getParentQuery = `
-            SELECT PARENTNAME, LINK, DESCRIPTION, CREATEDBY, DATECREATED
+            SELECT PARENTNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED
             FROM [SETTINGS.PARENTMODULE.1]
             WHERE ROWID = @moduleId
           `;
@@ -367,9 +373,9 @@ export const MODULE = {
           // Insert into child table
           const insertChildQuery = `
             INSERT INTO [SETTINGS.CHILDMODULE1.1]
-            (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+            (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
             VALUES
-            (@parentName, @childName, @link, @description, @createdBy, @dateCreated, @modifiedBy, GETDATE())
+            (@parentName, @childName, @link, @description, @icon, @createdBy, @dateCreated, @modifiedBy, GETDATE())
           `;
 
           result = await connection.request()
@@ -377,6 +383,7 @@ export const MODULE = {
             .input('childName', moduleData.submodulename)
             .input('link', moduleData.module)
             .input('description', moduleData.description || null)
+            .input('icon', moduleData.icon || null)
             .input('createdBy', parentData.recordset[0].CREATEDBY)
             .input('dateCreated', parentData.recordset[0].DATECREATED)
             .input('modifiedBy', modifiedBy)
@@ -394,7 +401,7 @@ export const MODULE = {
           // Update existing parent module
           updateQuery = `
             UPDATE [SETTINGS.PARENTMODULE.1]
-            SET PARENTNAME = @parentName, LINK = @link, DESCRIPTION = @description,
+            SET PARENTNAME = @parentName, LINK = @link, DESCRIPTION = @description, ICON = @icon,
             MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
             WHERE ROWID = @moduleId
           `;
@@ -403,6 +410,7 @@ export const MODULE = {
             .input('parentName', moduleData.name)
             .input('link', moduleData.module)
             .input('description', moduleData.description || null)
+            .input('icon', moduleData.icon || null)
             .input('modifiedBy', modifiedBy)
             .input('moduleId', moduleId)
             .query(updateQuery);
@@ -426,15 +434,16 @@ export const MODULE = {
           // Insert into parent table
           const insertParentQuery = `
             INSERT INTO [SETTINGS.PARENTMODULE.1]
-            (PARENTNAME, LINK, DESCRIPTION, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+            (PARENTNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
             VALUES
-            (@parentName, @link, @description, @createdBy, @dateCreated, @modifiedBy, GETDATE())
+            (@parentName, @link, @description, @icon, @createdBy, @dateCreated, @modifiedBy, GETDATE())
           `;
 
           result = await connection.request()
             .input('parentName', moduleData.name)
             .input('link', moduleData.module)
             .input('description', moduleData.description || null)
+            .input('icon', moduleData.icon || null)
             .input('createdBy', childData.recordset[0].CREATEDBY)
             .input('dateCreated', childData.recordset[0].DATECREATED)
             .input('modifiedBy', modifiedBy)

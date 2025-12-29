@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import HeaderNavBar from '../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../utils/authContext';
 import UserProfileHeader from '../_components/userProfileHeader';
 import UserPassword from '../_components/userPassword';
-import { getUserProfile, updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive } from './_actions';
+import { updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive } from './_actions';
 import { JobTitles, Departments, JobLevel } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
@@ -18,8 +17,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
 
 function UserAccountsContent() {
-    const router = useRouter();
-    const { user, loading, isAdmin, login, darkMode } = useAuth();
+    const { user, loading, darkMode } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -64,12 +62,8 @@ function UserAccountsContent() {
 
     useEffect(() => {
         if (loading) return;
-        if (!isAdmin()) {
-            router.push('/request-evaluation');
-            return;
-        } else {
-            fetchAllUsers();
-        }
+        fetchAllUsers();
+
     }, [loading]);
 
     const fetchAllUsers = async () => {
@@ -641,7 +635,7 @@ function UserAccountsContent() {
                                             <button
                                                 onClick={handleSetInactive}
                                                 disabled={setInactiveLoading}
-                                                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                                className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
                                             >
                                                 {setInactiveLoading ? (
                                                     <>

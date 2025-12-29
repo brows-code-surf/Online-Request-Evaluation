@@ -28,7 +28,7 @@ export default function UserPassword({
         <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl shadow-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} overflow-hidden backdrop-blur-sm`}>
 
             {/* Card Header */}
-            <div className="bg-gradient-to-r from-orange-600 via-red-600 to-orange-700 px-8 py-6">
+            <div className="bg-gradient-to-r from-blue-500 via-blue-550 to-blue-600 px-8 py-6">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export default function UserPassword({
                             <button
                                 onClick={onChangePassword}
                                 disabled={changePasswordLoading || !passwordValidation.valid}
-                                className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
                             >
                                 {changePasswordLoading ? (
                                     <>
@@ -202,7 +202,7 @@ export default function UserPassword({
                         </div>
                         <button
                             onClick={onTogglePasswordChange}
-                            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
                         >
                             Change Password
                         </button>

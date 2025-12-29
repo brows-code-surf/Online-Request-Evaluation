@@ -2,19 +2,20 @@
 
 import 'server-only';
 import Dashboard from '@/models/Dashboard.js';
+import UserProfile from '@/models/UserProfile.js';
 
 export async function getDashboardStats(user = null, isAdmin = false, days = 30) {
     const dashboard = new Dashboard();
-    
+
     try {
         // Get current stats
-        const stats = isAdmin 
+        const stats = isAdmin
             ? await dashboard.getUserStats(null)
             : await dashboard.getUserRequestStats(user?.empName);
 
         // Determine stat type based on admin/user
-        const statTypeMap = isAdmin 
-            ? { 
+        const statTypeMap = isAdmin
+            ? {
                 totalUsers: 'totalUsers',
                 activeUsers: 'activeUsers',
                 pendingRequests: 'pendingRequests',
@@ -99,9 +100,9 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
 
 export async function getDashboardTrend(user = null, isAdmin = false, days = 30) {
     const dashboard = new Dashboard();
-    
+
     try {
-        return isAdmin 
+        return isAdmin
             ? await dashboard.getThirtyDayTrend(days)
             : await dashboard.getUserThirtyDayTrend(user?.empName, days);
     } catch (error) {
@@ -110,5 +111,35 @@ export async function getDashboardTrend(user = null, isAdmin = false, days = 30)
             date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             requests: 0
         }));
+    }
+}
+
+export async function checkWelcomeModalStatus(employeeID) {
+    try {
+        // Get user login info from database
+        const user = await UserProfile.getUserByEmployeeID(employeeID);
+
+        if (!user) {
+            return { shouldShowModal: false };
+        }
+
+        // Check if LOGGEDIN date exists and matches today
+        if (!user.loggedIn) {
+            return { shouldShowModal: false };
+        }
+
+        const loggedInDate = new Date(user.loggedIn);
+        const today = new Date();
+
+        // Compare dates (ignoring time)
+        const loggedInDateStr = loggedInDate.toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
+
+        const shouldShowModal = loggedInDateStr === todayStr;
+
+        return { shouldShowModal };
+    } catch (error) {
+        console.error('Error checking welcome modal status:', error);
+        return { shouldShowModal: false };
     }
 }

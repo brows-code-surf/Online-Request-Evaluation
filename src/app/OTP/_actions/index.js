@@ -40,11 +40,23 @@ export async function verifyOTP(email, otp) {
         };
       }
 
+      // Set NEXT_OTP to 7 days from now
+      try {
+        const nextOTPDate = new Date();
+        nextOTPDate.setDate(nextOTPDate.getDate() + 7); // Add 7 days
+
+        await UserProfile.updateNextOTP(user.employeeID, nextOTPDate);
+        console.log(`NEXT_OTP updated for user ${user.employeeID}: ${nextOTPDate.toISOString()}`);
+      } catch (otpError) {
+        console.error('Error updating NEXT_OTP:', otpError);
+        // Continue with login even if NEXT_OTP update fails
+      }
+
       const token = LoginModel.createToken({ ...user, authenticated: true });
 
       return {
         success: true,
-        user: { email: user.email, empName: user.empName, authenticated: true, department: user.department, 
+        user: { email: user.email, empName: user.empName, authenticated: true, department: user.department,
                 jobTitle: user.jobTitle, employeeID: user.employeeID, location: user.location },
         token,
         message: 'OTP verified successfully'

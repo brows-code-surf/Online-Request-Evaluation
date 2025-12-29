@@ -278,6 +278,7 @@ export const USERACCESS = {
           m.description,
           m.module_type,
           m.is_active,
+          m.icon,
           ua.CREATEDBY as access_granted_by,
           ua.DATECREATED as access_granted_date
         FROM (
@@ -285,11 +286,12 @@ export const USERACCESS = {
           SELECT
             LINK as module_id,
             PARENTNAME as module_name,
-            LINK as module_link,
+            '/' + LINK as module_link,
             NULL as parent_name,
             DESCRIPTION as description,
             'parent' as module_type,
-            IS_ACTIVE as is_active
+            IS_ACTIVE as is_active,
+            ICON as icon
           FROM [SETTINGS.PARENTMODULE.1]
           WHERE LINK IN (${accessibleModuleIds.map((_, i) => `@module${i}`).join(',')})
 
@@ -299,11 +301,12 @@ export const USERACCESS = {
           SELECT
             LINK as module_id,
             CHILDNAME as module_name,
-            LINK as module_link,
+            '/' + LINK as module_link,
             PARENTNAME as parent_name,
             DESCRIPTION as description,
             'child' as module_type,
-            IS_ACTIVE as is_active
+            IS_ACTIVE as is_active,
+            ICON as icon
           FROM [SETTINGS.CHILDMODULE1.1]
           WHERE LINK IN (${accessibleModuleIds.map((_, i) => `@module${i}`).join(',')})
         ) m

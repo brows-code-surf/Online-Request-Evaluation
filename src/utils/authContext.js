@@ -27,7 +27,6 @@ export function AuthProvider({ children }) {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         try {
-          console.log('Restored user from localStorage:', storedUser);
           const userData = JSON.parse(storedUser);
           setUser(userData);
           // Load dark mode setting

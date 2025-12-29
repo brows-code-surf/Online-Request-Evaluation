@@ -1,86 +1,112 @@
 // Session timeout configuration
-// Set in milliseconds
-// export const SESSION_TIMEOUT = 1 * 60 * 60 * 1000; // 1 hour (adjust as needed, 1 week = 7 * 24 * 60 * 60 * 1000)
-// For 1 week:
-export const SESSION_TIMEOUT = 7 * 24 * 60 * 60 * 1000; // 1 week
+// Daily logout at 2:45 PM configuration (for testing)
+export const DAILY_LOGOUT_HOUR = 7; // 2 PM
+export const DAILY_LOGOUT_MINUTE = 0; // 2:45 PM
 
-// export const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-
-// Key for storing last activity timestamp in localStorage
-export const LAST_ACTIVITY_KEY = 'lastActivityTimestamp';
+// Key for storing daily logout processing status
+export const DAILY_LOGOUT_KEY = 'lastDailyLogoutDate';
 
 /**
- * Updates the last activity timestamp in localStorage
- * Call this function on user interactions
- */
-export const updateLastActivity = () => {
-  try {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
-    }
-  } catch (error) {
-    console.error('Error updating last activity:', error);
-  }
-};
-
-/**
- * Gets the last activity timestamp from localStorage
- * @returns {number} Last activity timestamp in milliseconds
- */
-export const getLastActivity = () => {
-  try {
-    if (typeof window !== 'undefined') {
-      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
-      return lastActivity ? parseInt(lastActivity, 10) : Date.now();
-    }
-  } catch (error) {
-    console.error('Error getting last activity:', error);
-    return Date.now();
-  }
-};
-
-/**
- * Checks if the session has expired
- * @returns {boolean} True if session has expired
- */
-export const isSessionExpired = () => {
-  try {
-    const lastActivity = getLastActivity();
-    const currentTime = Date.now();
-    const timeSinceLastActivity = currentTime - lastActivity;
-    return timeSinceLastActivity > SESSION_TIMEOUT;
-  } catch (error) {
-    console.error('Error checking session expiration:', error);
-    return false;
-  }
-};
-
-/**
- * Gets the remaining session time in milliseconds
- * @returns {number} Remaining time in milliseconds
- */
-export const getRemainingSessionTime = () => {
-  try {
-    const lastActivity = getLastActivity();
-    const currentTime = Date.now();
-    const timeSinceLastActivity = currentTime - lastActivity;
-    const remaining = SESSION_TIMEOUT - timeSinceLastActivity;
-    return remaining > 0 ? remaining : 0;
-  } catch (error) {
-    console.error('Error getting remaining session time:', error);
-    return SESSION_TIMEOUT;
-  }
-};
-
-/**
- * Clears the session activity data
+ * Clears the session data (daily logout status)
  */
 export const clearSessionActivity = () => {
   try {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(LAST_ACTIVITY_KEY);
+      clearDailyLogoutProcessed();
     }
   } catch (error) {
     console.error('Error clearing session activity:', error);
+  }
+};
+
+/**
+ * Gets the next daily logout timestamp in milliseconds
+ * @returns {number} Timestamp of next logout time
+ */
+export const getNextLogoutTimestamp = () => {
+  const now = new Date();
+  const nextLogout = new Date(now);
+
+  // Set to logout time today
+  nextLogout.setHours(DAILY_LOGOUT_HOUR, DAILY_LOGOUT_MINUTE, 0, 0);
+
+  // If it's already past logout time today, set to logout time tomorrow
+  if (now >= nextLogout) {
+    nextLogout.setDate(nextLogout.getDate() + 1);
+  }
+
+  return nextLogout.getTime();
+};
+
+/**
+ * Gets the milliseconds until next logout time
+ * @returns {number} Milliseconds until logout time
+ */
+export const getTimeUntilLogout = () => {
+  return getNextLogoutTimestamp() - Date.now();
+};
+
+/**
+ * Checks if it's time for daily logout
+ * @returns {boolean} True if it's logout time or later
+ */
+export const isDailyLogoutTime = () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  // Check if it's logout time or later
+  if (currentHour > DAILY_LOGOUT_HOUR) {
+    return true;
+  } else if (currentHour === DAILY_LOGOUT_HOUR && currentMinute >= DAILY_LOGOUT_MINUTE) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Checks if the daily logout has already been processed today
+ * @returns {boolean} True if logout was already processed today
+ */
+export const wasDailyLogoutProcessedToday = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      const lastLogoutDate = localStorage.getItem('lastDailyLogoutDate');
+      if (!lastLogoutDate) return false;
+
+      const today = new Date().toDateString();
+      return lastLogoutDate === today;
+    }
+  } catch (error) {
+    console.error('Error checking daily logout status:', error);
+  }
+  return false;
+};
+
+/**
+ * Marks the daily logout as processed for today
+ */
+export const markDailyLogoutProcessed = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      const today = new Date().toDateString();
+      localStorage.setItem('lastDailyLogoutDate', today);
+    }
+  } catch (error) {
+    console.error('Error marking daily logout as processed:', error);
+  }
+};
+
+/**
+ * Clears the daily logout processed flag
+ */
+export const clearDailyLogoutProcessed = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('lastDailyLogoutDate');
+    }
+  } catch (error) {
+    console.error('Error clearing daily logout processed flag:', error);
   }
 };

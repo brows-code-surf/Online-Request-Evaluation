@@ -4,6 +4,7 @@ import PurchaseRequest from '@/models/PurchaseRequest.js';
 import UserProfile from '@/models/UserProfile.js';
 import Notification from '@/models/Notification.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 export async function getAllPurchaseRequests(filters = {}, user = null) {
   try {
@@ -95,6 +96,14 @@ export async function postPurchaseRequest(referenceNo, posterName) {
     const result = await PurchaseRequest.postPurchaseRequest(referenceNo, posterName);
 
     if (result.success) {
+      // Emit real-time event for request-evaluation page
+      broadcastRequestEvaluationUpdate("purchase-request-posted", {
+        referenceNo: referenceNo,
+        posterName: posterName,
+        newStatus: result.newStatus,
+        timestamp: new Date().toISOString()
+      });
+
       // Send notifications asynchronously after posting
       const pr = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo);
       if (pr) {

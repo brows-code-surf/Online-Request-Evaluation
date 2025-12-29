@@ -17,7 +17,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 function RequestEvaluationContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, isAdmin, loading, darkMode } = useAuth();
+    const { user, loading, darkMode } = useAuth();
     const [selectedApproval, setSelectedApproval] = useState(null);
     const [approvals, setApprovals] = useState([]);
     const [pageLoading, setPageLoading] = useState(true);
@@ -36,12 +36,6 @@ function RequestEvaluationContent() {
 
     useEffect(() => {
         if (loading) return;
-
-        if (!isAdmin()) {
-            router.push('/request-evaluation');
-            return;
-        }
-
         fetchApprovals();
     }, [loading]);
 
@@ -270,9 +264,26 @@ function RequestEvaluationContent() {
                                                     {selectedApproval.title}
                                                 </h1>
                                                 <div className="flex items-center gap-3">
-                                                    <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(selectedApproval.status)}`}>
-                                                        {selectedApproval.status.charAt(0).toUpperCase() + selectedApproval.status.slice(1)}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        {selectedApproval.status === 'PENDING' && (
+                                                            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                        )}
+                                                        {selectedApproval.status === 'APPROVED' && (
+                                                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                        )}
+                                                        {selectedApproval.status === 'REJECTED' && (
+                                                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        )}
+                                                        <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(selectedApproval.status)}`}>
+                                                            {selectedApproval.status.charAt(0).toUpperCase() + selectedApproval.status.slice(1)}
+                                                        </span>
+                                                    </div>
                                                     <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                                         Requested on {new Date(selectedApproval.requestDate).toLocaleDateString('en-US', {
                                                             year: 'numeric',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../utils/authContext';
 import ProtectedRoute from '@/utils/protectedRoute';
@@ -14,6 +14,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
 import { ToastContainer, toast } from 'react-toastify';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import {
   getAllPurchaseRequests,
   getPurchaseRequestByReferenceNo,
@@ -25,7 +26,6 @@ import {
 
 function PurchaseRequestContent() {
   const { darkMode, user } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const formRef = useRef(null);
   const loadingRef = useRef(false);
@@ -36,6 +36,7 @@ function PurchaseRequestContent() {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsReloadKey, setDetailsReloadKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date');
@@ -149,11 +150,42 @@ function PurchaseRequestContent() {
       setDetailsLoading(true);
 
       try {
-        const details = await getPurchaseRequestByReferenceNo(selectedPurchaseRequest.referenceNo, user);
+        console.log(`Loading details for PR: ${selectedPurchaseRequest.referenceNo}, reload key: ${detailsReloadKey}`);
+
+        // Add cache-busting timestamp to ensure fresh data
+        const cacheBust = Date.now();
+        const details = await getPurchaseRequestByReferenceNo(
+          selectedPurchaseRequest.referenceNo,
+          user,
+          { cacheBust }
+        );
+
+        console.log('API Response:', details);
+
         // Only update if this is still the selected request
-        if (details.success) {
-          setPurchaseRequestDetails(details.purchaseRequest.details);
-          setSelectedPurchaseRequest({ ...selectedPurchaseRequest, details: details.purchaseRequest.details });
+        if (details.success && details.purchaseRequest && details.purchaseRequest.header) {
+          console.log('Updating purchase request details:', details.purchaseRequest.details);
+          console.log('Updating purchase request header:', details.purchaseRequest.header);
+
+          setPurchaseRequestDetails(details.purchaseRequest.details || []);
+          setSelectedPurchaseRequest({
+            ...selectedPurchaseRequest,
+            details: details.purchaseRequest.details || [],
+            // Update fields from header object
+            requestStatus: details.purchaseRequest.header.requestStatus || selectedPurchaseRequest.requestStatus,
+            dateReviewed: details.purchaseRequest.header.dateReviewed || selectedPurchaseRequest.dateReviewed,
+            dateApproved: details.purchaseRequest.header.dateApproved || selectedPurchaseRequest.dateApproved,
+            reviewer: details.purchaseRequest.header.reviewer || selectedPurchaseRequest.reviewer,
+            approver: details.purchaseRequest.header.approver || selectedPurchaseRequest.approver,
+            dateReceived: details.purchaseRequest.header.dateReceived || selectedPurchaseRequest.dateReceived,
+            addressedTo: details.purchaseRequest.header.addressedTo || selectedPurchaseRequest.addressedTo,
+            // Also update other header fields that might be relevant
+            reviewedBy: details.purchaseRequest.header.reviewedBy || selectedPurchaseRequest.reviewedBy,
+            approvedBy: details.purchaseRequest.header.approvedBy || selectedPurchaseRequest.approvedBy,
+            receivedBy: details.purchaseRequest.header.receivedBy || selectedPurchaseRequest.receivedBy
+          });
+        } else {
+          console.error('API response structure unexpected:', details);
         }
       } catch (error) {
         console.error('Failed to load purchase request details:', error);
@@ -165,7 +197,7 @@ function PurchaseRequestContent() {
     };
 
     loadDetails();
-  }, [selectedPurchaseRequest?.referenceNo]);
+  }, [selectedPurchaseRequest?.referenceNo, detailsReloadKey]);
 
   // Handle URL parameter changes to select purchase request
   useEffect(() => {
@@ -180,18 +212,18 @@ function PurchaseRequestContent() {
 
 
 
-  // Handle purchase request selection without redundant loading
+  // Handle purchase request selection with fresh data loading
   const handleSelectPurchaseRequest = (approval) => {
-    // Always update the selection, even if it's the same request
-    // This ensures the component re-renders and shows details properly
-    setSelectedPurchaseRequest(prev => {
-      // If it's the same request, force a re-render by creating a new object
-      if (prev?.id === approval.id) {
-        return { ...prev, _forceUpdate: Date.now() };
-      }
-      return approval;
-    });
+    // Always update the selection and force reload of details
+    setSelectedPurchaseRequest(approval);
     setCurrentView('list');
+
+    // Force reload of details by clearing the current details first
+    setPurchaseRequestDetails([]);
+    setDetailsLoading(true);
+
+    // Increment reload key to trigger useEffect even for same PR
+    setDetailsReloadKey(prev => prev + 1);
   };
 
   // Intersection Observer for Add Item button visibility
@@ -375,6 +407,33 @@ function PurchaseRequestContent() {
     }
   };
 
+  // Real-time updates from request-evaluation page
+  useSocketMultiple("request-evaluation-broadcast", {
+    "request-approved": useCallback(
+      (data) => {
+        console.log("Request approved event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+
+    "request-rejected": useCallback(
+      (data) => {
+        console.log("Request rejected event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+
+    "request-changed": useCallback(
+      (data) => {
+        console.log("Request changed event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+  });
+
   if (loading) {
     return (
       <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -450,14 +509,18 @@ function PurchaseRequestContent() {
                 {detailsLoading ? (
                   <SkeletonRequestEvaluationDetail />
                 ) : (
-                  <PurchaseRequestDetails
-                    purchaseRequest={selectedPurchaseRequest}
-                    onClose={() => setSelectedPurchaseRequest(null)}
-                    onPost={handlePostPurchaseRequest}
-                    onCancel={handleCancelPurchaseRequest}
-                    onEdit={handleEditPurchaseRequest}
-                    loading={false}
-                  />
+              <PurchaseRequestDetails
+                purchaseRequest={selectedPurchaseRequest}
+                onClose={() => setSelectedPurchaseRequest(null)}
+                onPost={handlePostPurchaseRequest}
+                onCancel={handleCancelPurchaseRequest}
+                onEdit={handleEditPurchaseRequest}
+                onDataRefresh={() => {
+                  // Trigger reload of details for the current purchase request
+                  setDetailsReloadKey(prev => prev + 1);
+                }}
+                loading={false}
+              />
                 )}
               </div>
             ) : (

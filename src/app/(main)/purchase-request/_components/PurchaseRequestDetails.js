@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../../../utils/authContext';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
+import { PurchaseRequestPrintModal } from './PurchaseRequestPrintModal';
 
 const STATUS_OPTIONS = [
   { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
@@ -31,16 +33,63 @@ export default function PurchaseRequestDetails({
   onPost,
   onCancel,
   onEdit,
+  onDataRefresh,
   loading = false
 }) {
   const { user, darkMode } = useAuth();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const menuRef = useRef(null);
+
+  // Real-time updates for this specific purchase request
+  useSocketMultiple("request-evaluation-broadcast", {
+    "request-approved": useCallback(
+      (data) => {
+        // Check if this approval event is for the current purchase request
+        if (data && data.referenceNo === purchaseRequest?.referenceNo) {
+          console.log("Purchase request approved - updating details:", data);
+          // Small delay to ensure database transaction is committed
+          setTimeout(() => {
+            onDataRefresh && onDataRefresh();
+          }, 1000); // 1 second delay
+        }
+      },
+      [purchaseRequest?.referenceNo, onDataRefresh]
+    ),
+
+    "request-rejected": useCallback(
+      (data) => {
+        // Check if this rejection event is for the current purchase request
+        if (data && data.referenceNo === purchaseRequest?.referenceNo) {
+          console.log("Purchase request rejected - updating details:", data);
+          // Small delay to ensure database transaction is committed
+          setTimeout(() => {
+            onDataRefresh && onDataRefresh();
+          }, 1000); // 1 second delay
+        }
+      },
+      [purchaseRequest?.referenceNo, onDataRefresh]
+    ),
+
+    "request-changed": useCallback(
+      (data) => {
+        // Check if this change event is for the current purchase request
+        if (data && data.referenceNo === purchaseRequest?.referenceNo) {
+          console.log("Purchase request changed - updating details:", data);
+          // Small delay to ensure database transaction is committed
+          setTimeout(() => {
+            onDataRefresh && onDataRefresh();
+          }, 1000); // 1 second delay
+        }
+      },
+      [purchaseRequest?.referenceNo, onDataRefresh]
+    ),
+  });
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -179,6 +228,19 @@ export default function PurchaseRequestDetails({
           <div className="relative">
             {/* Desktop buttons */}
             <div className="hidden sm:flex gap-3">
+              <button
+                onClick={() => setShowPrintModal(true)}
+                disabled={loading || actionLoading}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium ${darkMode ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[100px] ${
+                  actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                }`}
+                aria-label="Print purchase request"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print
+              </button>
               {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
                 <button
                   onClick={() => onEdit && onEdit(purchaseRequest)}
@@ -254,6 +316,27 @@ export default function PurchaseRequestDetails({
                   role="menu"
                   aria-orientation="vertical"
                 >
+                  <button
+                    onClick={() => {
+                      setShowPrintModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    disabled={loading || actionLoading}
+                    className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
+                      darkMode
+                        ? 'text-gray-300 hover:bg-gray-700 hover:text-white focus:bg-gray-700 focus:text-white'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:bg-gray-50 focus:text-gray-900'
+                    } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500 ${
+                      actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                    }`}
+                    role="menuitem"
+                    aria-label="Print purchase request"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    <span className="truncate">Print Request</span>
+                  </button>
                   {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
                     <button
                       onClick={() => {
@@ -265,7 +348,7 @@ export default function PurchaseRequestDetails({
                         darkMode
                           ? 'text-amber-400 hover:bg-amber-900/20 hover:text-amber-300 focus:bg-amber-900/20 focus:text-amber-300'
                           : 'text-amber-700 hover:bg-amber-50 hover:text-amber-800 focus:bg-amber-50 focus:text-amber-800'
-                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 ${
+                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 ${
                         actionLoading ? 'cursor-wait' : 'cursor-pointer'
                       }`}
                       role="menuitem"
@@ -498,6 +581,13 @@ export default function PurchaseRequestDetails({
         onConfirm={handleCancelConfirm}
         onCancel={() => setShowCancelModal(false)}
         isLoading={actionLoading}
+      />
+
+      {/* Print Modal */}
+      <PurchaseRequestPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        purchaseRequest={purchaseRequest}
       />
     </div>
   );

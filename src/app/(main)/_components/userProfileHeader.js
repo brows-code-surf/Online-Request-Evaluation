@@ -9,7 +9,7 @@ export default function UserProfileHeader({ profileData, isEditing, isUserAdmin,
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md mb-6 overflow-hidden`}>
       {/* Card Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-6 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-6 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">{profileData.empName}</h2>
           <p className="text-blue-100">{profileData.email}</p>
@@ -56,6 +56,7 @@ export default function UserProfileHeader({ profileData, isEditing, isUserAdmin,
                 name="email"
                 value={profileData.email}
                 onChange={onProfileChange}
+                disabled
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'text-white bg-gray-700' : 'text-black'} ${profileErrors.email ? 'border-red-500' : 'border-gray-300'}`}
               />
               {profileErrors.email && (

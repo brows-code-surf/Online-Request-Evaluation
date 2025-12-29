@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { getDashboardStats, getDashboardTrend } from './_actions/index.js';
+import { getDashboardStats, getDashboardTrend, checkWelcomeModalStatus } from './_actions/index.js';
 import { Users, Activity, FileText, TrendingUp, User, Calendar } from 'lucide-react';
 import { StatCard } from "./_components/StatCard.js";
 import { ChartCard } from "./_components/ChartCard.js";
 import { RecentLogins } from "./_components/RecentLogins.js";
 import { RecentActivityLogs } from "./_components/RecentActivityLogs.js";
+import { WelcomeModal } from "./_components/WelcomeModal.js";
 import { SkeletonDashboard } from '@/app/_components/skeletonLoader.js';
 import HeaderNavBar from '@/app/_components/headerNavBar.js';
 
@@ -48,6 +49,7 @@ export default function DashboardClient() {
     const [customEndDate, setCustomEndDate] = useState('');
     const [useCustomRange, setUseCustomRange] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const isUserAdmin = user && isAdmin();
     const theme = mounted ? darkMode : false;
 
@@ -158,6 +160,34 @@ export default function DashboardClient() {
             setLoading(false);
         }
     }, [isDataComplete]);
+
+    // Check if welcome modal should be shown
+    useEffect(() => {
+        const checkWelcomeModal = async () => {
+            if (!user?.employeeID || !isDataComplete) return;
+
+            try {
+                // Check if modal was already shown today
+                const today = new Date().toISOString().split('T')[0];
+                const lastShown = localStorage.getItem('welcomeModalShown');
+                if (lastShown === today) {
+                    return; // Already shown today
+                }
+
+                // Check server-side if user should see modal
+                const result = await checkWelcomeModalStatus(user.employeeID);
+                if (result.shouldShowModal) {
+                    setShowWelcomeModal(true);
+                    // Mark as shown today
+                    localStorage.setItem('welcomeModalShown', today);
+                }
+            } catch (error) {
+                console.error('Error checking welcome modal status:', error);
+            }
+        };
+
+        checkWelcomeModal();
+    }, [user?.employeeID, isDataComplete]);
 
     // Socket listeners for real-time updates
     useSocketMultiple("dashboard-broadcast", {
@@ -477,6 +507,12 @@ export default function DashboardClient() {
                     </div>
                 </div>
             </div>
+
+            {/* Welcome Modal */}
+            <WelcomeModal
+                isOpen={showWelcomeModal}
+                onClose={() => setShowWelcomeModal(false)}
+            />
         </div>
     );
 }

@@ -48,7 +48,8 @@ class UserProfile {
           DEPARTMENT as department,
           JOBTITLE as jobTitle,
           JOBLEVEL as jobLevel,
-          LOCATION as location
+          LOCATION as location,
+          LOGGEDIN as loggedIn
         FROM [SYSTEM.USERACCOUNT.1]
         WHERE EMPLOYEEIDNO = @employeeID
       `;
@@ -309,6 +310,76 @@ class UserProfile {
         } catch (error) {
             console.error('Error updating dark mode:', error);
             throw error;
+        }
+    }
+
+    static async getNextOTP(employeeID) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                SELECT NEXT_OTP
+                FROM [SYSTEM.USERACCOUNT.1]
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .query(query);
+
+            if (result.recordset.length === 0) {
+                return null;
+            }
+
+            return result.recordset[0].NEXT_OTP;
+        } catch (error) {
+            console.error('Error fetching NEXT_OTP:', error);
+            throw error;
+        }
+    }
+
+    static async updateNextOTP(employeeID, nextOTPDate) {
+        let connection;
+        try {
+            connection = await connectToDatabase();
+
+            const query = `
+                UPDATE [SYSTEM.USERACCOUNT.1]
+                SET
+                NEXT_OTP = @nextOTP,
+                MODIFIEDDATE = GETDATE()
+                WHERE EMPLOYEEIDNO = @employeeID
+            `;
+
+            const result = await connection.request()
+                .input('employeeID', employeeID)
+                .input('nextOTP', nextOTPDate)
+                .query(query);
+
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error('Error updating NEXT_OTP:', error);
+            throw error;
+        }
+    }
+
+    static async shouldRequireOTP(employeeID) {
+        try {
+            const nextOTP = await UserProfile.getNextOTP(employeeID);
+
+            if (!nextOTP) {
+                return true; // No NEXT_OTP set, require OTP
+            }
+
+            const now = new Date();
+            const nextOTPDate = new Date(nextOTP);
+
+            // Require OTP if current time is past NEXT_OTP
+            return now >= nextOTPDate;
+        } catch (error) {
+            console.error('Error checking if OTP is required:', error);
+            return true; // Default to requiring OTP on error
         }
     }
 }

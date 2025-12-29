@@ -2,6 +2,7 @@
 
 import LoginModel from '@/models/Login.js';
 import OTPModel from '@/models/OTP.js';
+import UserProfile from '@/models/UserProfile.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { checkRateLimit, recordLoginAttempt, resetLoginAttempts } from '@/utils/rateLimiter.js';
 
@@ -36,6 +37,31 @@ export async function loginUser(email, password) {
     // Reset attempts on successful authentication
     resetLoginAttempts(email);
 
+    // Get user details to check NEXT_OTP
+    const userDetails = await UserProfile.getUserByEmail(email);
+    const requiresOTP = await UserProfile.shouldRequireOTP(userDetails.employeeID);
+
+    if (!requiresOTP) {
+      // User doesn't need OTP verification, create token directly
+      const token = LoginModel.createToken({ ...userDetails, authenticated: true });
+
+      return {
+        success: true,
+        requiresOTP: false,
+        user: {
+          email: userDetails.email,
+          empName: userDetails.empName,
+          department: userDetails.department,
+          jobTitle: userDetails.jobTitle,
+          employeeID: userDetails.employeeID,
+          location: userDetails.location,
+          authenticated: true
+        },
+        token,
+        message: 'Login successful. Welcome back!'
+      };
+    }
+
     // Generate and save OTP
     const otp = OTPModel.generateOTP();
     await OTPModel.saveOTP(email, otp);
@@ -59,6 +85,7 @@ export async function loginUser(email, password) {
 
     return {
       success: true,
+      requiresOTP: true,
       email: user.email,
       empName: user.empName,
       department: user.department,

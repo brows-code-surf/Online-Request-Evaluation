@@ -375,21 +375,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
 
 
 
-            {/* Location Code */}
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Location Code
-              </label>
-              <input
-                type="text"
-                value={formData.locationCode}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.locationCode ? 'border-red-300 bg-red-50' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-500')
-                  }`}
-                placeholder="Auto-filled from user location"
-                disabled={true}
-              />
-              {errors.locationCode && <p className="mt-1 text-sm text-red-600">{errors.locationCode}</p>}
-            </div>
+
 
             {/* Rush Request */}
             <div>
