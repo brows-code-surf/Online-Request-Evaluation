@@ -1,4 +1,5 @@
 import connectToDatabase from "../lib/db.js";
+import UserProfile from "./UserProfile.js";
 
 export class OTPModel {
   generateOTP() {
@@ -32,16 +33,32 @@ export class OTPModel {
     try {
       connection = await connectToDatabase();
 
+      // Mark expired OTPs as verified
+      const expireQuery = `
+        UPDATE [SYSTEM.OTPHISTORY.1] 
+        SET VERIFIED = 1, DATEVERIFIED = GETDATE() 
+        WHERE EMAIL = @email AND VERIFIED = 0 AND DATEADD(MINUTE, 10, DATECREATED) <= GETDATE()
+      `;
+      await connection.request()
+        .input('email', email)
+        .query(expireQuery);
+
       const query = `
         SELECT TOP 1 ROWID, OTP, VERIFIED
         FROM [SYSTEM.OTPHISTORY.1]
-        WHERE EMAIL = @email
+        WHERE EMAIL = @email AND DATEADD(MINUTE, 10, DATECREATED) > GETDATE()
         ORDER BY DATECREATED DESC
       `;
 
       const result = await connection.request()
         .input('email', email)
         .query(query);
+
+      const loggedInQuery = `UPDATE [SYSTEM.USERACCOUNT.1] SET LOGGEDIN = GETDATE() WHERE EMAIL = @email`;
+
+      await connection.request()
+        .input('email', email)
+        .query(loggedInQuery);
 
       if (result.recordset.length === 0) {
         return false;

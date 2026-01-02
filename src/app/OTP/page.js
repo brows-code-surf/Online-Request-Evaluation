@@ -1,12 +1,15 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '../_components/authContext'
+import { useAuth } from '../../utils/authContext'
 import Loader from '../_components/loader';
 import Link from 'next/link';
 import { verifyOTP, resendOTP } from './_actions';
 
-export default function OTP() {
+// Ensure this page is treated as dynamic to avoid prerendering issues
+export const dynamic = 'force-dynamic';
+
+function OTPContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { login } = useAuth()
@@ -77,7 +80,7 @@ export default function OTP() {
             }
 
             login(result.user)
-            router.push('/request-evaluation')
+            router.push('/dashboard')
         } catch (err) {
             setError('OTP verification failed. Please try again.')
             console.error(err)
@@ -89,16 +92,17 @@ export default function OTP() {
         setResendTimer(60)
         setExpirationTimer(600)
         setOtp('')
+        setError('')
         await resendOTP(email)
     }
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-600 via-blue-500 to-green-400 animate-gradient">
-            <Loader />
+            <Loader loading = {loading}/>
             <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
-                        <img src="/SANTEH LOGO/SFC.png" alt="SANTEH Logo" className="" />
+                        <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="" />
                     </div>
                     <h3 className="text-gray-600 text-sm mt-2">Verify Your Identity</h3>
                     <p className="text-gray-500 text-xs mt-2">Enter the OTP sent to your email</p>
@@ -142,22 +146,30 @@ export default function OTP() {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center space-y-3">
                     <p className="text-sm text-gray-600">
                         Didn't receive the code?{' '}
                         <button
                             onClick={handleResend}
-                            disabled={resendTimer > 0}
+                            disabled={resendTimer > 0 || loading}
                             className="text-blue-600 hover:text-blue-700 font-medium disabled:text-gray-400"
                         >
                             {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                         </button>
                     </p>
-                    <Link href="/login" className="text-sm text-gray-600 hover:text-gray-700 mt-2 block">
+                    <Link href="/login" className="text-sm text-gray-600 hover:text-gray-700 block">
                         Back to Login
                     </Link>
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function OTPPage() {
+    return (
+        <Suspense fallback={null}>
+            <OTPContent />
+        </Suspense>
     )
 }

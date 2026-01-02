@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '../app/_components/authContext';
+import { useAuth } from './authContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Loader from '../app/_components/loader';
@@ -12,6 +12,8 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    }else{
+      return;
     }
   }, [user, loading, router]);
 

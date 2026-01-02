@@ -3,15 +3,14 @@ import { useState, useEffect } from 'react';
 import Lottie from 'lottie-react';
 import loader from '../_components/loader.json';
 
-export default function Loader({ children }) {
-  const [loading, setLoading] = useState(true);
+export default function Loader({ children, loading = true }) {
+  const [show, setShow] = useState(loading);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    setShow(loading);
+  }, [loading]);
 
-  if (loading) {
+  if (show) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-600/30 backdrop-blur-lg z-50">
         <Lottie

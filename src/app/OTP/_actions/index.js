@@ -2,6 +2,7 @@
 
 import OTPModel from '@/models/OTP.js';
 import LoginModel from '@/models/Login.js';
+import UserProfile from '@/models/UserProfile.js';
 import connectToDatabase from '@/lib/db.js';
 
 export async function verifyOTP(email, otp) {
@@ -29,36 +30,34 @@ export async function verifyOTP(email, otp) {
       };
     }
 
-    // Fetch user data to get empName
-    let connection;
     try {
-      connection = await connectToDatabase();
+      const user = await UserProfile.getUserByEmail(email);
 
-      const query = `
-        SELECT
-          EMPLOYEENAME as empName,
-          EMAIL as email
-        FROM [SYSTEM.USERACCOUNT.1]
-        WHERE EMAIL = @email
-      `;
-
-      const result = await connection.request()
-        .input('email', email)
-        .query(query);
-
-      if (result.recordset.length === 0) {
+      if (!user) {
         return {
           success: false,
           message: 'User not found'
         };
       }
 
-      const user = result.recordset[0];
+      // Set NEXT_OTP to 7 days from now
+      try {
+        const nextOTPDate = new Date();
+        nextOTPDate.setDate(nextOTPDate.getDate() + 7); // Add 7 days
+
+        await UserProfile.updateNextOTP(user.employeeID, nextOTPDate);
+        console.log(`NEXT_OTP updated for user ${user.employeeID}: ${nextOTPDate.toISOString()}`);
+      } catch (otpError) {
+        console.error('Error updating NEXT_OTP:', otpError);
+        // Continue with login even if NEXT_OTP update fails
+      }
+
       const token = LoginModel.createToken({ ...user, authenticated: true });
 
       return {
         success: true,
-        user: { email: user.email, empName: user.empName, authenticated: true },
+        user: { email: user.email, empName: user.empName, authenticated: true, department: user.department,
+                jobTitle: user.jobTitle, employeeID: user.employeeID, location: user.location },
         token,
         message: 'OTP verified successfully'
       };
@@ -88,9 +87,56 @@ export async function resendOTP(email) {
       };
     }
 
+    // Mark all previous unverified OTPs as verified
+    let connection;
+    try {
+      connection = await connectToDatabase();
+      const query = `
+        UPDATE [SYSTEM.OTPHISTORY.1]
+        SET VERIFIED = 1, DATEVERIFIED = GETDATE()
+        WHERE EMAIL = @email AND VERIFIED = 0
+      `;
+      await connection.request()
+        .input('email', email)
+        .query(query);
+    } catch (error) {
+      console.error('Error marking old OTPs:', error);
+    }
+
+    // Generate and save new OTP
+    try {
+      const newOtp = OTPModel.generateOTP();
+      await OTPModel.saveOTP(email, newOtp);
+
+      // Get user info to send email
+      const user = await UserProfile.getUserByEmail(email);
+      if (user) {
+        const { sendEmailWithTemplate } = await import('@/utils/emailService.js');
+        await sendEmailWithTemplate({
+          email,
+          title: 'Your New OTP',
+          companyName: 'SANTEH FEEDS CORPORATION',
+          greeting: 'Hello!',
+          name: user.empName || user.EMPLOYEENAME,
+          body: `Your new One-Time Password (OTP) is: ${newOtp}. This code expires in 10 minutes.`,
+          buttonText: 'Verify Now',
+          buttonUrl: 'http://localhost:3000/OTP?email=' + encodeURIComponent(email),
+          companyEmail: 'j.valencia@santehfeeds.com',
+          companyPhone: '+63 2 8584 4572',
+          subject: 'Your New OTP'
+        });
+      }
+    } catch (error) {
+      console.error('Error sending new OTP:', error);
+      return {
+        success: false,
+        message: 'Failed to send OTP email'
+      };
+    }
+
     return {
       success: true,
-      message: 'OTP sent successfully'
+      message: 'New OTP sent successfully'
     };
 
   } catch (error) {

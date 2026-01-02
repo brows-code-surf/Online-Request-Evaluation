@@ -1,33 +1,33 @@
 import sql from 'mssql';
 
-export async function connectToDatabase() {
-  if (!process.env.DB_HOST) throw new Error('DB_HOST environment variable is required');
-  if (!process.env.DB_USER) throw new Error('DB_USER environment variable is required');
-  if (!process.env.DB_PASSWORD) throw new Error('DB_PASSWORD environment variable is required');
-  if (!process.env.DB_NAME) throw new Error('DB_NAME environment variable is required');
+const pools = new Map();
 
-  try {
-    const config = {
-      server: String(process.env.DB_HOST),
-      user: String(process.env.DB_USER),
-      password: String(process.env.DB_PASSWORD),
-      database: String(process.env.DB_NAME),
-      options: {
-        encrypt: true,
-        trustServerCertificate: true
-      }
-    };
+export async function connectToDatabase(dbName) {
+  const database = dbName || process.env.DB_NAME;
 
-    const pool = await sql.connect(config);
-    console.log("SQL Server connected");
-    return pool;
-  } catch (error) {
-    console.error("SQL Server connection error:", {
-      message: error.message,
-      code: error.code
-    });
-    throw error;
+  if (pools.has(database)) {
+    return pools.get(database);
   }
+
+  const config = {
+    server: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database,
+    options: {
+      encrypt: true,
+      trustServerCertificate: true
+    }
+  };
+
+  const pool = new sql.ConnectionPool(config);
+  await pool.connect();
+
+  console.log(`Connected to DB: ${database}`);
+
+  pools.set(database, pool);
+  return pool;
 }
+
 
 export default connectToDatabase;
