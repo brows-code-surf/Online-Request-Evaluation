@@ -48,6 +48,8 @@ class RequestEvaluation {
                             PRH.DATEREVIEWED,
                             PRH.APPROVER,
                             PRH.DATEAPPROVED,
+                            PRH.ADDRESSEDTO,
+                            PRH.DATERECEIVED,
                             PRH.REQUESTSTATUS
                             FROM [PURCHASE.REQUESTDETAILS.1] PRD
                             INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
@@ -62,7 +64,7 @@ class RequestEvaluation {
         }
     }
 
-    static async getEvaluationsLeftPanel(requesterName, requestStatus, filters = {}) {
+    static async getEvaluationsLeftPanel(requesterName, requestStatus, filters = {}, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -94,25 +96,34 @@ class RequestEvaluation {
                             FROM [PURCHASE.REQUESTHEADER.1] PRH
                             WHERE `;
 
-            const request = connection.request()
-                .input('userName', requesterName);
+            const request = connection.request();
 
-            // Dynamic WHERE condition based on request status - strict role matching
-            switch (requestStatus.toLowerCase()) {
-                case 'for confirmation':
-                    query += ` PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1`;
-                    break;
-                case 'for request approval':
-                    query += ` PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1`;
-                    break;
-                case 'for purchasing lead time':
-                    query += ` PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1`;
-                    break;
-                default:
-                    // Show requests where user is assigned and status matches their role
-                    query += ` ((PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1)
-                              OR (PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1)
-                              OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1))`; // Also show user's own requests
+            // Only add userName input for non-admin users
+            if (!isAdmin) {
+                request.input('userName', requesterName);
+            }
+
+            // For admin users, show all posted requests regardless of assignment
+            if (isAdmin) {
+                query += ` PRH.IS_POSTED = 1`;
+            } else {
+                // Dynamic WHERE condition based on request status - strict role matching for regular users
+                switch (requestStatus.toLowerCase()) {
+                    case 'for confirmation':
+                        query += ` PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1`;
+                        break;
+                    case 'for request approval':
+                        query += ` PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1`;
+                        break;
+                    case 'for purchasing lead time':
+                        query += ` PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1`;
+                        break;
+                    default:
+                        // Show requests where user is assigned and status matches their role
+                        query += ` ((PRH.REVIEWER = @userName AND PRH.REQUESTSTATUS = 'FOR CONFIRMATION' AND PRH.IS_POSTED = 1)
+                                  OR (PRH.APPROVER = @userName AND PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' AND PRH.IS_POSTED = 1)
+                                  OR (PRH.ADDRESSEDTO = @userName AND PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' AND PRH.IS_POSTED = 1))`; // Also show user's own requests
+                }
             }
 
             // Dynamic filters
@@ -299,10 +310,10 @@ class RequestEvaluation {
                         console.log(`Final approval participants:`, { REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY });
 
                         const participants = [
-                            { role: 'reviewer', name: REVIEWER, message: `Request ${referenceNo} that you reviewed has been fully approved and is now in the canvassing stage.` },
-                            { role: 'approver', name: APPROVER, message: `Request ${referenceNo} that you approved has been fully approved and is now in the canvassing stage.` },
-                            { role: 'addressed-to', name: ADDRESSEDTO, message: `Request ${referenceNo} that was addressed to you has been fully approved and is now in the canvassing stage.` },
-                            { role: 'requester', name: REQUESTEDBY, message: `Your request ${referenceNo} has been fully approved and is now in the canvassing stage.` }
+                            { role: 'reviewer', name: REVIEWER, message: `Request ${referenceNo} is now processing.` },
+                            { role: 'approver', name: APPROVER, message: `Request ${referenceNo} is now processing.` },
+                            { role: 'addressed-to', name: ADDRESSEDTO, message: `Request ${referenceNo} is now processing.` },
+                            { role: 'requester', name: REQUESTEDBY, message: `Your request ${referenceNo} is now processing.` }
                         ];
 
                         for (const participant of participants) {

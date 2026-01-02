@@ -36,7 +36,7 @@ export default function PurchaseRequestDetails({
   onDataRefresh,
   loading = false
 }) {
-  const { user, darkMode } = useAuth();
+  const { user, darkMode, isAdmin } = useAuth();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -131,7 +131,7 @@ export default function PurchaseRequestDetails({
 
   const canPost = () => {
     return !purchaseRequest.isPosted &&
-      purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() &&
+      (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) &&
       (purchaseRequest.requestStatus === 'FOR CONFIRMATION' || purchaseRequest.requestStatus === 'FOR POSTING');
   };
 
@@ -241,7 +241,7 @@ export default function PurchaseRequestDetails({
                 </svg>
                 Print
               </button>
-              {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+              {!purchaseRequest.isPosted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                 <button
                   onClick={() => onEdit && onEdit(purchaseRequest)}
                   disabled={loading || actionLoading}
@@ -271,7 +271,7 @@ export default function PurchaseRequestDetails({
                   Post
                 </button>
               )}
-              {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+              {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   disabled={loading || actionLoading}
@@ -337,7 +337,7 @@ export default function PurchaseRequestDetails({
                     </svg>
                     <span className="truncate">Print Request</span>
                   </button>
-                  {!purchaseRequest.isPosted && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                  {!purchaseRequest.isPosted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                     <button
                       onClick={() => {
                         onEdit && onEdit(purchaseRequest);
@@ -383,7 +383,7 @@ export default function PurchaseRequestDetails({
                       <span className="truncate">Post Request</span>
                     </button>
                   )}
-                  {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() && (
+                  {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                     <button
                       onClick={() => {
                         setShowCancelModal(true);
@@ -428,12 +428,8 @@ export default function PurchaseRequestDetails({
               <p className="text-lg font-semibold text-blue-600">{purchaseRequest.referenceNo}</p>
             </div>
             <div>
-              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Company</p>
-              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.company}</p>
-            </div>
-            <div>
-              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Location</p>
-              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.locationCode}</p>
+              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Company / Location</p>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{purchaseRequest.company} - {purchaseRequest.locationCode}</p>
             </div>
             <div>
               <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>

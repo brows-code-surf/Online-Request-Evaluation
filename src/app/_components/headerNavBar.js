@@ -30,6 +30,14 @@ export default function HeaderNavBar() {
   const [modulesLoading, setModulesLoading] = useState(false);
   const [dynamicDropdowns, setDynamicDropdowns] = useState({});
 
+  // Helper function to close all dropdowns
+  const closeAllDropdowns = () => {
+    setIsProfileOpen(false);
+    setIsNotificationOpen(false);
+    setIsMenuOpen(false);
+    setDynamicDropdowns({});
+  };
+
   useEffect(() => setMounted(true), []);
 
   const notifRef = useRef(null);
@@ -222,9 +230,12 @@ export default function HeaderNavBar() {
           {/* Hamburger Menu */}
           <button
             onClick={() => {
-              setIsMenuOpen(!isMenuOpen);
-              setIsProfileOpen(false);
-              setIsNotificationOpen(false);
+              if (isMenuOpen) {
+                setIsMenuOpen(false);
+              } else {
+                closeAllDropdowns();
+                setIsMenuOpen(true);
+              }
             }}
             className={`md:hidden p-2 ${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600 transition rounded-full hover:${theme ? 'bg-gray-700' : 'bg-gray-100'}`}
           >
@@ -274,12 +285,13 @@ export default function HeaderNavBar() {
                 <div key={dropdown.name} className="relative">
                   <button
                     onClick={() => {
-                      setDynamicDropdowns(prev => ({
-                        ...prev,
-                        [dropdown.name]: !prev[dropdown.name]
-                      }));
-                      setIsProfileOpen(false);
-                      setIsNotificationOpen(false);
+                      const newState = !dynamicDropdowns[dropdown.name];
+                      // Close all other dropdowns first
+                      closeAllDropdowns();
+                      // Then set this dropdown's state
+                      if (newState) {
+                        setDynamicDropdowns({ [dropdown.name]: true });
+                      }
                     }}
                     className={`flex items-center gap-2 text-sm font-medium transition ${
                       dropdown.children.some(child => isLinkActive(child.module_link))
@@ -346,9 +358,8 @@ export default function HeaderNavBar() {
                 if (isNotificationOpen) {
                   setIsNotificationOpen(false);
                 } else {
+                  closeAllDropdowns();
                   setIsNotificationOpen(true);
-                  setIsProfileOpen(false);
-                  setIsMenuOpen(false);
                 }
               }}
               className={`relative p-2 ${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600 transition rounded-full hover:${theme ? 'bg-gray-700' : 'bg-gray-100'}`}
@@ -391,9 +402,8 @@ export default function HeaderNavBar() {
                 if (isProfileOpen) {
                   setIsProfileOpen(false);
                 } else {
+                  closeAllDropdowns();
                   setIsProfileOpen(true);
-                  setIsNotificationOpen(false);
-                  setIsMenuOpen(false);
                 }
               }}
               className={`flex items-center gap-2 p-2 ${theme ? 'text-gray-200' : 'text-gray-700'} hover:text-blue-600 transition rounded-full hover:${theme ? 'bg-gray-700' : 'bg-gray-100'}`}

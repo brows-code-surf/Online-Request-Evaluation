@@ -105,23 +105,23 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
           isRush: editData.isRush || false,
           items: editData.details && editData.details.length > 0
             ? editData.details.map(detail => ({
-                itemNumber: detail.itemNumber || '',
-                itemDescription: detail.itemDescription || '',
-                unitOfMeasure: detail.unitOfMeasure || '',
-                quantity: detail.quantity || '',
-                budgetName: detail.budgetName || '',
-                dateNeeded: detail.dateNeeded ? new Date(detail.dateNeeded).toISOString().split('T')[0] : '',
-                remarks: detail.remarks || ''
-              }))
+              itemNumber: detail.itemNumber || '',
+              itemDescription: detail.itemDescription || '',
+              unitOfMeasure: detail.unitOfMeasure || '',
+              quantity: detail.quantity || '',
+              budgetName: detail.budgetName || '',
+              dateNeeded: detail.dateNeeded ? new Date(detail.dateNeeded).toISOString().split('T')[0] : '',
+              remarks: detail.remarks || ''
+            }))
             : [{
-                itemNumber: '',
-                itemDescription: '',
-                unitOfMeasure: '',
-                quantity: '',
-                budgetName: '',
-                dateNeeded: '',
-                remarks: ''
-              }]
+              itemNumber: '',
+              itemDescription: '',
+              unitOfMeasure: '',
+              quantity: '',
+              budgetName: '',
+              dateNeeded: '',
+              remarks: ''
+            }]
         });
       } else {
         // Get next reference number for new requests
@@ -169,7 +169,50 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       try {
         const result = await generateItemNumber(value);
         if (result.success) {
-          newItems[index].itemNumber = result.itemNumber;
+          let generatedItemNumber = result.itemNumber;
+
+          // Check for conflicts with existing items in the form
+          // Find items with same base item number but different descriptions
+          const basePattern = generatedItemNumber.split('-')[0]; // Get base (e.g., 'CIC' from 'CIC-1')
+          const conflictingItems = newItems.filter((item, itemIndex) =>
+            itemIndex !== index && // Not the current item
+            item.itemNumber &&
+            item.itemNumber.startsWith(basePattern) &&
+            item.itemDescription.trim().toLowerCase() !== value.trim().toLowerCase()
+          );
+
+          if (conflictingItems.length > 0) {
+            // Find the highest number used for this base
+            let highestNumber = 0;
+            conflictingItems.forEach(item => {
+              const itemBase = item.itemNumber.split('-')[0];
+              if (itemBase === basePattern) {
+                if (item.itemNumber.includes('-')) {
+                  const numberPart = parseInt(item.itemNumber.split('-')[1]);
+                  if (!isNaN(numberPart) && numberPart > highestNumber) {
+                    highestNumber = numberPart;
+                  }
+                } else {
+                  // Exact base match without number, treat as 0
+                  highestNumber = Math.max(highestNumber, 0);
+                }
+              }
+            });
+
+            // Also check the generated item number itself
+            if (generatedItemNumber.includes('-')) {
+              const genNumberPart = parseInt(generatedItemNumber.split('-')[1]);
+              if (!isNaN(genNumberPart)) {
+                highestNumber = Math.max(highestNumber, genNumberPart);
+              }
+            }
+
+            // Increment to get the next available number
+            const nextNumber = highestNumber + 1;
+            generatedItemNumber = `${basePattern}-${nextNumber}`;
+          }
+
+          newItems[index].itemNumber = generatedItemNumber;
           setFormData(prev => ({ ...prev, items: newItems }));
         }
       } catch (error) {
@@ -263,7 +306,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       // Ultra-smooth auto-scroll to first error field with enhanced timing
       setTimeout(() => {
         const firstErrorField = document.querySelector('[data-error="true"]') ||
-                               document.querySelector('.error, [aria-invalid="true"], .is-invalid');
+          document.querySelector('.error, [aria-invalid="true"], .is-invalid');
 
         if (firstErrorField) {
           // Smooth scroll with enhanced options
@@ -410,11 +453,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 disabled={loading}
               >
                 <option value="">Select reviewer</option>
-                {users.map(user => (
-                  <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
-                    {user.empName}
-                  </option>
-                ))}
+                {users
+                  .filter(approverUser => approverUser.empName.toUpperCase() !== user?.empName?.toUpperCase())
+                  .map(user => (
+                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
+                      {user.empName}
+                    </option>
+                  ))}
               </select>
               {errors.reviewer && <p className="mt-1 text-sm text-red-600">{errors.reviewer}</p>}
             </div>
@@ -458,11 +503,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 disabled={loading}
               >
                 <option value="">Select recipient</option>
-                {users.map(user => (
-                  <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
-                    {user.empName}
-                  </option>
-                ))}
+                {users
+                  .filter(approverUser => approverUser.empName.toUpperCase() !== user?.empName?.toUpperCase())
+                  .map(user => (
+                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
+                      {user.empName}
+                    </option>
+                  ))}
               </select>
               {errors.addressedTo && <p className="mt-1 text-sm text-red-600">{errors.addressedTo}</p>}
             </div>
@@ -487,197 +534,197 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
 
         {/* Item Details Section */}
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm p-6`}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item Details</h3>
-              <button
-                ref={addItemButtonRef}
-                type="button"
-                onClick={addItem}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add Item
-              </button>
-            </div>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item Details</h3>
+            <button
+              ref={addItemButtonRef}
+              type="button"
+              onClick={addItem}
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add Item
+            </button>
+          </div>
 
-            {formData.items.map((item, index) => (
-              <div key={index} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-4 mb-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
-                  {formData.items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      disabled={loading}
-                      className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  )}
+          {formData.items.map((item, index) => (
+            <div key={index} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-4 mb-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
+                {formData.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    disabled={loading}
+                    className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Item Number */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Item Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={item.itemNumber}
+                    readOnly
+                    onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
+                    data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    placeholder="Automated Item Number"
+                    disabled={loading}
+                  />
+                  {errors[`items.${index}.itemNumber`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemNumber`]}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Item Number */}
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Item Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={item.itemNumber}
-                      readOnly
-                      onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
-                      data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      placeholder="Automated Item Number"
-                      disabled={loading}
-                    />
-                    {errors[`items.${index}.itemNumber`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemNumber`]}</p>}
-                  </div>
+                {/* Item Description */}
+                <div className="md:col-span-2">
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Item Description <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={item.itemDescription}
+                    onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
+                    data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    placeholder="Enter item description"
+                    disabled={loading}
+                  />
+                  {errors[`items.${index}.itemDescription`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemDescription`]}</p>}
+                </div>
 
-                  {/* Item Description */}
-                  <div className="md:col-span-2">
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Item Description <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={item.itemDescription}
-                      onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
-                      data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      placeholder="Enter item description"
-                      disabled={loading}
-                    />
-                    {errors[`items.${index}.itemDescription`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemDescription`]}</p>}
-                  </div>
+                {/* Unit of Measure */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Unit of Measure <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={item.unitOfMeasure}
+                    onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
+                    data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    disabled={loading}
+                  >
+                    <option value="">Select UOM</option>
+                    {UNIT_OF_MEASURE_OPTIONS.map(uom => (
+                      <option key={uom} value={uom} className={darkMode ? 'bg-gray-700' : ''}>{uom}</option>
+                    ))}
+                  </select>
+                  {errors[`items.${index}.unitOfMeasure`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.unitOfMeasure`]}</p>}
+                </div>
 
-                  {/* Unit of Measure */}
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Unit of Measure <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={item.unitOfMeasure}
-                      onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
-                      data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      disabled={loading}
-                    >
-                      <option value="">Select UOM</option>
-                      {UNIT_OF_MEASURE_OPTIONS.map(uom => (
-                        <option key={uom} value={uom} className={darkMode ? 'bg-gray-700' : ''}>{uom}</option>
-                      ))}
-                    </select>
-                    {errors[`items.${index}.unitOfMeasure`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.unitOfMeasure`]}</p>}
-                  </div>
+                {/* Quantity */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={item.quantity}
+                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                    data-error={errors[`items.${index}.quantity`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    placeholder="0.00"
+                    disabled={loading}
+                  />
+                  {errors[`items.${index}.quantity`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.quantity`]}</p>}
+                </div>
 
-                  {/* Quantity */}
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Quantity <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                      data-error={errors[`items.${index}.quantity`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      placeholder="0.00"
-                      disabled={loading}
-                    />
-                    {errors[`items.${index}.quantity`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.quantity`]}</p>}
-                  </div>
+                {/* Budget Name */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Budget Name <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={item.budgetName}
+                    onChange={(e) => handleItemChange(index, 'budgetName', e.target.value)}
+                    data-error={errors[`items.${index}.budgetName`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    disabled={loading}
+                  >
+                    <option value="">Select budget</option>
+                    {BUDGET_OPTIONS.map(budget => (
+                      <option key={budget} value={budget} className={darkMode ? 'bg-gray-700' : ''}>{budget}</option>
+                    ))}
+                  </select>
+                  {errors[`items.${index}.budgetName`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetName`]}</p>}
+                </div>
 
-                  {/* Budget Name */}
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Budget Name <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={item.budgetName}
-                      onChange={(e) => handleItemChange(index, 'budgetName', e.target.value)}
-                      data-error={errors[`items.${index}.budgetName`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      disabled={loading}
-                    >
-                      <option value="">Select budget</option>
-                      {BUDGET_OPTIONS.map(budget => (
-                        <option key={budget} value={budget} className={darkMode ? 'bg-gray-700' : ''}>{budget}</option>
-                      ))}
-                    </select>
-                    {errors[`items.${index}.budgetName`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetName`]}</p>}
-                  </div>
+                {/* Date Needed */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Date Needed <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDateForInput(item.dateNeeded)}
+                    onChange={(e) => handleItemChange(index, 'dateNeeded', e.target.value)}
+                    data-error={errors[`items.${index}.dateNeeded`] ? 'true' : 'false'}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                      }`}
+                    disabled={loading}
+                  />
+                  {errors[`items.${index}.dateNeeded`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.dateNeeded`]}</p>}
+                </div>
 
-                  {/* Date Needed */}
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Date Needed <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={formatDateForInput(item.dateNeeded)}
-                      onChange={(e) => handleItemChange(index, 'dateNeeded', e.target.value)}
-                      data-error={errors[`items.${index}.dateNeeded`] ? 'true' : 'false'}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                        }`}
-                      disabled={loading}
-                    />
-                    {errors[`items.${index}.dateNeeded`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.dateNeeded`]}</p>}
-                  </div>
-
-                  {/* Item Remarks */}
-                  <div className="md:col-span-3">
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Item Remarks
-                    </label>
-                    <textarea
-                      value={item.remarks}
-                      onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
-                        }`}
-                      rows={2}
-                      placeholder="Enter item-specific remarks..."
-                      disabled={loading}
-                    />
-                  </div>
+                {/* Item Remarks */}
+                <div className="md:col-span-3">
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Item Remarks
+                  </label>
+                  <textarea
+                    value={item.remarks}
+                    onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
+                      }`}
+                    rows={2}
+                    placeholder="Enter item-specific remarks..."
+                    disabled={loading}
+                  />
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
 
-          {/* Buttons */}
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className={`flex-1 ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} font-semibold py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  {editData ? 'Updating...' : 'Creating...'}
-                </div>
-              ) : (
-                editData ? 'Update Purchase Request' : 'Create Purchase Request'
-              )}
-            </button>
-          </div>
+        {/* Buttons */}
+        <div className="flex gap-4 pt-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className={`flex-1 ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} font-semibold py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                {editData ? 'Updating...' : 'Creating...'}
+              </div>
+            ) : (
+              editData ? 'Update Purchase Request' : 'Create Purchase Request'
+            )}
+          </button>
+        </div>
       </form>
 
       {/* Confirmation Modal */}

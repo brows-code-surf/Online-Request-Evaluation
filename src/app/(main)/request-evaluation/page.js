@@ -14,9 +14,10 @@ import SuccessModal from '../_components/successModal';
 import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses, markAsRead } from './_actions/index';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
+import SearchModal from '../_components/SearchModal';
 
 function RequestEvaluationContent() {
-    const { user, darkMode } = useAuth();
+    const { user, darkMode, isAdmin } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const loadingRef = useRef(false);
@@ -39,14 +40,18 @@ function RequestEvaluationContent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+    const [showSearchModal, setShowSearchModal] = useState(false);
 
-    // Helper function to format date
-    const formatDate = (date) => {
+    // Helper function to format date and time
+    const formatDateTime = (date) => {
         if (!date) return '-';
-        return new Date(date).toLocaleDateString('en-US', {
+        return new Date(date).toLocaleString('en-US', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric'
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC'
         });
     };
 
@@ -91,6 +96,8 @@ function RequestEvaluationContent() {
                 const data = await fetchEvaluationLeftPanel(user?.empName, 'all', filters);
                 setApprovals(data);
 
+                // Check URL parameter for initial selection or maintain current selection
+                const id = searchParams.get('id');
                 // Only set initial selection if we don't have one already
                 if (!selectedApproval && data.length > 0) {
                     const id = searchParams.get('id');
@@ -111,7 +118,7 @@ function RequestEvaluationContent() {
         };
 
         loadApprovals();
-    }, [user?.empName, filterDepartment, filterLocation, filterStartDate, filterEndDate]); // Removed selectedApproval from dependencies
+    }, [user?.empName, filterDepartment, filterLocation, filterStartDate, filterEndDate, selectedApproval?.id]); // Added selectedApproval?.id back to dependencies
 
     // Initialize filter status based on user's available statuses
     useEffect(() => {
@@ -377,6 +384,21 @@ function RequestEvaluationContent() {
                         setSidebarOpen={setSidebarOpen}
                     />
 
+                    {/* Admin Search Button */}
+                    {user && isAdmin() && (
+                        <div className="fixed bottom-6 right-6 z-50">
+                            <button
+                                onClick={() => setShowSearchModal(true)}
+                                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
+                                title="Search All Request Evaluations"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+
                     {selectedApproval ? (
                         <div className="flex-1 overflow-y-auto">
                             {detailsLoading ? (
@@ -408,13 +430,14 @@ function RequestEvaluationContent() {
                                                     </span>
                                                 </div>
                                             </div>
-                                        </div>
                                     </div>
 
-                                    {/* Request Header Info */}
+                                    {/* Request Details - Combined */}
                                     <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg mb-6 border`}>
-                                        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Information</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Details</h3>
+
+                                        {/* Request Information - 3 Column Grid Layout */}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                                             <div>
                                                 <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reference Number</p>
                                                 <p className="text-sm font-semibold text-blue-600">{selectedApproval.id}</p>
@@ -428,79 +451,83 @@ function RequestEvaluationContent() {
                                                 <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedApproval.department} - {selectedApproval.location}</p>
                                             </div>
                                         </div>
-                                        {/* Approval Status */}
-                                        {(approvalDetails.length > 0) && (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                                                {/* Show Reviewer Info only when status is FOR REQUEST APPROVAL */}
-                                                {approvalDetails[0]?.REQUESTSTATUS === 'FOR REQUEST APPROVAL' && (
-                                                    <>
-                                                        <div>
-                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
-                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                                {approvalDetails[0]?.REVIEWER ? (
-                                                                    <>
-                                                                        {approvalDetails[0].REVIEWER}
-                                                                        {approvalDetails[0]?.DATEREVIEWED ? (
-                                                                            <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
-                                                                                [REVIEWED: {formatDate(approvalDetails[0].DATEREVIEWED)}]
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
-                                                                                [PENDING]
-                                                                            </span>
-                                                                        )}
-                                                                    </>
-                                                                ) : (
-                                                                    <span className={`text-sm ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-                                                                        [No Reviewer Assigned]
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div></div>
-                                                        <div></div>
-                                                    </>
-                                                )}
 
-                                                {/* Show both Reviewer and Approver Info when status is FOR PURCHASING LEAD TIME */}
-                                                {approvalDetails[0]?.REQUESTSTATUS === 'FOR PURCHASING LEAD TIME' && (
-                                                    <>
-                                                        <div>
-                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
-                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                                {approvalDetails[0]?.REVIEWER}
+                                        {/* Assigned Persons - 3 Column Grid Layout */}
+                                        {(approvalDetails.length > 0) && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Reviewer</p>
+                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                        {approvalDetails[0]?.REVIEWER ? (
+                                                            <>
+                                                                {approvalDetails[0].REVIEWER}
                                                                 {approvalDetails[0]?.DATEREVIEWED ? (
                                                                     <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
-                                                                        [REVIEWED: {formatDate(approvalDetails[0].DATEREVIEWED)}]
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-                                                                        [No Reviewer Assigned]
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Approver</p>
-                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                                {approvalDetails[0]?.APPROVER || '-'}
-                                                                {approvalDetails[0]?.DATEAPPROVED ? (
-                                                                    <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
-                                                                        [APPROVED: {formatDate(approvalDetails[0].DATEAPPROVED)}]
+                                                                        [REVIEWED: {formatDateTime(approvalDetails[0].DATEREVIEWED)}]
                                                                     </span>
                                                                 ) : (
                                                                     <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
                                                                         [PENDING]
                                                                     </span>
                                                                 )}
-                                                            </p>
-                                                        </div>
-                                                        <div></div>
-                                                    </>
-                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className={`text-sm ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                                [No Reviewer Assigned]
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Approver</p>
+                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                        {approvalDetails[0]?.APPROVER ? (
+                                                            <>
+                                                                {approvalDetails[0].APPROVER}
+                                                                {approvalDetails[0]?.DATEAPPROVED ? (
+                                                                    <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                                        [APPROVED: {formatDateTime(approvalDetails[0].DATEAPPROVED)}]
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                                                                        [PENDING]
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className={`text-sm ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                                [No Approver Assigned]
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Addressed To</p>
+                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                        {approvalDetails[0]?.ADDRESSEDTO ? (
+                                                            <>
+                                                                {approvalDetails[0].ADDRESSEDTO}
+                                                                {approvalDetails[0]?.DATERECEIVED ? (
+                                                                    <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                                        [RECEIVED: {formatDateTime(approvalDetails[0].DATERECEIVED)}]
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                                                                        [PENDING]
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className={`text-sm ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                                [No Recipient Assigned]
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
+                                </div>
 
 
                                     {/* Remarks */}
@@ -538,15 +565,19 @@ function RequestEvaluationContent() {
                                                                 <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</td>
                                                                 <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.QUANTITY || 0}</td>
                                                                 <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.BUDGETNAME || '-'}</td>
-                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
-                                                                    {item.DATENEEDED ? new Date(item.DATENEEDED).toLocaleDateString() : '-'}
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                                    {item.DATENEEDED ? new Date(item.DATENEEDED).toLocaleDateString('en-US', {
+                                                                        year: 'numeric',
+                                                                        month: 'short',
+                                                                        day: 'numeric'
+                                                                    }) : '-'}
                                                                 </td>
                                                                 <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
                                                             </tr>
                                                         ))
                                                     ) : (
                                                         <tr>
-                                                            <td colSpan="7" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                            <td colSpan="8" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                                                 No items found for this request
                                                             </td>
                                                         </tr>
@@ -637,6 +668,15 @@ function RequestEvaluationContent() {
                     reloadApprovalsData();
                 }}
                 autoCloseDelay={3000}
+            />
+
+            {/* Search Modal */}
+            <SearchModal
+                isOpen={showSearchModal}
+                onClose={() => setShowSearchModal(false)}
+                onSelect={handleSelectApproval}
+                darkMode={darkMode}
+                type="request-evaluation"
             />
         </div>
     );

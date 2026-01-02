@@ -7,9 +7,9 @@ import { ActivityLogs } from '@/models/ActivityLogs';
 import { sendEmailWithTemplate } from '@/utils/emailService';
 import { broadcastRequestEvaluationUpdate, broadcastDashboardUpdate } from '@/lib/socketBroadcast';
 
-export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}) {
+export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}, isAdmin = false) {
     try {
-        const requests = await RequestEvaluation.getEvaluationsLeftPanel(requesterName, requestStatus, filters);
+        const requests = await RequestEvaluation.getEvaluationsLeftPanel(requesterName, requestStatus, filters, isAdmin);
         return requests;
     } catch (error) {
         console.error('Error fetching requests:', error);
@@ -335,7 +335,7 @@ export async function markAsRead(referenceNo, userName) {
         if (result) {
             // Log activity for marking as read
             try {
-                const activityMessage = `Marked request ${referenceNo} as read`;
+                const activityMessage = `Marked request ${referenceNo}`;
                 await ActivityLogs.saveActivity(activityMessage, userName);
                 console.log('Activity logged for marking as read:', activityMessage);
             } catch (logError) {

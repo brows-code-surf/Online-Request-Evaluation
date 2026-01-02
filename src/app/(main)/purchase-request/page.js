@@ -8,6 +8,7 @@ import HeaderNavBar from '@/app/_components/headerNavBar';
 import ContentLeftPanel from '../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
+import SearchModal from '../_components/SearchModal';
 
 import SuccessModal from '@/app/(main)/_components/successModal';
 import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
@@ -25,7 +26,7 @@ import {
 } from './_actions';
 
 function PurchaseRequestContent() {
-  const { darkMode, user } = useAuth();
+  const { darkMode, user, isAdmin } = useAuth();
   const searchParams = useSearchParams();
   const formRef = useRef(null);
   const loadingRef = useRef(false);
@@ -45,6 +46,7 @@ function PurchaseRequestContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [addItemButtonVisible, setAddItemButtonVisible] = useState(true);
+  const [showSearchModal, setShowSearchModal] = useState(false);
 
   // Function to reload purchase requests data without page refresh
   const reloadPurchaseRequestsData = async () => {
@@ -157,6 +159,7 @@ function PurchaseRequestContent() {
         const details = await getPurchaseRequestByReferenceNo(
           selectedPurchaseRequest.referenceNo,
           user,
+          isAdmin(),
           { cacheBust }
         );
 
@@ -549,17 +552,33 @@ function PurchaseRequestContent() {
             </button>
           )}
 
-          {/* Floating Action Button - Only show when not creating or editing */}
+          {/* Floating Action Buttons - Only show when not creating or editing */}
           {currentView !== 'create' && currentView !== 'edit' && (
-            <button
-              onClick={() => setCurrentView('create')}
-              className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 z-50"
-              title="Create Purchase Request"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
+            <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+              {/* Search Button - Admin Only */}
+              {user && isAdmin() && (
+                <button
+                  onClick={() => setShowSearchModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
+                  title="Search Purchase Requests"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Create Button */}
+              <button
+                onClick={() => setCurrentView('create')}
+                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+                title="Create Purchase Request"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -575,6 +594,15 @@ function PurchaseRequestContent() {
           reloadPurchaseRequestsData();
         }}
         autoCloseDelay={3000}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSelect={handleSelectPurchaseRequest}
+        darkMode={darkMode}
+        type="purchase-request"
       />
 
       {/* Toast Container */}

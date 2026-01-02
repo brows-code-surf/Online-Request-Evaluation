@@ -175,7 +175,7 @@ export const NotificationBell = forwardRef((props, ref) => {
         <h3 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Notifications</h3>
       </div>
 
-      <div className="max-h-[calc(70vh-60px)] sm:max-h-80 md:max-h-96 overflow-y-auto">
+      <div className="max-h-[calc(70vh-80px)] sm:max-h-[calc(24rem-64px)] md:max-h-[calc(24rem-64px)] overflow-y-auto">
         {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(3)].map((_, index) => (

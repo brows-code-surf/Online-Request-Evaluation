@@ -1,5 +1,6 @@
 import connectToDatabase from "../lib/db.js";
 import bcrypt from "bcryptjs";
+import UserProfile from "./UserProfile.js";
 
 export class LoginModel {
   async authenticate(email, password) {
@@ -32,6 +33,30 @@ export class LoginModel {
 
       if (!passwordMatch) {
         return null;
+      }
+
+      // Get employee ID for OTP check
+      const employeeQuery = `
+        SELECT EMPLOYEEIDNO
+        FROM [SYSTEM.USERACCOUNT.1]
+        WHERE EMAIL = @email
+      `;
+
+      const employeeResult = await connection.request()
+        .input('email', email)
+        .query(employeeQuery);
+
+      const employeeID = employeeResult.recordset[0]?.EMPLOYEEIDNO;
+
+      // Check if user requires OTP
+      const requiresOTP = employeeID ? await UserProfile.shouldRequireOTP(employeeID) : true;
+
+      // If user does not require OTP yet (NEXT_OTP is in the future), update LOGGEDIN
+      if (!requiresOTP) {
+        const loggedInQuery = `UPDATE [SYSTEM.USERACCOUNT.1] SET LOGGEDIN = GETDATE() WHERE EMAIL = @email`;
+        await connection.request()
+          .input('email', email)
+          .query(loggedInQuery);
       }
 
       return {

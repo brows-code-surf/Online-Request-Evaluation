@@ -1,4 +1,5 @@
 import connectToDatabase from "../lib/db.js";
+import UserProfile from "./UserProfile.js";
 
 export class OTPModel {
   generateOTP() {

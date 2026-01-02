@@ -167,7 +167,7 @@ export default function Signup() {
                     });
                     await sendNotification(
                         'New Account Request',
-                        `A new account has been requested by ${formData.fullName} (${formData.email}). Please review and approve the account.`,
+                        `Account for approval ${formData.fullName}. Please review and approve the account.`,
                         formData.email,
                         formData.employeeid
                     );

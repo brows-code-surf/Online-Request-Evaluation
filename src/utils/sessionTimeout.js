@@ -1,7 +1,7 @@
 // Session timeout configuration
-// Daily logout at 2:45 PM configuration (for testing)
-export const DAILY_LOGOUT_HOUR = 7; // 2 PM
-export const DAILY_LOGOUT_MINUTE = 0; // 2:45 PM
+// Daily logout at 7:00 AM configuration
+export const DAILY_LOGOUT_HOUR = 7; // 7 AM
+export const DAILY_LOGOUT_MINUTE = 0; // 7:00 AM
 
 // Key for storing daily logout processing status
 export const DAILY_LOGOUT_KEY = 'lastDailyLogoutDate';

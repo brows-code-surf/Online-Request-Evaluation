@@ -12,8 +12,8 @@ import {
 import { useRouter } from 'next/navigation';
 
 /**
- * Hook to handle daily logout at 2:45 PM Philippine Time
- * Logs out the user every day at 2:45 PM in the Philippines (for testing)
+ * Hook to handle session timeout
+ * Logs out users who logged in before 7 AM today, and daily logout at 7 AM
  */
 export function useSessionTimeout() {
   const { logout, user } = useAuth();
@@ -27,14 +27,43 @@ export function useSessionTimeout() {
       return;
     }
 
-    // Removed immediate logout check - only scheduled logout via timeout
+    // Check if user logged in before 7 AM today - if so, logout immediately
+    const checkLoginTime = async () => {
+      try {
+        const response = await fetch('/api/check-login-time', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: user.email }),
+        });
 
-    // Set up daily logout at 2:45 PM Philippine Time
+        if (!response.ok) {
+          throw new Error('Failed to check login time');
+        }
+
+        const data = await response.json();
+        if (data.shouldLogout) {
+          console.log('User logged in before 7 AM today - logging out');
+          clearSessionActivity();
+          logout();
+          router.push('/login?reason=early-login-logout');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking login time:', error);
+        // On error, continue with normal flow
+      }
+    };
+
+    checkLoginTime();
+
+    // Set up daily logout at 7:00 AM
     const setupDailyLogout = () => {
       const timeUntilLogout = getTimeUntilLogout();
       if (timeUntilLogout > 0) { // Only set timeout if logout time is in the future
         dailyLogoutRef.current = setTimeout(() => {
-          console.log('Daily logout time (2:45 PM Philippine Time) reached - logging out');
+          console.log('Daily logout time (7:00 AM) reached - logging out');
           markDailyLogoutProcessed();
           clearSessionActivity();
           logout();

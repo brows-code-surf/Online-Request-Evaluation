@@ -6,9 +6,9 @@ import Notification from '@/models/Notification.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
-export async function getAllPurchaseRequests(filters = {}, user = null) {
+export async function getAllPurchaseRequests(filters = {}, user = null, isAdmin = false) {
   try {
-    const purchaseRequests = await PurchaseRequest.getAllPurchaseRequests(filters, user);
+    const purchaseRequests = await PurchaseRequest.getAllPurchaseRequests(filters, user, isAdmin);
     return { success: true, purchaseRequests };
   } catch (error) {
     console.error('Error getting purchase requests:', error);
@@ -16,9 +16,9 @@ export async function getAllPurchaseRequests(filters = {}, user = null) {
   }
 }
 
-export async function getPurchaseRequestByReferenceNo(referenceNo, user = null) {
+export async function getPurchaseRequestByReferenceNo(referenceNo, user = null, isAdmin = false) {
   try {
-    const purchaseRequest = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, user);
+    const purchaseRequest = await PurchaseRequest.getPurchaseRequestByReferenceNo(referenceNo, user, isAdmin);
     return { success: true, purchaseRequest };
   } catch (error) {
     console.error('Error getting purchase request:', error);

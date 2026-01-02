@@ -5,7 +5,7 @@ import connectToDatabase from '@/lib/db.js';
 
 class PurchaseRequest {
     // Get all purchase requests with filtering and role-based access
-    static async getAllPurchaseRequests(filters = {}, user = null) {
+    static async getAllPurchaseRequests(filters = {}, user = null, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -43,8 +43,8 @@ class PurchaseRequest {
             const params = [];
             let paramIndex = 1;
 
-            // Filter by requested by (only show PRs created by the user)
-            if (user) {
+            // Filter by requested by (only show PRs created by the user for non-admin users)
+            if (user && !isAdmin) {
                 const userName = user.empName;
                 query += ` AND UPPER(PRH.REQUESTEDBY) = UPPER(@userName${paramIndex})`;
                 params.push({ name: `userName${paramIndex}`, value: userName });
@@ -121,13 +121,13 @@ class PurchaseRequest {
     }
 
     // Get purchase request by reference number with details
-    static async getPurchaseRequestByReferenceNo(referenceNo, user = null) {
+    static async getPurchaseRequestByReferenceNo(referenceNo, user = null, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Check access permissions - only allow if user is the requester
-            if (user) {
+            // Check access permissions - only allow if user is the requester (unless admin)
+            if (user && !isAdmin) {
                 const userName = user.empName;
                 const accessQuery = `
                     SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1]
@@ -324,17 +324,22 @@ class PurchaseRequest {
                 .query(headerQuery);
 
             // Insert details
-            for (const detail of detailsData) {
+            for (let i = 0; i < detailsData.length; i++) {
+                const detail = detailsData[i];
+                const itemRowNumber = i + 1; // Use the item order (1-based) instead of database ROWID
+
                 // First, insert the record
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED
+                        UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED, RID
                     ) VALUES (
                         @referenceNo, 'FOR POSTING', @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded
+                        @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded, @rid
                     )
                 `;
+
+                const rid = `${referenceNo}-${itemRowNumber}`;
 
                 await connection.request()
                     .input('referenceNo', referenceNo)
@@ -345,38 +350,8 @@ class PurchaseRequest {
                     .input('budgetName', detail.budgetName)
                     .input('remarks', detail.remarks || '')
                     .input('dateNeeded', detail.dateNeeded)
+                    .input('rid', rid)
                     .query(detailInsertQuery);
-
-                // Get the ROWID of the inserted record
-                const getRowIdQuery = `
-                    SELECT TOP 1 ROWID
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE REFERENCENO = @referenceNo AND ITEMNMBR = @itemNumber AND ITEMDESC = @itemDescription
-                    ORDER BY ROWID DESC
-                `;
-
-                const rowIdResult = await connection.request()
-                    .input('referenceNo', referenceNo)
-                    .input('itemNumber', detail.itemNumber)
-                    .input('itemDescription', detail.itemDescription)
-                    .query(getRowIdQuery);
-
-                if (rowIdResult.recordset.length > 0) {
-                    const rowId = rowIdResult.recordset[0].ROWID;
-                    const rid = `${referenceNo}-${rowId}`;
-
-                    // Update the RID field
-                    const updateRidQuery = `
-                        UPDATE [PURCHASE.REQUESTDETAILS.1]
-                        SET RID = @rid
-                        WHERE ROWID = @rowId
-                    `;
-
-                    await connection.request()
-                        .input('rid', rid)
-                        .input('rowId', rowId)
-                        .query(updateRidQuery);
-                }
             }
 
             // Log activity for created request
@@ -815,7 +790,32 @@ class PurchaseRequest {
         }
     }
 
-    // Generate unique item number from description
+    // Check if there are existing items with same base but different descriptions
+    static async checkItemBaseConflict(baseItemNumber, currentDescription) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const checkQuery = `
+                SELECT COUNT(*) as count
+                FROM [PURCHASE.REQUESTDETAILS.1]
+                WHERE ITEMNMBR LIKE @basePattern + '%' AND UPPER(LTRIM(RTRIM(ITEMDESC))) != UPPER(LTRIM(RTRIM(@currentDescription)))
+            `;
+
+            const result = await connection.request()
+                .input('basePattern', baseItemNumber)
+                .input('currentDescription', currentDescription.trim())
+                .query(checkQuery);
+
+            return result.recordset[0].count > 0;
+
+        } catch (error) {
+            console.error('Error checking item base conflict:', error);
+            throw new Error('Failed to check item base conflict: ' + error.message);
+        }
+    }
+
+    // Generate unique item number from description (increment only for same base, different descriptions)
     static async generateItemNumber(itemDescription) {
         let connection;
         try {
@@ -837,7 +837,7 @@ class PurchaseRequest {
                 return exactMatchResult.recordset[0].ITEMNMBR;
             }
 
-            // No exact match, generate new item number from first 3 letters
+            // No exact match, generate base item number from first 3 letters
             const words = itemDescription.trim().split(/\s+/).slice(0, 3);
             const baseItemNumber = words.map(word => word.charAt(0).toUpperCase()).join('');
 
@@ -845,32 +845,64 @@ class PurchaseRequest {
                 throw new Error('Item description must contain at least one word');
             }
 
-            // Check if base item number exists
-            const checkQuery = `
+            // Check if any items with this base exist but have different descriptions
+            const checkBaseQuery = `
                 SELECT COUNT(*) as count
                 FROM [PURCHASE.REQUESTDETAILS.1]
-                WHERE ITEMNMBR = @itemNumber
+                WHERE ITEMNMBR LIKE @basePattern + '%' AND UPPER(LTRIM(RTRIM(ITEMDESC))) != UPPER(LTRIM(RTRIM(@itemDescription)))
             `;
 
-            let itemNumber = baseItemNumber;
-            let counter = 1;
+            const baseResult = await connection.request()
+                .input('basePattern', baseItemNumber)
+                .input('itemDescription', itemDescription.trim())
+                .query(checkBaseQuery);
 
-            while (true) {
-                const result = await connection.request()
-                    .input('itemNumber', itemNumber)
-                    .query(checkQuery);
+            const hasDifferentDescriptionsWithSameBase = baseResult.recordset[0].count > 0;
 
-                if (result.recordset[0].count === 0) {
-                    // Item number is unique
-                    break;
-                }
-
-                // Item number exists, add suffix
-                itemNumber = `${baseItemNumber}-${counter}`;
-                counter++;
+            if (!hasDifferentDescriptionsWithSameBase) {
+                // No existing items with same base but different descriptions, return base without number
+                return baseItemNumber;
             }
 
-            return itemNumber;
+            // Find the highest number used for this base (including dash)
+            const findHighestQuery = `
+                SELECT ITEMNMBR
+                FROM [PURCHASE.REQUESTDETAILS.1]
+                WHERE ITEMNMBR LIKE @basePattern + '%'
+                ORDER BY CAST(ISNULL(NULLIF(REPLACE(ITEMNMBR, @basePattern + '-', ''), @basePattern), '0') AS INT) DESC
+            `;
+
+            const result = await connection.request()
+                .input('basePattern', baseItemNumber)
+                .query(findHighestQuery);
+
+            let highestNumber = 0;
+
+            // Parse the results to find the highest number
+            for (const record of result.recordset) {
+                const itemNumber = record.ITEMNMBR;
+                let numberPart = 0;
+
+                if (itemNumber.startsWith(baseItemNumber + '-')) {
+                    // Has dash, extract number after dash
+                    const parts = itemNumber.split('-');
+                    if (parts.length >= 2) {
+                        numberPart = parseInt(parts[1]) || 0;
+                    }
+                } else if (itemNumber === baseItemNumber) {
+                    // Exact match without dash, treat as number 0
+                    numberPart = 0;
+                }
+
+                if (numberPart > highestNumber) {
+                    highestNumber = numberPart;
+                }
+            }
+
+            // Use next available number with dash
+            const nextNumber = highestNumber + 1;
+            return `${baseItemNumber}-${nextNumber}`;
+
         } catch (error) {
             console.error('Error generating item number:', error);
             throw new Error('Failed to generate item number: ' + error.message);
