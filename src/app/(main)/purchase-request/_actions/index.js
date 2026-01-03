@@ -139,9 +139,9 @@ export async function updatePurchaseRequest(referenceNo, headerData, detailsData
   }
 }
 
-export async function cancelPurchaseRequest(referenceNo, cancellerName) {
+export async function cancelPurchaseRequest(referenceNo, cancellerName, cancelReason = '') {
   try {
-    const result = await PurchaseRequest.cancelPurchaseRequest(referenceNo, cancellerName);
+    const result = await PurchaseRequest.cancelPurchaseRequest(referenceNo, cancellerName, cancelReason);
     return result;
   } catch (error) {
     console.error('Error canceling purchase request:', error);

@@ -23,14 +23,6 @@ const inter = Inter({
   ]
 });
 
-export const metadata = {
-  icons:{
-    icon: [
-    { url: "/SFC.ico" },
-    ],
-  }
-};
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

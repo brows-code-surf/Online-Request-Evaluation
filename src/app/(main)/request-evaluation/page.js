@@ -540,6 +540,28 @@ function RequestEvaluationContent() {
                                         </div>
                                     )}
 
+                                    {/* Cancel Remarks */}
+                                    {(selectedApproval.status === 'REJECTED' || selectedApproval.status === 'CANCELLED') && (
+                                        <div className="mb-6">
+                                            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>
+                                                {selectedApproval.status === 'REJECTED' ? 'Rejection Reason' : 'Cancellation Reason'}
+                                            </h3>
+                                            <div className={`leading-relaxed p-4 rounded-lg border ${darkMode ? 'text-gray-300 bg-red-900/20 border-red-600' : 'text-gray-700 bg-red-50 border-red-200'}`}>
+                                                <div className="flex items-start gap-3">
+                                                    <svg className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selectedApproval.status === 'REJECTED' ? 'text-red-500' : 'text-orange-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                    </svg>
+                                                    <p className="flex-1">
+                                                        {approvalDetails.length > 0 && approvalDetails[0].CANCELREMARKS && approvalDetails[0].CANCELREMARKS.trim()
+                                                            ? approvalDetails[0].CANCELREMARKS
+                                                            : 'No reason provided'
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Items Table */}
                                     <div className="mb-6">
                                         <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Items</h3>

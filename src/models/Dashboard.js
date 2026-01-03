@@ -195,11 +195,10 @@ class Dashboard {
 
             // Active requests (not completed/cancelled) - for requests user created - only posted requests
             const activeRequestsQuery = `
-                SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
-                FROM [PURCHASE.REQUESTHEADER.1] PRH
-                INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTEDBY = @createdBy
-                AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
+                SELECT COUNT(DISTINCT REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE IS_POSTED = 1 AND REQUESTEDBY = @createdBy
+                AND REQUESTSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
             `;
             const activeRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
@@ -208,11 +207,10 @@ class Dashboard {
 
             // Pending requests for evaluation (only for requests user created)
             const pendingRequestsQuery = `
-                SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
-                FROM [PURCHASE.REQUESTHEADER.1] PRH
-                INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                WHERE PRH.REQUESTEDBY = @createdBy
-                AND PRD.ITEMSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                SELECT COUNT(DISTINCT REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1]
+                WHERE REQUESTEDBY = @createdBy
+                AND REQUESTSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
             `;
             const pendingRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
@@ -393,13 +391,12 @@ class Dashboard {
                     case 'activeRequests':
                         // User's active requests created on each day
                         const activeReqQuery = `
-                            SELECT CAST(PRH.DATEREQUESTED AS DATE) as date, COUNT(DISTINCT PRH.REFERENCENO) as count
-                            FROM [PURCHASE.REQUESTHEADER.1] PRH
-                            INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                            WHERE PRH.IS_POSTED = 1 AND PRH.REQUESTEDBY = @userName
-                            AND PRD.ITEMSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
-                            AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                            GROUP BY CAST(PRH.DATEREQUESTED AS DATE)
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1]
+                            WHERE IS_POSTED = 1 AND REQUESTEDBY = @userName
+                            AND REQUESTSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
+                            AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
                         `;
                         const activeReqResult = await connection.request()
                             .input('userName', user.empName)
@@ -409,13 +406,12 @@ class Dashboard {
                     case 'pendingRequests':
                         // User's pending requests created on each day
                         const userPendingQuery = `
-                            SELECT CAST(PRH.DATEREQUESTED AS DATE) as date, COUNT(DISTINCT PRH.REFERENCENO) as count
-                            FROM [PURCHASE.REQUESTHEADER.1] PRH
-                            INNER JOIN [PURCHASE.REQUESTDETAILS.1] PRD ON PRH.REFERENCENO = PRD.REFERENCENO
-                            WHERE PRH.REQUESTEDBY = @userName
-                            AND PRD.ITEMSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
-                            AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                            GROUP BY CAST(PRH.DATEREQUESTED AS DATE)
+                            SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT REFERENCENO) as count
+                            FROM [PURCHASE.REQUESTHEADER.1]
+                            WHERE REQUESTEDBY = @userName
+                            AND REQUESTSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                            AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATEREQUESTED AS DATE)
                         `;
                         const userPendingResult = await connection.request()
                             .input('userName', user.empName)

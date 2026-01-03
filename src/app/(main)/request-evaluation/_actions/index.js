@@ -182,6 +182,8 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
 
 export async function rejectEvaluation(referenceNo, approverName, rejectionReason) {
     try {
+        // Get current status before rejection
+        const currentStatus = await RequestEvaluation.getRequestStatus(referenceNo);
         const result = await RequestEvaluation.rejectApprovedEvaluation(referenceNo, approverName, rejectionReason);
 
         // Send email notification for rejection

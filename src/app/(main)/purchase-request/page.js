@@ -59,8 +59,8 @@ function PurchaseRequestContent() {
           ...pr,
           id: pr.referenceNo,
           title: `${pr.company} - ${pr.requestStatus}`,
-          requester: pr.requestedBy,
-          status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
+          requester: pr.requestStatus,
+          status: pr.status,
           requestDate: pr.dateRequested,
           department: pr.company,
           isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -96,9 +96,9 @@ function PurchaseRequestContent() {
           const approvalsData = purchaseRequestsData.map(pr => ({
             ...pr,
             id: pr.referenceNo,
-            title: `${pr.company} - ${pr.requestStatus}`,
+            title: pr.company,
             requester: pr.requestedBy,
-            status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
+            status: pr.requestStatus,
             requestDate: pr.dateRequested,
             department: pr.company,
             isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -182,9 +182,10 @@ function PurchaseRequestContent() {
             approver: details.purchaseRequest.header.approver || selectedPurchaseRequest.approver,
             dateReceived: details.purchaseRequest.header.dateReceived || selectedPurchaseRequest.dateReceived,
             addressedTo: details.purchaseRequest.header.addressedTo || selectedPurchaseRequest.addressedTo,
+            cancelRemarks: details.purchaseRequest.header.cancelRemarks,
             // Also update other header fields that might be relevant
             reviewedBy: details.purchaseRequest.header.reviewedBy || selectedPurchaseRequest.reviewedBy,
-            approvedBy: details.purchaseRequest.header.approvedBy || selectedPurchaseRequest.approvedBy,
+            approvedBy: details.purchaseRequest.header.approvedBy || selectedPurchaseRequest.approver,
             receivedBy: details.purchaseRequest.header.receivedBy || selectedPurchaseRequest.receivedBy
           });
         } else {
@@ -340,9 +341,11 @@ function PurchaseRequestContent() {
     }
   };
 
-  const handleCancelPurchaseRequest = async (referenceNo) => {
+  const handleCancelPurchaseRequest = async (referenceNo, cancelReason = '') => {
+    console.log('handleCancelPurchaseRequest called with:', { referenceNo, cancelReason });
     try {
-      const result = await cancelPurchaseRequest(referenceNo, user?.empName);
+      const result = await cancelPurchaseRequest(referenceNo, user?.empName, cancelReason);
+      console.log('Cancel result:', result);
       if (result.success) {
         setSuccessMessage({
           title: 'Purchase Request Cancelled',

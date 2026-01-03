@@ -35,11 +35,10 @@ class RequestEvaluation {
                             PRH.REQUESTEDBY as requestedBy,
                             PRH.COMPANY as company,
                             PRH.LOCNCODE as locationCode,
-                            PRD.ITEMSTATUS as STATUS,
                             PRD.ITEMNMBR,
                             PRD.ITEMDESC,
                             PRD.UOFM,
-                            ISNULL(PRD.QUANTITY, 0) + ISNULL(PRD.QUANTITYADJ, 0) - ISNULL(PRD.QUANTITYCANCEL, 0) as QUANTITY,
+                            ISNULL(PRD.QUANTITY, 0) as QUANTITY,
                             PRD.BUDGETNAME,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
@@ -50,7 +49,8 @@ class RequestEvaluation {
                             PRH.DATEAPPROVED,
                             PRH.ADDRESSEDTO,
                             PRH.DATERECEIVED,
-                            PRH.REQUESTSTATUS
+                            PRH.REQUESTSTATUS,
+                            PRH.CANCELREMARKS
                             FROM [PURCHASE.REQUESTDETAILS.1] PRD
                             INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
                             WHERE PRH.REFERENCENO = @REFERENCENO`;
@@ -246,17 +246,7 @@ class RequestEvaluation {
             requestHeader.input('newStatus', newStatus);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
-
-            // Update request details with new status
-            const detailsUpdateQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] 
-                                       SET ITEMSTATUS = @newStatus 
-                                       WHERE REFERENCENO = @referenceNo`;
-
-            const requestDetails = connection.request();
-            requestDetails.input('referenceNo', referenceNo);
-            requestDetails.input('newStatus', newStatus);
-
-            const resultDetails = await requestDetails.query(detailsUpdateQuery);
+         
 
             // Create notification for the next approver with improved error handling
             const notificationResults = [];
@@ -369,7 +359,6 @@ class RequestEvaluation {
 
             return {
                 headerUpdated: resultHeader.rowsAffected[0] > 0,
-                detailsUpdated: resultDetails.rowsAffected[0] > 0,
                 newStatus: newStatus
             };
 
@@ -384,30 +373,19 @@ class RequestEvaluation {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                      SET REQUESTSTATUS = 'REJECTED'
+            const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                      SET REQUESTSTATUS = 'REJECTED',
+                                          CANCELREMARKS = @rejectionReason
                                       WHERE REFERENCENO = @referenceNo`;
 
             const requestHeader = connection.request();
             requestHeader.input('referenceNo', referenceNo);
+            requestHeader.input('rejectionReason', rejectionReason);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
-            // Update request details status to REJECTED
-            const detailsUpdateQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] 
-                                       SET ITEMSTATUS = 'REJECTED',
-                                       ADJCANCELREMARKS = @rejectionReason
-                                       WHERE REFERENCENO = @referenceNo`;
-
-            const requestDetails = connection.request();
-            requestDetails.input('referenceNo', referenceNo);
-            requestDetails.input('rejectionReason', rejectionReason);
-
-            const resultDetails = await requestDetails.query(detailsUpdateQuery);
-
             return {
-                headerUpdated: resultHeader.rowsAffected[0] > 0,
-                detailsUpdated: resultDetails.rowsAffected[0] > 0
+                headerUpdated: resultHeader.rowsAffected[0] > 0
             };
 
         } catch (error) {
@@ -531,9 +509,9 @@ class RequestEvaluation {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             // Check if table exists
-            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
-            if (!detailsExists) {
-                console.warn('PURCHASE.REQUESTDETAILS.1 table not found.');
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found.');
                 return [];
             }
 
@@ -541,27 +519,28 @@ class RequestEvaluation {
                 SELECT
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'CANCELLED' THEN 'CANCELLED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END as status,
-                    COUNT(*) as count
-                FROM [PURCHASE.REQUESTDETAILS.1] PRD
-                INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
+                    COUNT(DISTINCT PRH.REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1] PRH
                 GROUP BY
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'CANCELLED' THEN 'CANCELLED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END
                 ORDER BY status
             `;
@@ -697,7 +676,7 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CAST(DATEREQUESTED AS DATE) as requestDate,
-                    COUNT(DISTINCT ROWID) as requestCount
+                    COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
                 AND REQUESTEDBY = @createdBy

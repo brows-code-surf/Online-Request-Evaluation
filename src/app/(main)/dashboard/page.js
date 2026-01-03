@@ -104,38 +104,29 @@ export default function DashboardClient() {
         );
     }, []);
 
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = (promise, timeout = 15000) => {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout))
+        ]);
+    };
+
     useEffect(() => {
         async function fetchStats() {
-            setLoading(true);
+            const isInitialLoad = !data;
+            if (isInitialLoad) setLoading(true);
             try {
-                const statsData = await getDashboardStats(user, isUserAdmin, selectedDateRange);
+                const statsData = await fetchWithTimeout(getDashboardStats(user, isUserAdmin, selectedDateRange), 10000);
                 setData(statsData);
             } catch (error) {
                 console.error('Error fetching stats:', error);
-                setData(null);
+                if (isInitialLoad) setData(null); // Only set to null on initial load failure
             }
+            if (isInitialLoad) setLoading(false);
         }
         fetchStats();
     }, [user, isUserAdmin, selectedDateRange]);
-
-    // Separate effect for trend data when date range changes
-    useEffect(() => {
-        async function fetchTrend() {
-            if (!data) return;
-
-            try {
-                const trendData = await getDashboardTrend(user, isUserAdmin, selectedDateRange);
-
-                setData(prev => ({
-                    ...prev,
-                    thirtyDayTrend: trendData
-                }));
-            } catch (error) {
-                console.error('Error fetching trend:', error);
-            }
-        }
-        fetchTrend();
-    }, [selectedDateRange]); // Only refetch when date range changes
 
     // Check if data is complete to determine loading state
     const isDataComplete = data &&

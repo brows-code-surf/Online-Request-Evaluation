@@ -189,6 +189,7 @@ class PurchaseRequest {
                     receivedBy: header.RECEIVEDBY,
                     dateReceived: header.DATERECEIVED,
                     remarks: header.REMARKS,
+                    cancelRemarks: header.CANCELREMARKS,
                     isRush: header.IS_RUSH,
                     createdBy: header.CREATEDBY,
                     dateCreated: header.DATECREATED,
@@ -198,7 +199,6 @@ class PurchaseRequest {
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,
                     referenceNo: detail.REFERENCENO,
-                    itemStatus: detail.ITEMSTATUS,
                     itemNumber: detail.ITEMNMBR,
                     itemDescription: detail.ITEMDESC,
                     rid: detail.RID,
@@ -331,10 +331,10 @@ class PurchaseRequest {
                 // First, insert the record
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
-                        REFERENCENO, ITEMSTATUS, ITEMNMBR, ITEMDESC,
+                        REFERENCENO, ITEMNMBR, ITEMDESC,
                         UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED, RID
                     ) VALUES (
-                        @referenceNo, 'FOR POSTING', @itemNumber, @itemDescription,
+                        @referenceNo, @itemNumber, @itemDescription,
                         @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded, @rid
                     )
                 `;
@@ -422,18 +422,6 @@ class PurchaseRequest {
                 throw new Error('Purchase request not found or already posted');
             }
 
-            // Update item statuses as well
-            const updateItemsQuery = `
-                UPDATE [PURCHASE.REQUESTDETAILS.1]
-                SET ITEMSTATUS = @newStatus
-                WHERE REFERENCENO = @referenceNo
-            `;
-
-            await connection.request()
-                .input('referenceNo', referenceNo)
-                .input('newStatus', newStatus)
-                .query(updateItemsQuery);
-
             // Log activity for posted request
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
@@ -462,7 +450,6 @@ class PurchaseRequest {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             let updateQuery = '';
-            let statusUpdate = '';
 
             switch (action) {
                 case 'review':
@@ -474,7 +461,6 @@ class PurchaseRequest {
                             IS_READ = 0
                         WHERE REFERENCENO = @referenceNo
                     `;
-                    statusUpdate = "UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR REQUEST APPROVAL' WHERE REFERENCENO = @referenceNo";
                     break;
 
                 case 'approve':
@@ -486,7 +472,6 @@ class PurchaseRequest {
                             IS_READ = 0
                         WHERE REFERENCENO = @referenceNo
                     `;
-                    statusUpdate = "UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR PURCHASING LEAD TIME' WHERE REFERENCENO = @referenceNo";
                     break;
 
                 case 'receive':
@@ -498,17 +483,16 @@ class PurchaseRequest {
                             IS_READ = 1
                         WHERE REFERENCENO = @referenceNo
                     `;
-                    statusUpdate = "UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'COMPLETED' WHERE REFERENCENO = @referenceNo";
                     break;
 
                 case 'reject':
                     updateQuery = `
                         UPDATE [PURCHASE.REQUESTHEADER.1]
                         SET REQUESTSTATUS = 'REJECTED',
+                            CANCELREMARKS = @remarks,
                             IS_READ = 1
                         WHERE REFERENCENO = @referenceNo
                     `;
-                    statusUpdate = "UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'REJECTED' WHERE REFERENCENO = @referenceNo";
                     break;
 
                 default:
@@ -519,10 +503,6 @@ class PurchaseRequest {
                 .input('referenceNo', referenceNo)
                 .input('userName', userName)
                 .query(updateQuery);
-
-            await connection.request()
-                .input('referenceNo', referenceNo)
-                .query(statusUpdate);
 
             // Log activity
             const activityQuery = `
@@ -591,10 +571,10 @@ class PurchaseRequest {
                 // First, insert the record
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
-                        REFERENCENO, ITEMSTATUS, ITEMNMBR, ITEMDESC,
+                        REFERENCENO, ITEMNMBR, ITEMDESC,
                         UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED
                     ) VALUES (
-                        @referenceNo, 'FOR CONFIRMATION', @itemNumber, @itemDescription,
+                        @referenceNo, @itemNumber, @itemDescription,
                         @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded
                     )
                 `;
@@ -663,38 +643,42 @@ class PurchaseRequest {
     }
 
     // Cancel purchase request
-    static async cancelPurchaseRequest(referenceNo, cancellerName) {
+    static async cancelPurchaseRequest(referenceNo, cancellerName, cancelReason = '') {
         let connection;
         try {
+            console.log('cancelPurchaseRequest called with:', { referenceNo, cancellerName, cancelReason });
             connection = await connectToDatabase(process.env.DB_SFC);
 
             // Update header status to CANCELLED
             const updateHeaderQuery = `
                 UPDATE [PURCHASE.REQUESTHEADER.1]
                 SET REQUESTSTATUS = 'CANCELLED',
+                    CANCELREMARKS = @cancelReason,
                     IS_READ = 1
                 WHERE REFERENCENO = @referenceNo
             `;
 
+            console.log('Executing query:', updateHeaderQuery);
+            console.log('With parameters:', { referenceNo, cancelReason });
+
             const headerResult = await connection.request()
                 .input('referenceNo', referenceNo)
-                .input('cancellerName', cancellerName)
+                .input('cancelReason', cancelReason)
                 .query(updateHeaderQuery);
+
+            console.log('Update result:', headerResult);
 
             if (headerResult.rowsAffected[0] === 0) {
                 throw new Error('Purchase request not found');
             }
 
-            // Update all item statuses to CANCELLED
-            const updateItemsQuery = `
-                UPDATE [PURCHASE.REQUESTDETAILS.1]
-                SET ITEMSTATUS = 'CANCELLED'
-                WHERE REFERENCENO = @referenceNo
-            `;
-
-            await connection.request()
+            // Verify the update by checking the result
+            const verifyQuery = `SELECT CANCELREMARKS FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
+            const verifyResult = await connection.request()
                 .input('referenceNo', referenceNo)
-                .query(updateItemsQuery);
+                .query(verifyQuery);
+
+            console.log('Verification query result:', verifyResult.recordset);
 
             // Log activity for cancelled request
             const activityQuery = `

@@ -13,13 +13,12 @@ export class ActivityLogs{
 
         connection = await connectToDatabase(process.env.DB_SFC);
 
-        const query = `INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED) VALUES (@activity, @createdby, @datecreated)`;
+        const query = `INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED) VALUES (@activity, @createdby, GETDATE())`;
 
         const request = connection.request()
         .input('ACTIVITY', activity)
         .input('CREATEDBY', createdby)
-        .input('DATECREATED', new Date().toISOString())
-
+        
         const result = await request.query(query);
 
         if(result.rowsAffected && result.rowsAffected[0] > 0){
