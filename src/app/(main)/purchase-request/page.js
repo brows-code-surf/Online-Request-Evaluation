@@ -58,9 +58,9 @@ function PurchaseRequestContent() {
         const approvalsData = data.purchaseRequests.map(pr => ({
           ...pr,
           id: pr.referenceNo,
-          title: `${pr.company} - ${pr.requestStatus}`,
-          requester: pr.requestStatus,
-          status: pr.status,
+          title: pr.company,
+          requester: pr.requestedBy,
+          status: pr.requestStatus,
           requestDate: pr.dateRequested,
           department: pr.company,
           isRead: pr.isRead ? 'READ' : 'NOT READ',

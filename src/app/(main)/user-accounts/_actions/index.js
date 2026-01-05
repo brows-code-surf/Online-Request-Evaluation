@@ -1,6 +1,7 @@
 'use server';
 
 import UserProfile from '@/models/UserProfile.js';
+import NameChange from '@/models/NameChange.js';
 import { broadcastUserAccountUpdate } from '@/app/_actions/socket';
 
 export async function getAllUsers() {
@@ -134,14 +135,14 @@ export async function setUserInactive(employeeID) {
 export async function setUserActive(employeeID) {
   try {
     await UserProfile.setUserActive(employeeID);
-    
+
     // Trigger Pusher event to notify all users of the status change
     await broadcastUserAccountUpdate('user-status-changed', {
       employeeID,
       newStatus: 'ACTIVE',
       timestamp: new Date().toISOString()
     });
-    
+
     return {
       success: true,
       message: 'User account set to active successfully'
@@ -151,6 +152,49 @@ export async function setUserActive(employeeID) {
     return {
       success: false,
       message: 'Failed to set user active'
+    };
+  }
+}
+
+export async function previewNameChange(employeeID, newName) {
+  try {
+    const preview = await NameChange.previewNameChange(employeeID, newName);
+    return {
+      success: true,
+      data: preview
+    };
+  } catch (error) {
+    console.error('Error previewing name change:', error);
+    return {
+      success: false,
+      message: 'Failed to preview name change'
+    };
+  }
+}
+
+export async function changeEmployeeName(employeeID, newName, modifiedBy) {
+  try {
+    const result = await NameChange.changeEmployeeName(employeeID, newName, modifiedBy);
+
+    if (result.success) {
+      // Trigger Pusher event to notify all users of the name change
+      await broadcastUserAccountUpdate('user-name-changed', {
+        employeeID,
+        oldName: result.oldName,
+        newName,
+        modifiedBy,
+        totalAffectedRows: result.totalAffectedRows,
+        updatedTables: result.updatedTables,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error changing employee name:', error);
+    return {
+      success: false,
+      errors: [{ general: error.message }]
     };
   }
 }

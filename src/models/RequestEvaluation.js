@@ -39,7 +39,7 @@ class RequestEvaluation {
                             PRD.ITEMDESC,
                             PRD.UOFM,
                             ISNULL(PRD.QUANTITY, 0) as QUANTITY,
-                            PRD.BUDGETNAME,
+                            PRD.BUDGETCODE,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
                             PRH.IS_READ,

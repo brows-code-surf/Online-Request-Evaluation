@@ -1,6 +1,7 @@
 'use server';
 
 import PurchaseRequest from '@/models/PurchaseRequest.js';
+import Budget from '@/models/Budget.js';
 import UserProfile from '@/models/UserProfile.js';
 import Notification from '@/models/Notification.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
@@ -13,6 +14,67 @@ export async function getAllPurchaseRequests(filters = {}, user = null, isAdmin 
   } catch (error) {
     console.error('Error getting purchase requests:', error);
     return { success: false, message: 'Failed to fetch purchase requests' };
+  }
+}
+
+// Validate names in PURCHASE.REQUESTHEADER.1 fields
+async function validatePurchaseRequestNames(headerData) {
+  try {
+    // Get filtered users (excluding Production Rank & File and Union Members)
+    const usersResult = await getFilteredUsersForPurchaseRequest();
+    if (!usersResult.success) {
+      return { success: false, message: 'Failed to fetch users for validation' };
+    }
+
+    const validUsers = usersResult.data;
+    const validUserNames = validUsers.map(user => user.empName.toUpperCase());
+
+    // Validate requestedBy (optional field)
+    if (headerData.requestedBy && headerData.requestedBy.trim()) {
+      if (!validUserNames.includes(headerData.requestedBy.trim().toUpperCase())) {
+        return { success: false, message: `Requested by "${headerData.requestedBy}" is not a valid user` };
+      }
+    }
+
+    // Validate reviewer (optional field)
+    if (headerData.reviewer && headerData.reviewer.trim()) {
+      if (!validUserNames.includes(headerData.reviewer.trim().toUpperCase())) {
+        return { success: false, message: `Reviewer "${headerData.reviewer}" is not a valid user` };
+      }
+    }
+
+    // Validate approver (required field)
+    if (headerData.approver && headerData.approver.trim()) {
+      if (!validUserNames.includes(headerData.approver.trim().toUpperCase())) {
+        return { success: false, message: `Approver "${headerData.approver}" is not a valid user` };
+      }
+    }
+
+    // Validate addressedTo (required field)
+    if (headerData.addressedTo && headerData.addressedTo.trim()) {
+      if (!validUserNames.includes(headerData.addressedTo.trim().toUpperCase())) {
+        return { success: false, message: `Addressed to "${headerData.addressedTo}" is not a valid user` };
+      }
+    }
+
+    // Validate createdBy (optional field)
+    if (headerData.createdBy && headerData.createdBy.trim()) {
+      if (!validUserNames.includes(headerData.createdBy.trim().toUpperCase())) {
+        return { success: false, message: `Created by "${headerData.createdBy}" is not a valid user` };
+      }
+    }
+
+    // Validate postedBy (optional field)
+    if (headerData.postedBy && headerData.postedBy.trim()) {
+      if (!validUserNames.includes(headerData.postedBy.trim().toUpperCase())) {
+        return { success: false, message: `Posted by "${headerData.postedBy}" is not a valid user` };
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error validating purchase request names:', error);
+    return { success: false, message: 'Failed to validate user names' };
   }
 }
 
@@ -48,6 +110,12 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
       return { success: false, message: 'Addressed to is required' };
     }
 
+    // Validate names in header fields
+    const nameValidation = await validatePurchaseRequestNames(headerData);
+    if (!nameValidation.success) {
+      return nameValidation;
+    }
+
     // Validate details
     if (!detailsData || detailsData.length === 0) {
       return { success: false, message: 'At least one item detail is required' };
@@ -66,8 +134,8 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
       if (!detail.quantity || detail.quantity <= 0) {
         return { success: false, message: 'Valid quantity is required for all items' };
       }
-      if (!detail.budgetName || !detail.budgetName.trim()) {
-        return { success: false, message: 'Budget name is required for all items' };
+      if (!detail.budgetCode || !detail.budgetCode.trim()) {
+        return { success: false, message: 'Budget code is required for all items' };
       }
       if (!detail.dateNeeded) {
         return { success: false, message: 'Date needed is required for all items' };
@@ -131,6 +199,12 @@ export async function postPurchaseRequest(referenceNo, posterName) {
 
 export async function updatePurchaseRequest(referenceNo, headerData, detailsData, updaterName) {
   try {
+    // Validate names in header fields during update
+    const nameValidation = await validatePurchaseRequestNames(headerData);
+    if (!nameValidation.success) {
+      return nameValidation;
+    }
+
     const result = await PurchaseRequest.updatePurchaseRequest(referenceNo, headerData, detailsData, updaterName);
     return result;
   } catch (error) {
@@ -201,6 +275,16 @@ export async function getFilteredUsersForPurchaseRequest() {
       success: false,
       message: 'Failed to fetch users'
     };
+  }
+}
+
+export async function getAllBudgetAccounts() {
+  try {
+    const budgets = await Budget.getAllBudgetAccounts();
+    return { success: true, budgets };
+  } catch (error) {
+    console.error('Error getting budget accounts:', error);
+    return { success: false, message: 'Failed to fetch budget accounts' };
   }
 }
 

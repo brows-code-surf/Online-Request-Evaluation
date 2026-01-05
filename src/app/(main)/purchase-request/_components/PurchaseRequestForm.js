@@ -4,17 +4,9 @@ import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 're
 import { useAuth } from '../../../../utils/authContext';
 import { getNextReferenceNumber, generateItemNumber, getFilteredUsersForPurchaseRequest } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
+import BudgetModal from './BudgetModal';
 
-const BUDGET_OPTIONS = [
-  'IT Equipment',
-  'Office Supplies',
-  'Software Licenses',
-  'Marketing',
-  'Travel',
-  'Training',
-  'Maintenance',
-  'Other'
-];
+
 
 const UNIT_OF_MEASURE_OPTIONS = [
   'Each',
@@ -64,13 +56,15 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       itemDescription: '',
       unitOfMeasure: '',
       quantity: '',
-      budgetName: '',
+      budgetCode: '',
       dateNeeded: '',
       remarks: ''
     }]
   });
   const [errors, setErrors] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [currentBudgetItemIndex, setCurrentBudgetItemIndex] = useState(null);
 
   // Get users for dropdowns
   const [users, setUsers] = useState([]);
@@ -109,7 +103,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               itemDescription: detail.itemDescription || '',
               unitOfMeasure: detail.unitOfMeasure || '',
               quantity: detail.quantity || '',
-              budgetName: detail.budgetName || '',
+              budgetCode: detail.budgetCode || '',
               dateNeeded: detail.dateNeeded ? new Date(detail.dateNeeded).toISOString().split('T')[0] : '',
               remarks: detail.remarks || ''
             }))
@@ -118,7 +112,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               itemDescription: '',
               unitOfMeasure: '',
               quantity: '',
-              budgetName: '',
+              budgetCode: '',
               dateNeeded: '',
               remarks: ''
             }]
@@ -239,7 +233,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         itemDescription: '',
         unitOfMeasure: '',
         quantity: '',
-        budgetName: '',
+        budgetCode: '',
         dateNeeded: '',
         remarks: ''
       }]
@@ -287,8 +281,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       if (!item.quantity || item.quantity <= 0) {
         newErrors[`items.${index}.quantity`] = 'Valid quantity is required';
       }
-      if (!item.budgetName.trim()) {
-        newErrors[`items.${index}.budgetName`] = 'Budget name is required';
+      if (!item.budgetCode.trim()) {
+        newErrors[`items.${index}.budgetCode`] = 'Budget code is required';
       }
       if (!item.dateNeeded) {
         newErrors[`items.${index}.dateNeeded`] = 'Date needed is required';
@@ -355,7 +349,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       itemDescription: item.itemDescription,
       unitOfMeasure: item.unitOfMeasure,
       quantity: parseFloat(item.quantity),
-      budgetName: item.budgetName,
+      budgetCode: item.budgetCode,
       dateNeeded: item.dateNeeded,
       remarks: item.remarks
     }));
@@ -367,6 +361,19 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toISOString().split('T')[0];
+  };
+
+  const handleOpenBudgetModal = (itemIndex) => {
+    setCurrentBudgetItemIndex(itemIndex);
+    setShowBudgetModal(true);
+  };
+
+  const handleBudgetSelect = (budgetDisplay) => {
+    if (currentBudgetItemIndex !== null) {
+      handleItemChange(currentBudgetItemIndex, 'budgetCode', budgetDisplay);
+    }
+    setShowBudgetModal(false);
+    setCurrentBudgetItemIndex(null);
   };
 
   return (
@@ -642,25 +649,36 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   {errors[`items.${index}.quantity`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.quantity`]}</p>}
                 </div>
 
-                {/* Budget Name */}
+                {/* Budget Code */}
                 <div>
                   <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    Budget Name <span className="text-red-500">*</span>
+                    Budget Code <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={item.budgetName}
-                    onChange={(e) => handleItemChange(index, 'budgetName', e.target.value)}
-                    data-error={errors[`items.${index}.budgetName`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                      }`}
-                    disabled={loading}
-                  >
-                    <option value="">Select budget</option>
-                    {BUDGET_OPTIONS.map(budget => (
-                      <option key={budget} value={budget} className={darkMode ? 'bg-gray-700' : ''}>{budget}</option>
-                    ))}
-                  </select>
-                  {errors[`items.${index}.budgetName`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetName`]}</p>}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={item.budgetCode}
+                      onChange={(e) => handleItemChange(index, 'budgetCode', e.target.value)}
+                      onClick={() => handleOpenBudgetModal(index)}
+                      data-error={errors[`items.${index}.budgetCode`] ? 'true' : 'false'}
+                      className={`w-full px-3 py-2 pr-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetCode`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                        } cursor-pointer`}
+                      placeholder="Click to select budget"
+                      disabled={loading}
+                      readOnly
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBudgetModal(index)}
+                      disabled={loading}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {errors[`items.${index}.budgetCode`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetCode`]}</p>}
                 </div>
 
                 {/* Date Needed */}
@@ -739,6 +757,14 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowConfirmModal(false)}
         isLoading={loading}
+      />
+
+      {/* Budget Modal */}
+      <BudgetModal
+        isOpen={showBudgetModal}
+        onClose={() => setShowBudgetModal(false)}
+        onSelect={handleBudgetSelect}
+        darkMode={darkMode}
       />
     </div>
   );

@@ -204,7 +204,7 @@ class PurchaseRequest {
                     rid: detail.RID,
                     unitOfMeasure: detail.UOFM,
                     quantity: detail.QUANTITY,
-                    budgetName: detail.BUDGETNAME,
+                    budgetCode: detail.BUDGETCODE,
                     remarks: detail.REMARKS,
                     dateNeeded: detail.DATENEEDED
                 }))
@@ -332,10 +332,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED, RID
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, RID
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded, @rid
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @rid
                     )
                 `;
 
@@ -347,7 +347,7 @@ class PurchaseRequest {
                     .input('itemDescription', detail.itemDescription)
                     .input('unitOfMeasure', detail.unitOfMeasure)
                     .input('quantity', detail.quantity)
-                    .input('budgetName', detail.budgetName)
+                    .input('budgetCode', detail.budgetCode)
                     .input('remarks', detail.remarks || '')
                     .input('dateNeeded', detail.dateNeeded)
                     .input('rid', rid)
@@ -572,10 +572,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETNAME, REMARKS, DATENEEDED
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetName, @remarks, @dateNeeded
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded
                     )
                 `;
 
@@ -585,7 +585,7 @@ class PurchaseRequest {
                     .input('itemDescription', detail.itemDescription)
                     .input('unitOfMeasure', detail.unitOfMeasure)
                     .input('quantity', detail.quantity)
-                    .input('budgetName', detail.budgetName)
+                    .input('budgetCode', detail.budgetCode)
                     .input('remarks', detail.remarks || '')
                     .input('dateNeeded', detail.dateNeeded)
                     .query(detailInsertQuery);
