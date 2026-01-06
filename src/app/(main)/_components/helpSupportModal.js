@@ -95,21 +95,7 @@ export default function HelpSupportModal({ isOpen, onClose }) {
                         <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             Major Modules & Workflows
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
-                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Request Evaluation</h4>
-                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                    Main module for submitting and managing purchase requests through the approval workflow.
-                                </p>
-                            </div>
-
-                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
-                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>User Account Management</h4>
-                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                    Admin tools for approving new user accounts and managing existing user profiles.
-                                </p>
-                            </div>
-
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
                                 <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard & Analytics</h4>
                                 <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -118,9 +104,65 @@ export default function HelpSupportModal({ isOpen, onClose }) {
                             </div>
 
                             <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Purchase Request</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Module for creating and submitting new purchase requests with detailed specifications.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Request Evaluation</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Main module for submitting and managing purchase requests through the approval workflow.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
                                 <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Settings & Activity Logs</h4>
                                 <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                     User preferences, system settings, and comprehensive activity logging for audit trails.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>System Modules</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Administration of system modules and submodules configuration.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Ticket</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Support ticketing system for technical issues and feature requests.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>User Access</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Management of user permissions and access controls.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>User Accounts</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Administrative tools for managing existing user accounts.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>User Approval</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    Admin tools for approving new user accounts and managing registration requests.
+                                </p>
+                            </div>
+
+                            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border`}>
+                                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>User Profile</h4>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    User profile management and personal settings.
                                 </p>
                             </div>
                         </div>

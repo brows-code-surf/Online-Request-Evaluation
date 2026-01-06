@@ -1,3 +1,4 @@
+import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 import Notification from './Notification.js';
 
@@ -204,11 +205,22 @@ class RequestEvaluation {
         }
     }
 
+    // Update approved evaluation with transaction safety
     static async updateApprovedEvaluation(referenceNo, approverName, currentStatus) {
         console.log(`updateApprovedEvaluation called with:`, { referenceNo, approverName, currentStatus });
-        let connection;
+        let connection = null;
+        let transaction = null;
+
         try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for approval update');
 
             let newStatus = '';
             let headerUpdateQuery = '';
@@ -216,37 +228,39 @@ class RequestEvaluation {
             // Determine new status and set appropriate fields based on current status
             if (currentStatus === 'FOR CONFIRMATION') {
                 newStatus = 'FOR REQUEST APPROVAL';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET REVIEWEDBY = @approverName, 
-                                        DATEREVIEWED = GETDATE(), 
+                // Only update reviewer fields if a reviewer is assigned
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET REVIEWEDBY = CASE WHEN REVIEWER IS NOT NULL AND REVIEWER != '' THEN @approverName ELSE REVIEWEDBY END,
+                                        DATEREVIEWED = CASE WHEN REVIEWER IS NOT NULL AND REVIEWER != '' THEN GETDATE() ELSE DATEREVIEWED END,
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR REQUEST APPROVAL') {
                 newStatus = 'FOR PURCHASING LEAD TIME';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET APPROVEDBY = @approverName, 
-                                        DATEAPPROVED = GETDATE(), 
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET APPROVEDBY = @approverName,
+                                        DATEAPPROVED = GETDATE(),
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
                 newStatus = 'FOR CANVASSING';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET RECEIVEDBY = @approverName, 
-                                        DATERECEIVED = GETDATE(), 
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET RECEIVEDBY = @approverName,
+                                        DATERECEIVED = GETDATE(),
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             }
 
-            const requestHeader = connection.request();
+            const requestHeader = transaction.request();
             requestHeader.input('referenceNo', referenceNo);
             requestHeader.input('approverName', approverName);
             requestHeader.input('newStatus', newStatus);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
-         
+
+            console.log('Header status updated');
 
             // Create notification for the next approver with improved error handling
             const notificationResults = [];
@@ -260,13 +274,13 @@ class RequestEvaluation {
                 if (newStatus === 'FOR REQUEST APPROVAL') {
                     // Get the approver from the request
                     const approverQuery = `SELECT APPROVER FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const approverResult = await connection.request()
+                    const approverResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(approverQuery);
                 } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
                     // Get the addressed to person from the request
                     const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const addressedToResult = await connection.request()
+                    const addressedToResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(addressedToQuery);
 
@@ -291,7 +305,7 @@ class RequestEvaluation {
                 } else if (newStatus === 'FOR CANVASSING') {
                     // For final approval, notify all participants
                     const participantsQuery = `SELECT REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const participantsResult = await connection.request()
+                    const participantsResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(participantsQuery);
 
@@ -357,6 +371,10 @@ class RequestEvaluation {
                 notificationResults.push({ type: 'system-error', error: notificationError.message });
             }
 
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
             return {
                 headerUpdated: resultHeader.rowsAffected[0] > 0,
                 newStatus: newStatus
@@ -364,25 +382,56 @@ class RequestEvaluation {
 
         } catch (error) {
             console.error('Error updating approved evaluation:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw error;
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 
+    // Reject approved evaluation with transaction safety
     static async rejectApprovedEvaluation(referenceNo, approverName, rejectionReason) {
-        let connection;
+        let connection = null;
+        let transaction = null;
+
         try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for rejection');
 
             const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
                                       SET REQUESTSTATUS = 'REJECTED',
                                           CANCELREMARKS = @rejectionReason
                                       WHERE REFERENCENO = @referenceNo`;
 
-            const requestHeader = connection.request();
+            const requestHeader = transaction.request();
             requestHeader.input('referenceNo', referenceNo);
             requestHeader.input('rejectionReason', rejectionReason);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
+
+            console.log('Header status updated to REJECTED');
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
 
             return {
                 headerUpdated: resultHeader.rowsAffected[0] > 0
@@ -390,7 +439,21 @@ class RequestEvaluation {
 
         } catch (error) {
             console.error('Error rejecting evaluation:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw error;
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 
