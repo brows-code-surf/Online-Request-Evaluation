@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Printer } from 'lucide-react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 
 export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) => {
   const { darkMode } = useAuth();

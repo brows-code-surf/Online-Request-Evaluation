@@ -873,6 +873,11 @@ class PurchaseRequest {
                 throw new Error('Item description must contain at least one word');
             }
 
+            // For single-word descriptions, don't check conflicts, just return the base
+            if (words.length === 1 || words.length === 2) {
+                return baseItemNumber;
+            }
+
             // Check if any items with this base exist but have different descriptions
             const checkBaseQuery = `
                 SELECT COUNT(*) as count
@@ -897,7 +902,12 @@ class PurchaseRequest {
                 SELECT ITEMNMBR
                 FROM [PURCHASE.REQUESTDETAILS.1]
                 WHERE ITEMNMBR LIKE @basePattern + '%'
-                ORDER BY CAST(ISNULL(NULLIF(REPLACE(ITEMNMBR, @basePattern + '-', ''), @basePattern), '0') AS INT) DESC
+                ORDER BY
+                  CASE
+                    WHEN ITEMNMBR = @basePattern THEN 0
+                    WHEN ITEMNMBR LIKE @basePattern + '-%' THEN COALESCE(TRY_CAST(ISNULL(NULLIF(REPLACE(ITEMNMBR, @basePattern + '-', ''), ''), '0') AS INT), 0)
+                    ELSE 0
+                  END DESC
             `;
 
             const result = await connection.request()

@@ -131,6 +131,20 @@ export default function AddModuleModal({
                         <h2 className="text-2xl font-bold mb-4">Add New Main Module</h2>
 
                         <div className="space-y-4">
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Module Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={onInputChange}
+                                    placeholder="e.g., User Management"
+                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
+                                />
+                                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Identifier</label>
                                 <input
@@ -146,20 +160,7 @@ export default function AddModuleModal({
                                     Module identifiers can use letters, numbers, spaces, hyphens, and underscores
                                 </p>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Module Name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={onInputChange}
-                                    placeholder="e.g., User Management"
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
-                            </div>
-
+                            
                             <div>
                                 <label className="block text-sm font-medium mb-1">Description</label>
                                 <textarea

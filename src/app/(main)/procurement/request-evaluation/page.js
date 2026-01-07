@@ -3,18 +3,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/utils/authContext';
-import HeaderNavBar from '../../_components/headerNavBar';
+import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-import ContentLeftPanel from '../_components/contentLeftPanel';
-import { SkeletonRequestEvaluationDetail } from '../../_components/skeletonLoader';
-import ConfirmModal from '../_components/confirmModal';
-import RejectRequestModal from '../_components/rejectRequestModal';
-import SuccessModal from '../_components/successModal';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
+import { SkeletonRequestEvaluationDetail } from '../../../_components/skeletonLoader';
+import ConfirmModal from '../../_components/confirmModal';
+import RejectRequestModal from '../../_components/rejectRequestModal';
+import SuccessModal from '../../_components/successModal';
 import { fetchEvaluationLeftPanel, fetchEvaluationDetails, approveEvaluation, rejectEvaluation, fetchUserAvailableStatuses, markAsRead } from './_actions/index';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
-import SearchModal from '../_components/SearchModal';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
+import SearchModal from '../../_components/SearchModal';
 
 function RequestEvaluationContent() {
     const { user, darkMode, isAdmin } = useAuth();

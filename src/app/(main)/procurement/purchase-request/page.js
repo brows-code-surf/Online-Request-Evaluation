@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../../utils/authContext';
+import { useAuth } from '../../../../utils/authContext';
 import ProtectedRoute from '@/utils/protectedRoute';
 import HeaderNavBar from '@/app/_components/headerNavBar';
-import ContentLeftPanel from '../_components/contentLeftPanel';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
-import SearchModal from '../_components/SearchModal';
+import SearchModal from '../../_components/SearchModal';
 
 import SuccessModal from '@/app/(main)/_components/successModal';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
 import { ToastContainer, toast } from 'react-toastify';
@@ -562,7 +562,7 @@ function PurchaseRequestContent() {
               {user && isAdmin() && (
                 <button
                   onClick={() => setShowSearchModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-2xl transform hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50 backdrop-blur-md hover:backdrop-blur-sm opacity-70 hover:opacity-100"
                   title="Search Purchase Requests"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -574,7 +574,7 @@ function PurchaseRequestContent() {
               {/* Create Button */}
               <button
                 onClick={() => setCurrentView('create')}
-                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-2xl transform hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 backdrop-blur-md hover:backdrop-blur-sm opacity-70 hover:opacity-100"
                 title="Create Purchase Request"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
