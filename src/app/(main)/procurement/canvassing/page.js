@@ -8,11 +8,13 @@ import HeaderNavBar from '@/app/_components/headerNavBar';
 import SuccessModal from '@/app/(main)/_components/successModal';
 import Loader from '@/app/_components/loader';
 import CreateCanvassingModal from './_components/CreateCanvassingModal';
+import CreateOption2 from './_components/CreateOption2';
 import { ToastContainer, toast } from 'react-toastify';
 import {
   getAllCanvassingRequests,
   getCanvassingRequestByPQCode,
-  approveCanvassingRequest
+  approveCanvassingRequest,
+  postCanvassingRequest
 } from './_actions';
 
 function CanvassingContent() {
@@ -25,6 +27,8 @@ function CanvassingContent() {
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'list', 'create'
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal2, setShowCreateModal2] = useState(false);
+
 
   // Function to reload canvassing requests data without page refresh
   const reloadCanvassingRequestsData = async () => {
@@ -81,6 +85,25 @@ function CanvassingContent() {
     }
   };
 
+  const handlePostCanvassingRequest = async (pqCode) => {
+    try {
+      const result = await postCanvassingRequest(pqCode, user?.empName);
+      if (result.success) {
+        setSuccessMessage({
+          title: 'Canvassing Request Posted',
+          message: 'The canvassing request has been posted successfully.'
+        });
+        setShowSuccessModal(true);
+        await reloadCanvassingRequestsData();
+      } else {
+        toast.error('Failed to post canvassing request: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error posting canvassing request:', error);
+      toast.error('Failed to post canvassing request');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'FOR CANVASSING':
@@ -124,7 +147,7 @@ function CanvassingContent() {
               </div>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => setShowCreateModal2(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,13 +288,12 @@ function CanvassingContent() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              request.postStatus === 1 ? 'bg-blue-100 text-blue-800' :
-                              request.postStatus === 2 ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.postStatus === 1 ? 'bg-blue-100 text-blue-800' :
+                                request.postStatus === 2 ? 'bg-green-100 text-green-800' :
+                                  'bg-gray-100 text-gray-800'
+                              }`}>
                               {request.postStatus === 1 ? 'FOR CANVASSING' :
-                               request.postStatus === 2 ? 'APPROVED' : 'COMPLETED'}
+                                request.postStatus === 2 ? 'APPROVED' : 'COMPLETED'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -285,12 +307,20 @@ function CanvassingContent() {
                               View Details
                             </button>
                             {request.postStatus === 1 && (
-                              <button
-                                onClick={() => handleApproveCanvassingRequest(request.pqCode)}
-                                className="text-green-600 hover:text-green-900 transition-colors duration-200"
-                              >
-                                Approve
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handlePostCanvassingRequest(request.pqCode)}
+                                  className="text-purple-600 hover:text-purple-900 transition-colors duration-200"
+                                >
+                                  Post
+                                </button>
+                                <button
+                                  onClick={() => handleApproveCanvassingRequest(request.pqCode)}
+                                  className="text-green-600 hover:text-green-900 transition-colors duration-200"
+                                >
+                                  Approve
+                                </button>
+                              </>
                             )}
                           </td>
                         </tr>
@@ -344,6 +374,14 @@ function CanvassingContent() {
       <CreateCanvassingModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        darkMode={darkMode}
+        user={user}
+        onSuccess={reloadCanvassingRequestsData}
+      />
+
+      <CreateOption2
+        isOpen={showCreateModal2}
+        onClose={() => setShowCreateModal2(false)}
         darkMode={darkMode}
         user={user}
         onSuccess={reloadCanvassingRequestsData}

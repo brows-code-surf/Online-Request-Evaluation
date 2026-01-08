@@ -70,7 +70,7 @@ class Canvassing {
             return result.recordset.map(record => ({
                 id: record.ROWID,
                 company: record.COMPANY,
-                referenceNum: record.REFERENCENUM,
+                referenceNum: `QUO-${record.REFERENCENUM}`,
                 pqCode: record.PQCODE,
                 dateRequested: record.DATEREQUESTED,
                 postStatus: record.POSTSTATUS,
@@ -146,7 +146,7 @@ class Canvassing {
                 header: {
                     id: header.ROWID,
                     company: header.COMPANY,
-                    referenceNum: header.REFERENCENUM,
+                    referenceNum: `QUO-${header.REFERENCENUM}`,
                     pqCode: header.PQCODE,
                     dateRequested: header.DATEREQUESTED,
                     postStatus: header.POSTSTATUS,
@@ -202,7 +202,7 @@ class Canvassing {
     }
 
     // Create new canvassing request with transaction safety
-    static async createCanvassingRequest(headerData, detailsData, creatorName) {
+    static async createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
         let connection = null;
         let transaction = null;
 
@@ -220,6 +220,15 @@ class Canvassing {
             // Generate PQ code
             const pqCode = await Canvassing.getNextPQCode();
 
+            // Extract number from referenceNum (remove 'QUO-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+
+            // Prepare remarks with supplier info
+            let remarks = headerData.pqRemarks || '';
+            if (supplierName) {
+                remarks = supplierName + (remarks ? ' - ' + remarks : '');
+            }
+
             // Insert canvassing header
             const headerQuery = `
                 INSERT INTO [PURCHASE.QUOTATIONHEADER.1] (
@@ -233,9 +242,9 @@ class Canvassing {
 
             const headerResult = await transaction.request()
                 .input('company', headerData.company)
-                .input('referenceNum', headerData.referenceNum)
+                .input('referenceNum', referenceNumOnly)
                 .input('pqCode', pqCode)
-                .input('pqRemarks', headerData.pqRemarks || '')
+                .input('pqRemarks', remarks)
                 .input('createdBy', creatorName)
                 .query(headerQuery);
 
@@ -252,22 +261,6 @@ class Canvassing {
             // Insert canvassing details
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
-
-                const detailInsertQuery = `
-                    INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
-                        PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
-                        OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
-                        LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
-                        BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
-                    ) VALUES (
-                        @pqCode, @prCode, @rid, 'FOR CANVASSING', @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
-                        @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
-                        @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
-                        @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
-                    )
-                `;
 
                 await transaction.request()
                     .input('pqCode', pqCode)
@@ -294,25 +287,22 @@ class Canvassing {
                     .input('budgetCode', detail.budgetCode)
                     .input('modifiedBy', creatorName)
                     .input('isServed', detail.isServed || 0)
-                    .query(detailInsertQuery);
+                    .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
+                        PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
+                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
+                        LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
+                        BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
+                    ) VALUES (
+                        @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
+                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
+                        @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
+                        @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
+                        @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
+                    )`);
             }
 
             console.log(`${detailsData.length} canvassing request details inserted`);
-
-            // Insert initial approval status
-            const approvalInsertQuery = `
-                INSERT INTO [PURCHASE.QUOTATIONAPPROVALSTATUS.1] (
-                    PQROWID, IS_APPROVED, APPROVEDBY, DATEAPPROVED
-                ) VALUES (
-                    @pqRowId, 0, NULL, NULL
-                )
-            `;
-
-            await transaction.request()
-                .input('pqRowId', headerRowId)
-                .query(approvalInsertQuery);
-
-            console.log('Approval status initialized');
 
             // Insert audit/history log
             const activityQuery = `
@@ -370,6 +360,9 @@ class Canvassing {
 
             console.log('Transaction started for canvassing request update');
 
+            // Extract number from referenceNum (remove 'QUO-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+
             // Update header
             const updateHeaderQuery = `
                 UPDATE [PURCHASE.QUOTATIONHEADER.1]
@@ -384,7 +377,7 @@ class Canvassing {
             const headerResult = await transaction.request()
                 .input('pqCode', pqCode)
                 .input('company', headerData.company)
-                .input('referenceNum', headerData.referenceNum)
+                .input('referenceNum', referenceNumOnly)
                 .input('pqRemarks', headerData.pqRemarks || '')
                 .input('modifiedBy', updaterName)
                 .query(updateHeaderQuery);
@@ -411,27 +404,10 @@ class Canvassing {
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
 
-                const detailInsertQuery = `
-                    INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
-                        PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
-                        OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
-                        LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
-                        BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
-                    ) VALUES (
-                        @pqCode, @prCode, @rid, @pqdPostStatus, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
-                        @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
-                        @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
-                        @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
-                    )
-                `;
-
                 await transaction.request()
                     .input('pqCode', pqCode)
                     .input('prCode', detail.prCode || '')
                     .input('rid', detail.rid || `${pqCode}-${i + 1}`)
-                    .input('pqdPostStatus', detail.pqdPostStatus || 'FOR CANVASSING')
                     .input('itemNumber', detail.itemNumber)
                     .input('itemDescription', detail.itemDescription)
                     .input('unitOfMeasure', detail.unitOfMeasure)
@@ -449,11 +425,23 @@ class Canvassing {
                     .input('deliverySchedule', detail.deliverySchedule || '')
                     .input('poNumber', detail.poNumber || '')
                     .input('remarks', detail.remarks || '')
-                    .input('canvassedBy', detail.canvassedBy || updaterName)
+                    .input('canvassedBy', detail.canvassedBy || creatorName)
                     .input('budgetCode', detail.budgetCode)
-                    .input('modifiedBy', updaterName)
+                    .input('modifiedBy', creatorName)
                     .input('isServed', detail.isServed || 0)
-                    .query(detailInsertQuery);
+                    .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
+                        PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
+                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
+                        LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
+                        BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
+                    ) VALUES (
+                        @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
+                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
+                        @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
+                        @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
+                        @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
+                    )`);
             }
 
             console.log(`${detailsData.length} updated details inserted`);
@@ -552,6 +540,50 @@ class Canvassing {
         }
     }
 
+    // Post canvassing request (change status to posted)
+    static async postCanvassingRequest(pqCode, posterName) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Update header post status to 2 (APPROVED/POSTED)
+            const updateHeaderQuery = `
+                UPDATE [PURCHASE.QUOTATIONHEADER.1]
+                SET POSTSTATUS = 2,
+                    DATEMODIFIED = GETDATE(),
+                    MODIFIEDBY = @posterName
+                WHERE PQCODE = @pqCode
+            `;
+
+            const result = await connection.request()
+                .input('pqCode', pqCode)
+                .input('posterName', posterName)
+                .query(updateHeaderQuery);
+
+            if (result.rowsAffected[0] === 0) {
+                throw new Error('Canvassing request not found');
+            }
+
+            // Log activity
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @posterName, GETDATE())
+            `;
+            await connection.request()
+                .input('activity', `Canvassing Request ${pqCode} posted by ${posterName}`)
+                .input('posterName', posterName)
+                .query(activityQuery);
+
+            return {
+                success: true,
+                message: 'Canvassing request posted successfully'
+            };
+        } catch (error) {
+            console.error('Error posting canvassing request:', error);
+            throw new Error('Failed to post canvassing request: ' + error.message);
+        }
+    }
+
     // Get next PQ code
     static async getNextPQCode() {
         let connection;
@@ -582,6 +614,34 @@ class Canvassing {
         }
     }
 
+    // Get next reference number with QUO- prefix
+    static async getNextReferenceNumber() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Get the highest reference number (REFERENCENUM is int column)
+            const query = `
+                SELECT TOP 1 REFERENCENUM
+                FROM [PURCHASE.QUOTATIONHEADER.1]
+                ORDER BY REFERENCENUM DESC
+            `;
+
+            const result = await connection.request().query(query);
+
+            let nextNumber = 1;
+            if (result.recordset.length > 0) {
+                const lastNumber = result.recordset[0].REFERENCENUM;
+                nextNumber = lastNumber + 1;
+            }
+
+            return `QUO-${nextNumber}`;
+        } catch (error) {
+            console.error('Error getting next reference number:', error);
+            throw new Error('Failed to generate reference number: ' + error.message);
+        }
+    }
+
     // Get purchase request details that are FOR CANVASSING
     static async getPurchaseRequestDetailsForCanvassing(user, filterByAddressedTo = true) {
         let connection;
@@ -594,6 +654,7 @@ class Canvassing {
                   rh.COMPANY,
                   rh.REQUESTTYPE,
                   rh.REQUESTEDBY as requester,
+                  rh.ADDRESSEDTO as addressedTo,
                   rh.DATEREQUESTED as dateRequested,
                   rh.LOCNCODE as location,
                   rh.REFERENCENO as requestId
@@ -605,9 +666,9 @@ class Canvassing {
             const params = [];
             let paramIndex = 1;
 
-            // Filter by requested by (only show PRs created by the user for non-admin users)
+            // Filter by addressed to (only show PRs addressed to the user for non-admin users)
             if (filterByAddressedTo && user?.empName) {
-                query += ` AND UPPER(rh.REQUESTEDBY) = UPPER(@userName${paramIndex})`;
+                query += ` AND UPPER(rh.ADDRESSEDTO) = UPPER(@userName${paramIndex})`;
                 params.push({ name: `userName${paramIndex}`, value: user.empName });
                 paramIndex++;
             }
@@ -634,6 +695,7 @@ class Canvassing {
                 requestType: record.REQUESTTYPE,
                 company: record.COMPANY,
                 requester: record.requester,
+                addressedTo: record.addressedTo,
                 dateRequested: record.dateRequested,
                 location: record.location,
                 ITEMNMBR: record.ITEMNMBR,
@@ -693,6 +755,71 @@ class Canvassing {
         } catch (error) {
             console.error('Error fetching canvassing stats:', error);
             throw new Error('Failed to fetch canvassing stats: ' + error.message);
+        }
+    }
+
+    // Get all suppliers
+    static async getAllSuppliers() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                SELECT
+                    ROWID,
+                    VENDORID,
+                    VENDNAME,
+                    PYMTRMID
+                FROM [SUPPLIER.1]
+                ORDER BY VENDNAME
+            `;
+
+            const result = await connection.request().query(query);
+
+            return result.recordset.map(record => ({
+                id: record.ROWID,
+                vendorId: record.VENDORID,
+                vendorName: record.VENDNAME,
+                paymentTerms: record.PYMTRMID
+            }));
+        } catch (error) {
+            console.error('Error fetching suppliers:', error);
+            throw new Error('Failed to fetch suppliers: ' + error.message);
+        }
+    }
+
+    // Get all payment terms
+    static async getAllPaymentTerms() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_NAME);
+
+            const query = `
+                SELECT
+                    ROWID,
+                    PYMTRMID,
+                    DUEDTDS,
+                    ACTIVE,
+                    DATECREATED,
+                    DATEMODIFIED
+                FROM [PAYMENT.TERMS.1]
+                WHERE ACTIVE = 1
+                ORDER BY PYMTRMID
+            `;
+
+            const result = await connection.request().query(query);
+
+            return result.recordset.map(record => ({
+                id: record.ROWID,
+                paymentTermId: record.PYMTRMID,
+                dueDays: record.DUEDTDS,
+                active: record.ACTIVE,
+                dateCreated: record.DATECREATED,
+                dateModified: record.DATEMODIFIED
+            }));
+        } catch (error) {
+            console.error('Error fetching payment terms:', error);
+            throw new Error('Failed to fetch payment terms: ' + error.message);
         }
     }
 }
