@@ -14,7 +14,6 @@ class Canvassing {
             let query = `
                 SELECT DISTINCT
                     PQH.ROWID,
-                    PQH.COMPANY,
                     PQH.REFERENCENUM,
                     PQH.PQCODE,
                     PQH.DATEREQUESTED,
@@ -31,14 +30,12 @@ class Canvassing {
             let paramIndex = 1;
 
             // Filter by status (for canvassing)
-            if (filters.status) {
+            if (filters.status !== undefined && filters.status !== null) {
                 query += ` AND PQH.POSTSTATUS = @status${paramIndex}`;
                 params.push({ name: `status${paramIndex}`, value: filters.status });
                 paramIndex++;
-            } else {
-                // Default to canvassing status
-                query += ` AND PQH.POSTSTATUS = 0`;
             }
+            // No default filter - show all statuses including posted (POSTSTATUS = 1)
 
             // Filter by created by (only show canvassing requests created by the user for non-admin users)
             if (user && !isAdmin) {
@@ -48,12 +45,7 @@ class Canvassing {
                 paramIndex++;
             }
 
-            // Apply additional filters
-            if (filters.company) {
-                query += ` AND PQH.COMPANY = @company${paramIndex}`;
-                params.push({ name: `company${paramIndex}`, value: filters.company });
-                paramIndex++;
-            }
+            // Company filter removed since company is now per-item in details
 
             if (filters.pqCode) {
                 query += ` AND PQH.PQCODE LIKE @pqCode${paramIndex}`;
@@ -67,7 +59,6 @@ class Canvassing {
             const result = await request.query(query);
             return result.recordset.map(record => ({
                 id: record.ROWID,
-                company: record.COMPANY,
                 referenceNum: `QUO-${record.REFERENCENUM}`,
                 pqCode: record.PQCODE,
                 dateRequested: record.DATEREQUESTED,
@@ -121,7 +112,7 @@ class Canvassing {
 
             const header = headerResult.recordset[0];
 
-            // Get details with supplier information
+            // Get details with supplier information and company
             const detailsQuery = `
                 SELECT PQD.*, S.VENDNAME as vendorName
                 FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
@@ -145,7 +136,6 @@ class Canvassing {
             return {
                 header: {
                     id: header.ROWID,
-                    company: header.COMPANY,
                     referenceNum: `QUO-${header.REFERENCENUM}`,
                     pqCode: header.PQCODE,
                     dateRequested: header.DATEREQUESTED,
@@ -167,6 +157,7 @@ class Canvassing {
                     itemDescription: detail.ITEMDESC,
                     unitOfMeasure: detail.UOFM,
                     quantity: detail.QUANTITY,
+                    company: detail.COMPANY,
                     vendorId: detail.VENDORID,
                     vendorName: detail.vendorName,
                     brand: detail.BRAND,
@@ -230,16 +221,15 @@ class Canvassing {
             // Insert canvassing header
             const headerQuery = `
                 INSERT INTO [PURCHASE.QUOTATIONHEADER.1] (
-                    COMPANY, REFERENCENUM, PQCODE, DATEREQUESTED, POSTSTATUS,
+                    REFERENCENUM, PQCODE, DATEREQUESTED, POSTSTATUS,
                     PQREMARKS, CREATEDBY, DATEMODIFIED, MODIFIEDBY
                 ) VALUES (
-                    @company, @referenceNum, @pqCode, GETDATE(), 0,
+                    @referenceNum, @pqCode, GETDATE(), 0,
                     @pqRemarks, @createdBy, GETDATE(), @createdBy
                 )
             `;
 
             const headerResult = await transaction.request()
-                .input('company', headerData.company)
                 .input('referenceNum', referenceNumOnly)
                 .input('pqCode', pqCode)
                 .input('pqRemarks', remarks)
@@ -268,6 +258,7 @@ class Canvassing {
                     .input('itemDescription', detail.itemDescription)
                     .input('unitOfMeasure', detail.unitOfMeasure)
                     .input('quantity', detail.quantity)
+                    .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
                     .input('origin', detail.origin || '')
@@ -286,13 +277,13 @@ class Canvassing {
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @isServed
@@ -365,8 +356,7 @@ class Canvassing {
             // Update header
             const updateHeaderQuery = `
                 UPDATE [PURCHASE.QUOTATIONHEADER.1]
-                SET COMPANY = @company,
-                    REFERENCENUM = @referenceNum,
+                SET REFERENCENUM = @referenceNum,
                     PQREMARKS = @pqRemarks,
                     DATEMODIFIED = GETDATE(),
                     MODIFIEDBY = @modifiedBy
@@ -375,7 +365,6 @@ class Canvassing {
 
             const headerResult = await transaction.request()
                 .input('pqCode', pqCode)
-                .input('company', headerData.company)
                 .input('referenceNum', referenceNumOnly)
                 .input('pqRemarks', headerData.pqRemarks || '')
                 .input('modifiedBy', updaterName)
@@ -411,6 +400,7 @@ class Canvassing {
                     .input('itemDescription', detail.itemDescription)
                     .input('unitOfMeasure', detail.unitOfMeasure)
                     .input('quantity', detail.quantity)
+                    .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
                     .input('origin', detail.origin || '')
@@ -430,13 +420,13 @@ class Canvassing {
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
@@ -723,7 +713,46 @@ class Canvassing {
         }
     }
 
-    // Get purchase request details that are FOR CANVASSING
+    // Check existing suppliers for given RIDs
+    static async checkExistingSuppliersForRIDs(rids) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            if (!rids || rids.length === 0) {
+                return new Map();
+            }
+
+            // Create placeholders for the IN clause
+            const placeholders = rids.map((_, index) => `@rid${index}`).join(', ');
+
+            const query = `
+                SELECT DISTINCT RID, VENDORID
+                FROM [PURCHASE.QUOTATIONDETAILS.1]
+                WHERE RID IN (${placeholders})
+            `;
+
+            const request = connection.request();
+            rids.forEach((rid, index) => {
+                request.input(`rid${index}`, rid);
+            });
+
+            const result = await request.query(query);
+
+            // Create a Map of RID -> vendorId
+            const existingSuppliers = new Map();
+            result.recordset.forEach(record => {
+                existingSuppliers.set(record.RID, record.VENDORID);
+            });
+
+            return existingSuppliers;
+        } catch (error) {
+            console.error('Error checking existing suppliers for RIDs:', error);
+            throw new Error('Failed to check existing suppliers: ' + error.message);
+        }
+    }
+
+    // Get purchase request details that are FOR CANVASSING or already canvassed (POSTSTATUS = 1)
     static async getPurchaseRequestDetailsForCanvassing(user, filterByAddressedTo = true) {
         let connection;
         try {

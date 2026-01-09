@@ -6,7 +6,8 @@ import {
   updateCanvassingRequest,
   getAllSuppliers,
   getAllPaymentTerms,
-  getPurchaseRequestDetailsForCanvassing
+  getPurchaseRequestDetailsForCanvassing,
+  checkExistingSuppliersForRIDs
 } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
@@ -41,6 +42,35 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
   const [filterByAddressedTo, setFilterByAddressedTo] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Item Selection, 2: Canvassing Details
   const [tableSearchTerm, setTableSearchTerm] = useState('');
+  const [existingSuppliers, setExistingSuppliers] = useState(new Map()); // RID -> vendorId mapping
+
+  // Check for existing suppliers when selected items change
+  useEffect(() => {
+    const checkExistingSuppliers = async () => {
+      if (selectedItems.length === 0) {
+        setExistingSuppliers(new Map());
+        return;
+      }
+
+      try {
+        // Get unique RIDs from selected items
+        const rids = [...new Set(selectedItems.map(item => item.RID))];
+
+        const result = await checkExistingSuppliersForRIDs(rids);
+        if (result.success) {
+          setExistingSuppliers(result.existingSuppliers);
+        } else {
+          console.error('Failed to check existing suppliers');
+          setExistingSuppliers(new Map());
+        }
+      } catch (error) {
+        console.error('Error checking existing suppliers:', error);
+        setExistingSuppliers(new Map());
+      }
+    };
+
+    checkExistingSuppliers();
+  }, [selectedItems]);
 
   // Load suppliers, payment terms, and available items
   useEffect(() => {
@@ -139,7 +169,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
     // Set payment terms
     setSelectedPaymentTerm(canvassingData.details[0]?.paymentTerms || '');
 
-    // Convert details to selected items format
+    // Convert details to selected items format using RID to match with available items
     const items = canvassingData.details.map(detail => ({
       ...detail,
       requestId: detail.prCode,
@@ -148,8 +178,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       UOFM: detail.unitOfMeasure,
       QUANTITY: detail.quantity,
       BUDGETCODE: detail.budgetCode,
-      RID: detail.prCode, // Assuming this maps to RID
-      uniqueId: `${detail.prCode}-${detail.itemNumber}`,
+      RID: detail.rid || detail.prCode, // Use RID from data or fallback to prCode
+      uniqueId: `${detail.prCode}-${detail.rid || detail.prCode}`,
       offeredPrice: detail.offeredPrice || 0,
       bidPrice: detail.bidPrice || 0,
       finalPrice: detail.finalPrice || 0,
@@ -196,15 +226,14 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
 
     setSubmitting(true);
     try {
-      // Prepare header data
+      // Prepare header data (company is now optional at header level)
       const headerData = {
         pqCode: canvassingData.header.pqCode,
-        company: canvassingData.header.company,
         referenceNum: canvassingFormData.referenceNum,
         pqRemarks: canvassingFormData.remarks
       };
 
-      // Prepare details data from selected items
+      // Prepare details data from selected items with individual companies
       const detailsData = selectedItems.map(item => ({
         id: item.id, // Include the existing ID for update
         prCode: item.requestId,
@@ -212,6 +241,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         itemDescription: item.ITEMDESC,
         unitOfMeasure: item.UOFM,
         quantity: item.QUANTITY,
+        company: item.company || '', // Each item can have different company
         budgetCode: item.BUDGETCODE,
         remarks: '',
         vendorId: selectedVendorId,
@@ -321,17 +351,24 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
     }
   };
 
-  // Filter available items based on search term
+  // Filter available items based on search term and selected item descriptions
   const filteredAvailableItems = availableItems.filter((item) => {
     const searchTerm = tableSearchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       item.requestId?.toLowerCase().includes(searchTerm) ||
       item.RID?.toString().toLowerCase().includes(searchTerm) ||
       item.ITEMDESC?.toLowerCase().includes(searchTerm) ||
       item.BUDGETCODE?.toLowerCase().includes(searchTerm) ||
-      item.requester?.toLowerCase().includes(searchTerm) ||
+      item.addressedTo?.toLowerCase().includes(searchTerm) ||
       item.company?.toLowerCase().includes(searchTerm)
     );
+
+    // If any items are selected, filter to show only items with the same ITEMDESC
+    const matchesSelectedItemDesc = selectedItems.length > 0
+      ? selectedItems.some(selected => selected.ITEMDESC === item.ITEMDESC)
+      : true;
+
+    return matchesSearch && matchesSelectedItemDesc;
   });
 
   if (!isOpen) return null;
@@ -346,15 +383,15 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <form onSubmit={handleSubmit}>
             {/* Header */}
-            <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex-1"></div>
                 <div className="text-center">
-                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
                     Edit Canvassing Request
                   </h3>
                   {canvassingFormData.referenceNum && (
-                    <p className="text-sm mt-1 font-bold text-blue-600">
+                    <p className="text-sm mt-1 font-bold text-blue-800">
                       Reference: {canvassingFormData.referenceNum}
                     </p>
                   )}
@@ -371,10 +408,10 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                     </svg>
                   </button>
                 </div>
+              </div>
             </div>
-
             {/* Step Indicator */}
-            <div className="px-4 sm:px-6 py-4 border-b">
+            <div className="px-4 sm:px-6 py-4 border-b bg-white">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-4 sm:mb-0">
                   <div className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -393,12 +430,12 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                   </div>
                 </div>
 
-              <div className="text-sm text-gray-500 text-center sm:text-right">
-                Step {currentStep} of 2
+                <div className="text-sm text-gray-500 text-center sm:text-right">
+                  Step {currentStep} of 2
+                </div>
               </div>
+
             </div>
-          </div>
-        </div>
 
             {/* Content */}
             <div className="px-6 py-4 overflow-y-auto" style={{ height: 'calc(86vh - 200px)' }}>
@@ -447,7 +484,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Search items by reference no., item details, requester, company..."
+                          placeholder="Search items by reference no., item details, addressed to, company..."
                           value={tableSearchTerm}
                           onChange={(e) => setTableSearchTerm(e.target.value)}
                           className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
@@ -538,6 +575,9 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                 <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
+                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Company
+                                </th>
                                 <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
@@ -552,7 +592,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                   <td className="px-2 sm:px-4 py-3">
                                     <input
                                       type="checkbox"
-                                      checked={selectedItems.some(selected => selected.uniqueId === item.uniqueId || (selected.requestId === item.requestId && selected.ITEMNMBR === item.RID) || selected.ITEMDESC === item.ITEMDESC)}
+                                      checked={selectedItems.some(selected => selected.RID === item.RID)}
                                       onChange={(e) => handleItemSelect(item, e.target.checked)}
                                       className="rounded"
                                     />
@@ -570,6 +610,11 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                                         Budget: {item.BUDGETCODE}
                                       </div>
+                                    </div>
+                                  </td>
+                                  <td className={`hidden lg:table-cell px-2 sm:px-4 py-3`}>
+                                    <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.company || 'N/A'}
                                     </div>
                                   </td>
                                   <td className={`hidden md:table-cell px-2 sm:px-4 py-3`}>
@@ -606,380 +651,398 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                       <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         Supplier Information
                       </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Supplier <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={selectedSupplier}
-                          onChange={(e) => {
-                            setSelectedSupplier(e.target.value);
-                            setSupplierSearch(e.target.value);
-                          }}
-                          onFocus={() => setShowSupplierDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowSupplierDropdown(false), 200)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="Select or type supplier name"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSupplierDropdown(!showSupplierDropdown)}
-                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                      {showSupplierDropdown && (
-                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                          }`}>
-                          {suppliers
-                            .filter(supplier =>
-                              supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
-                            )
-                            .map((supplier) => (
-                              <div
-                                key={supplier.id}
-                                onClick={() => {
-                                  setSelectedSupplier(supplier.vendorName);
-                                  setSelectedVendorId(supplier.vendorId);
-                                  setSupplierSearch('');
-                                  setShowSupplierDropdown(false);
-                                }}
-                                className={`px-3 py-2 cursor-pointer ${darkMode
-                                  ? 'text-white hover:bg-gray-600'
-                                  : 'text-gray-900 hover:bg-gray-100'
-                                  }`}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <span>{supplier.vendorName}</span>
-                                </div>
-                              </div>
-                            ))}
-                          {suppliers.filter(supplier =>
-                            supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
-                          ).length === 0 && supplierSearch && (
-                              <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                No suppliers found
-                              </div>
-                            )}
-                        </div>
-                      )}
-                    </div>
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Vendor ID
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedVendorId}
-                        readOnly
-                        className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-600'
-                          }`}
-                        placeholder="Auto-filled when supplier is selected"
-                      />
-                    </div>
-                    <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Payment Terms <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={selectedPaymentTerm}
-                          onChange={(e) => {
-                            setSelectedPaymentTerm(e.target.value);
-                            setPaymentTermSearch(e.target.value);
-                          }}
-                          onFocus={() => setShowPaymentTermDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowPaymentTermDropdown(false), 200)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="Select payment terms"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPaymentTermDropdown(!showPaymentTermDropdown)}
-                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                      {showPaymentTermDropdown && (
-                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                          }`}>
-                          {paymentTerms
-                            .filter(term =>
-                              term.paymentTermId.toLowerCase().includes(paymentTermSearch.toLowerCase())
-                            )
-                            .map((term) => (
-                              <div
-                                key={term.id}
-                                onClick={() => {
-                                  setSelectedPaymentTerm(term.paymentTermId);
-                                  setPaymentTermSearch('');
-                                  setShowPaymentTermDropdown(false);
-                                }}
-                                className={`px-3 py-2 cursor-pointer ${darkMode
-                                  ? 'text-white hover:bg-gray-600'
-                                  : 'text-gray-900 hover:bg-gray-100'
-                                  }`}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <span>{term.paymentTermId}</span>
-                                  <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    {term.dueDays} days
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          {paymentTerms.filter(term =>
-                            term.paymentTermId.toLowerCase().includes(paymentTermSearch.toLowerCase())
-                          ).length === 0 && paymentTermSearch && (
-                              <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                No payment terms found
-                              </div>
-                            )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="relative">
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Supplier <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={selectedSupplier}
+                              onChange={(e) => {
+                                setSelectedSupplier(e.target.value);
+                                setSupplierSearch(e.target.value);
+                              }}
+                              onFocus={() => setShowSupplierDropdown(true)}
+                              onBlur={() => setTimeout(() => setShowSupplierDropdown(false), 200)}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="Select or type supplier name"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowSupplierDropdown(!showSupplierDropdown)}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                          {showSupplierDropdown && (
+                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                              }`}>
+                              {suppliers
+                                .filter(supplier =>
+                                  supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
+                                )
+                                .map((supplier) => {
+                                  // Check if this supplier is already assigned to any selected items
+                                  const isAlreadyAssigned = selectedItems.some(item =>
+                                    existingSuppliers.get(item.RID) === supplier.vendorId
+                                  );
 
-                {/* Item Details */}
-                <div className="mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Delivery Schedule
-                      </label>
-                      <input
-                        type="date"
-                        value={canvassingFormData.deliverySchedule}
-                        onChange={(e) => setCanvassingFormData(prev => ({ ...prev, deliverySchedule: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Supplier QTY
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={canvassingFormData.supplierQty}
-                        onChange={(e) => setCanvassingFormData(prev => ({ ...prev, supplierQty: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                        placeholder="Enter supplier quantity"
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Brand
-                      </label>
-                      <input
-                        type="text"
-                        value={canvassingFormData.brand}
-                        onChange={(e) => setCanvassingFormData(prev => ({ ...prev, brand: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                        placeholder="Enter brand name"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Origin
-                        </label>
-                        <label className={`inline-flex items-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  return (
+                                    <div
+                                      key={supplier.id}
+                                      onClick={() => {
+                                        if (isAlreadyAssigned) {
+                                          toast.error(`Supplier ${supplier.vendorName} is already assigned to selected item(s). Please choose a different supplier.`);
+                                          return;
+                                        }
+
+                                        setSelectedSupplier(supplier.vendorName);
+                                        setSelectedVendorId(supplier.vendorId);
+                                        setSupplierSearch('');
+                                        setShowSupplierDropdown(false);
+                                      }}
+                                      className={`px-3 py-2 cursor-pointer ${
+                                        isAlreadyAssigned
+                                          ? 'opacity-50 cursor-not-allowed'
+                                          : darkMode
+                                            ? 'text-white hover:bg-gray-600'
+                                            : 'text-gray-900 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-center">
+                                        <span>{supplier.vendorName}</span>
+                                        {isAlreadyAssigned && (
+                                          <span className="text-xs text-red-500 ml-2">Already assigned</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              {suppliers.filter(supplier =>
+                                supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
+                              ).length === 0 && supplierSearch && (
+                                  <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    No suppliers found
+                                  </div>
+                                )}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Vendor ID
+                          </label>
                           <input
-                            type="checkbox"
-                            checked={canvassingFormData.isImported}
-                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, isImported: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            type="text"
+                            value={selectedVendorId}
+                            readOnly
+                            className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-600'
+                              }`}
+                            placeholder="Auto-filled when supplier is selected"
                           />
-                          <span className="ml-2 text-sm">Is Imported</span>
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        value={canvassingFormData.origin}
-                        onChange={(e) => setCanvassingFormData(prev => ({ ...prev, origin: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                        placeholder="Enter origin/country"
-                      />
-                    </div>
-                  </div>
-
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Item Pricing
-                  </h4>
-
-                  {/* Global Pricing Inputs */}
-                  <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-                    <h5 className={`text-sm font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Apply Pricing to All Selected Items
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Offered Price <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={canvassingFormData.offeredPrice || ''}
-                          onChange={(e) => handleGlobalPriceUpdate('offeredPrice', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="0.00"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Bid Price <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={canvassingFormData.bidPrice || ''}
-                          onChange={(e) => handleGlobalPriceUpdate('bidPrice', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="0.00"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Agreed Price <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={canvassingFormData.agreedPrice || ''}
-                          onChange={(e) => handleGlobalPriceUpdate('agreedPrice', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="0.00"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <p className={`text-xs mt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Changes here will apply to all selected items.
-                    </p>
-                  </div>
-
-                  {/* Selected Items Summary */}
-                  <div className="border rounded-md overflow-hidden">
-                    <div className="max-h-96 overflow-y-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                          <tr>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Item Ref No.
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Item Details
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Quantity
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Offered Price
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Bid Price
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Final Price
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                          {selectedItems.map((item, index) => (
-                            <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                              <td className="px-4 py-3">
-                                <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {item.RID}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div>
-                                  <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    {item.ITEMDESC}
+                        </div>
+                        <div className="relative">
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Payment Terms <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={selectedPaymentTerm}
+                              onChange={(e) => {
+                                setSelectedPaymentTerm(e.target.value);
+                                setPaymentTermSearch(e.target.value);
+                              }}
+                              onFocus={() => setShowPaymentTermDropdown(true)}
+                              onBlur={() => setTimeout(() => setShowPaymentTermDropdown(false), 200)}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="Select payment terms"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPaymentTermDropdown(!showPaymentTermDropdown)}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                          {showPaymentTermDropdown && (
+                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                              }`}>
+                              {paymentTerms
+                                .filter(term =>
+                                  term.paymentTermId.toLowerCase().includes(paymentTermSearch.toLowerCase())
+                                )
+                                .map((term) => (
+                                  <div
+                                    key={term.id}
+                                    onClick={() => {
+                                      setSelectedPaymentTerm(term.paymentTermId);
+                                      setPaymentTermSearch('');
+                                      setShowPaymentTermDropdown(false);
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer ${darkMode
+                                      ? 'text-white hover:bg-gray-600'
+                                      : 'text-gray-900 hover:bg-gray-100'
+                                      }`}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <span>{term.paymentTermId}</span>
+                                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        {term.dueDays} days
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    {item.ITEMNMBR}
+                                ))}
+                              {paymentTerms.filter(term =>
+                                term.paymentTermId.toLowerCase().includes(paymentTermSearch.toLowerCase())
+                              ).length === 0 && paymentTermSearch && (
+                                  <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    No payment terms found
                                   </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {item.QUANTITY} {item.UOFM}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  ₱{item.offeredPrice?.toLocaleString() || '0'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  ₱{item.bidPrice?.toLocaleString() || '0'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  ₱{item.finalPrice?.toLocaleString() || '0'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedItems(prev => prev.filter(selected => selected.uniqueId !== item.uniqueId))}
-                                  className={`p-1 rounded-md ${darkMode ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-700 hover:bg-red-50'} transition-colors duration-200`}
-                                  title="Remove item"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Item Details */}
+                    <div className="mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Delivery Schedule
+                          </label>
+                          <input
+                            type="date"
+                            value={canvassingFormData.deliverySchedule}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, deliverySchedule: e.target.value }))}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Supplier QTY
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={canvassingFormData.supplierQty}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, supplierQty: e.target.value }))}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="Enter supplier quantity"
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Brand
+                          </label>
+                          <input
+                            type="text"
+                            value={canvassingFormData.brand}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, brand: e.target.value }))}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="Enter brand name"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Origin
+                            </label>
+                            <label className={`inline-flex items-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <input
+                                type="checkbox"
+                                checked={canvassingFormData.isImported}
+                                onChange={(e) => setCanvassingFormData(prev => ({ ...prev, isImported: e.target.checked }))}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="ml-2 text-sm">Is Imported</span>
+                            </label>
+                          </div>
+                          <input
+                            type="text"
+                            value={canvassingFormData.origin}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, origin: e.target.value }))}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="Enter origin/country"
+                          />
+                        </div>
+                      </div>
+
+                      <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Item Pricing
+                      </h4>
+
+                      {/* Global Pricing Inputs */}
+                      <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
+                        <h5 className={`text-sm font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Apply Pricing to All Selected Items
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Offered Price <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={canvassingFormData.offeredPrice || ''}
+                              onChange={(e) => handleGlobalPriceUpdate('offeredPrice', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Bid Price <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={canvassingFormData.bidPrice || ''}
+                              onChange={(e) => handleGlobalPriceUpdate('bidPrice', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Agreed Price <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={canvassingFormData.agreedPrice || ''}
+                              onChange={(e) => handleGlobalPriceUpdate('agreedPrice', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <p className={`text-xs mt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Changes here will apply to all selected items.
+                        </p>
+                      </div>
+
+                      {/* Selected Items Summary */}
+                      <div className="border rounded-md overflow-hidden">
+                        <div className="max-h-96 overflow-y-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                              <tr>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Item Ref No.
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Item Details
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Quantity
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Offered Price
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Bid Price
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Final Price
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                              {selectedItems.map((item, index) => (
+                                <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                                  <td className="px-4 py-3">
+                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.RID}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {item.ITEMDESC}
+                                      </div>
+                                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        {item.ITEMNMBR}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.QUANTITY} {item.UOFM}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      ₱{item.offeredPrice?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      ₱{item.bidPrice?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      ₱{item.finalPrice?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedItems(prev => prev.filter(selected => selected.uniqueId !== item.uniqueId))}
+                                      className={`p-1 rounded-md ${darkMode ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-700 hover:bg-red-50'} transition-colors duration-200`}
+                                      title="Remove item"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+                </>
+              )}
+            </div>
 
             {/* Footer */}
-            <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`px-6 py-4 border-t ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
                 <div className="text-sm text-gray-500 text-center sm:text-left">
                   {currentStep === 1 && selectedItems.length > 0 && (

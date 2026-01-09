@@ -52,9 +52,9 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
 
         <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-7xl sm:w-full h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+          <div className={`px-6 py-4 border-b ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
             <div className="flex items-center justify-between">
-              <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
                 Canvassing Request Details - {pqCode}
               </h3>
               <div className="flex items-center space-x-2">
@@ -162,10 +162,10 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Company
+                        Created By
                       </label>
                       <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.header.company}
+                        {canvassingData.header.createdBy}
                       </p>
                     </div>
                     <div>
@@ -190,14 +190,14 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         {canvassingData.details[0].vendorName}
                       </p>
                     </div>
-                    <div>
+                    {/* <div>
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Created By
                       </label>
                       <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {canvassingData.header.createdBy}
                       </p>
-                    </div>
+                    </div> */}
                     <div>
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Date Requested
@@ -258,6 +258,15 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         </p>
                       </div>
                     )}
+                    {/* Display Total Supplier Quantity */}
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Total Supplier Qty
+                      </label>
+                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details.reduce((total, item) => total + (item.supplierQty || item.quantity || 0), 0).toLocaleString()}
+                      </p>
+                    </div>
                     {/* Display Total Offered Price */}
                     <div>
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -283,15 +292,6 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                       </label>
                       <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         ₱{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                    {/* Display Total Supplier Quantity */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Total Supplier Qty
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.details.reduce((total, item) => total + (item.supplierQty || item.quantity || 0), 0).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -335,8 +335,11 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <tr>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[300px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[200px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Item Details
+                          </th>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[100px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Company
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[100px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Quantity
@@ -362,6 +365,11 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                                 <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                   UOM: {item.unitOfMeasure} | Budget: {item.budgetCode}
                                 </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.company || 'N/A'}
                               </div>
                             </td>
                             <td className="px-4 py-3">
@@ -402,7 +410,7 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
           </div>
 
           {/* Footer */}
-          <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+          <div className={`px-6 py-4 border-t ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
             <div className="flex justify-end">
               <button
                 type="button"

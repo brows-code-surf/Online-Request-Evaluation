@@ -45,7 +45,6 @@ function CanvassingContent() {
     const searchLower = searchTerm.toLowerCase();
     return (
       request.pqCode?.toLowerCase().includes(searchLower) ||
-      request.company?.toLowerCase().includes(searchLower) ||
       request.createdBy?.toLowerCase().includes(searchLower) ||
       request.postStatus === 0 && 'not posted'.includes(searchLower) ||
       request.postStatus === 1 && 'posted'.includes(searchLower) ||
@@ -217,20 +216,21 @@ function CanvassingContent() {
         <div className="max-w-7xl mx-auto p-6">
 
           {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Canvassing Management
-                </h1>
-                <p className={`text-lg mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Manage vendor quotations and pricing for procurement requests
-                </p>
-              </div>
-              <div className="flex space-x-4">
+          <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} shadow-sm relative`}>
+            <div className="flex-1">
+              <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+                Canvassing Management
+              </h1>
+              <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+                Manage vendor quotations and pricing for procurement requests
+              </p>
+
+            {/* Floating Action Button - Upper Right */}
+            <div className="absolute top-6 right-6">
+              <div className="flex flex-col items-end space-y-2">
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -239,9 +239,10 @@ function CanvassingContent() {
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               <div className={`rounded-lg shadow-sm p-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -334,18 +335,25 @@ function CanvassingContent() {
 
           {/* Main Content Area */}
           {currentView === 'dashboard' && (
-            <div className={`rounded-lg shadow-sm overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`rounded-xl shadow-sm overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className={`px-6 py-5 border-b ${darkMode ? 'border-blue-700 bg-blue-900' : 'border-blue-200 bg-blue-50'}`}>
                 <div className="flex justify-between items-center">
-                  <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recent Canvassing Requests</h2>
+                  <div>
+                    <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
+                      Canvassing Requests
+                    </h2>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      View and manage all canvassing requests ({filteredCanvassingRequests.length} total)
+                    </p>
+                  </div>
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="Search requests by PQ code, company, creator, or status..."
+                        placeholder="Search requests by PQ code, creator, or status..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className={`w-80 px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
+                        className={`w-80 px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
                           }`}
                       />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -367,9 +375,6 @@ function CanvassingContent() {
                           PQ Code
                         </th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                          Company
-                        </th>
-                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                           Created By
                         </th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
@@ -389,11 +394,6 @@ function CanvassingContent() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                               {request.pqCode}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {request.company}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -456,7 +456,7 @@ function CanvassingContent() {
                                   </button>
                                 </>
                               )}
-                              {request.postStatus === 1 && (
+                              {/* {request.postStatus === 1 && (
                                 <button
                                   onClick={() => handleApproveCanvassingRequest(request.pqCode)}
                                   className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors duration-200"
@@ -466,7 +466,7 @@ function CanvassingContent() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </button>
-                              )}
+                              )} */}
                             </div>
                           </td>
                         </tr>

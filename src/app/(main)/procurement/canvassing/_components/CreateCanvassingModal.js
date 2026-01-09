@@ -7,7 +7,8 @@ import {
   createCanvassingRequest,
   getAllSuppliers,
   getAllPaymentTerms,
-  getNextReferenceNumber
+  getNextReferenceNumber,
+  checkExistingSuppliersForRIDs
 } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
@@ -42,18 +43,54 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
   const [filterByAddressedTo, setFilterByAddressedTo] = useState(true);
   const [currentStep, setCurrentStep] = useState(1); // 1: Item Selection, 2: Header, 3: Supplier, 4: Pricing
   const [tableSearchTerm, setTableSearchTerm] = useState('');
+  const [existingSuppliers, setExistingSuppliers] = useState(new Map()); // RID -> vendorId mapping
 
-  // Filter available items based on search term
+  // Check for existing suppliers when selected items change
+  useEffect(() => {
+    const checkExistingSuppliers = async () => {
+      if (selectedItems.length === 0) {
+        setExistingSuppliers(new Map());
+        return;
+      }
+
+      try {
+        // Get unique RIDs from selected items
+        const rids = [...new Set(selectedItems.map(item => item.RID))];
+
+        const result = await checkExistingSuppliersForRIDs(rids);
+        if (result.success) {
+          setExistingSuppliers(result.existingSuppliers);
+        } else {
+          console.error('Failed to check existing suppliers');
+          setExistingSuppliers(new Map());
+        }
+      } catch (error) {
+        console.error('Error checking existing suppliers:', error);
+        setExistingSuppliers(new Map());
+      }
+    };
+
+    checkExistingSuppliers();
+  }, [selectedItems]);
+
+  // Filter available items based on search term and selected item description
   const filteredAvailableItems = availableItems.filter((item) => {
     const searchTerm = tableSearchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       item.requestId?.toLowerCase().includes(searchTerm) ||
       item.RID?.toString().toLowerCase().includes(searchTerm) ||
       item.ITEMDESC?.toLowerCase().includes(searchTerm) ||
       item.BUDGETCODE?.toLowerCase().includes(searchTerm) ||
-      item.requester?.toLowerCase().includes(searchTerm) ||
+      item.addressedTo?.toLowerCase().includes(searchTerm) ||
       item.company?.toLowerCase().includes(searchTerm)
     );
+
+    // If any items are selected, filter to show only items with the same ITEMDESC
+    const matchesSelectedItemDesc = selectedItems.length > 0
+      ? selectedItems.some(selected => selected.ITEMDESC === item.ITEMDESC)
+      : true;
+
+    return matchesSearch && matchesSelectedItemDesc;
   });
 
   // Load suppliers, payment terms, reference number, and available purchase request items that are FOR CANVASSING
@@ -169,28 +206,21 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
 
     setSubmitting(true);
     try {
-      // Get company from the selected items (all should have the same company)
-      const companies = [...new Set(selectedItems.map(item => item.company))];
-      if (companies.length !== 1) {
-        toast.error('All selected items must be from the same company');
-        setSubmitting(false);
-        return;
-      }
-
-      // Prepare header data
+      // Prepare header data (company is now optional at header level)
       const headerData = {
-        company: companies[0],
         referenceNum: canvassingData.referenceNum,
         pqRemarks: canvassingData.remarks
       };
 
-      // Prepare details data from selected items
+      // Prepare details data from selected items with individual companies
       const detailsData = selectedItems.map(item => ({
         prCode: item.requestId,
+        rid: item.RID, // Save the RID of the purchase request
         itemNumber: item.ITEMNMBR,
         itemDescription: item.ITEMDESC,
         unitOfMeasure: item.UOFM,
         quantity: item.QUANTITY,
+        company: item.company || '', // Each item can have different company
         budgetCode: item.BUDGETCODE,
         remarks: '',
         vendorId: selectedVendorId,
@@ -304,15 +334,15 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
         <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <form onSubmit={handleSubmit}>
             {/* Header */}
-            <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex-1"></div>
                 <div className="text-center">
-                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
                     Create Canvassing Request
                   </h3>
                   {canvassingData.referenceNum && (
-                    <p className="text-sm mt-1 font-bold text-blue-600">
+                    <p className="text-sm mt-1 font-bold text-blue-800">
                       Reference: {canvassingData.referenceNum}
                     </p>
                   )}
@@ -333,7 +363,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
             </div>
 
             {/* Step Indicator */}
-            <div className="px-4 sm:px-6 py-4 border-b">
+            <div className="px-4 sm:px-6 py-4 border-b bg-white">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-4 sm:mb-0">
                   <div className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -407,9 +437,10 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             id="selectAll"
                             checked={selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0}
                             onChange={(e) => handleSelectAll(e.target.checked)}
-                            className="rounded"
+                            disabled={selectedItems.length === 0}
+                            className="rounded disabled:opacity-50"
                           />
-                          <label htmlFor="selectAll" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label htmlFor="selectAll" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} ${selectedItems.length === 0 ? 'opacity-50' : ''}`}>
                             Select All ({filteredAvailableItems.length} items)
                           </label>
                         </div>
@@ -421,7 +452,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Search items by reference no., item details, requester, company..."
+                          placeholder="Search items by reference no., item details, addressed to, company..."
                           value={tableSearchTerm}
                           onChange={(e) => setTableSearchTerm(e.target.value)}
                           className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
@@ -451,7 +482,10 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                   Item Details
                                 </th>
                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  Request Info
+                                  Company
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Addressed To
                                 </th>
                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Quantity
@@ -468,6 +502,12 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                     <SkeletonLoader height="h-4" width="w-12" />
                                   </td>
                                   <td className="px-4 py-3">
+                                    <div className="space-y-1">
+                                      <SkeletonLoader height="h-4" width="w-32" />
+                                      <SkeletonLoader height="h-3" width="w-24" />
+                                    </div>
+                                  </td>
+                                   <td className="px-4 py-3">
                                     <div className="space-y-1">
                                       <SkeletonLoader height="h-4" width="w-32" />
                                       <SkeletonLoader height="h-3" width="w-24" />
@@ -512,6 +552,9 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                 <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
+                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Company
+                                </th>
                                 <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
@@ -544,6 +587,11 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                                         Budget: {item.BUDGETCODE}
                                       </div>
+                                    </div>
+                                  </td>
+                                  <td className={`hidden lg:table-cell px-2 sm:px-4 py-3`}>
+                                    <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.company || 'N/A'}
                                     </div>
                                   </td>
                                   <td className={`hidden md:table-cell px-2 sm:px-4 py-3`}>
@@ -631,29 +679,47 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                 .filter(supplier =>
                                   supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
                                 )
-                                .map((supplier) => (
-                                  <div
-                                    key={supplier.id}
-                                    onClick={() => {
-                                      setSelectedSupplier(supplier.vendorName);
-                                      setSelectedVendorId(supplier.vendorId);
-                                      // Pre-select payment terms from supplier's default
-                                      if (supplier.paymentTerms) {
-                                        setSelectedPaymentTerm(supplier.paymentTerms);
-                                      }
-                                      setSupplierSearch('');
-                                      setShowSupplierDropdown(false);
-                                    }}
-                                    className={`px-3 py-2 cursor-pointer ${darkMode
-                                      ? 'text-white hover:bg-gray-600'
-                                      : 'text-gray-900 hover:bg-gray-100'
+                                .map((supplier) => {
+                                  // Check if this supplier is already assigned to any selected items
+                                  const isAlreadyAssigned = selectedItems.some(item =>
+                                    existingSuppliers.get(item.RID) === supplier.vendorId
+                                  );
+
+                                  return (
+                                    <div
+                                      key={supplier.id}
+                                      onClick={() => {
+                                        if (isAlreadyAssigned) {
+                                          toast.error(`Supplier ${supplier.vendorName} is already assigned to selected item(s). Please choose a different supplier.`);
+                                          return;
+                                        }
+
+                                        setSelectedSupplier(supplier.vendorName);
+                                        setSelectedVendorId(supplier.vendorId);
+                                        // Pre-select payment terms from supplier's default
+                                        if (supplier.paymentTerms) {
+                                          setSelectedPaymentTerm(supplier.paymentTerms);
+                                        }
+                                        setSupplierSearch('');
+                                        setShowSupplierDropdown(false);
+                                      }}
+                                      className={`px-3 py-2 cursor-pointer ${
+                                        isAlreadyAssigned
+                                          ? 'opacity-50 cursor-not-allowed'
+                                          : darkMode
+                                            ? 'text-white hover:bg-gray-600'
+                                            : 'text-gray-900 hover:bg-gray-100'
                                       }`}
-                                  >
-                                    <div className="flex justify-between items-center">
-                                      <span>{supplier.vendorName}</span>
+                                    >
+                                      <div className="flex justify-between items-center">
+                                        <span>{supplier.vendorName}</span>
+                                        {isAlreadyAssigned && (
+                                          <span className="text-xs text-red-500 ml-2">Already assigned</span>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               {suppliers.filter(supplier =>
                                 supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
                               ).length === 0 && supplierSearch && (
@@ -982,7 +1048,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
             </div>
 
             {/* Footer */}
-            <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`px-6 py-4 border-t ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
                 <div className="text-sm text-gray-500 text-center sm:text-left">
                   {currentStep === 1 && selectedItems.length > 0 && (

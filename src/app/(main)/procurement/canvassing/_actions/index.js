@@ -28,9 +28,6 @@ export async function getCanvassingRequestByPQCode(pqCode, user = null, isAdmin 
 export async function createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
   try {
     // Validate required fields
-    if (!headerData.company || !headerData.company.trim()) {
-      return { success: false, message: 'Company is required' };
-    }
     if (!headerData.referenceNum || !headerData.referenceNum.trim()) {
       return { success: false, message: 'Reference number is required' };
     }
@@ -223,5 +220,16 @@ export async function getNextReferenceNumber() {
   } catch (error) {
     console.error('Error getting next reference number:', error);
     return { success: false, message: 'Failed to generate reference number' };
+  }
+}
+
+// Check existing suppliers for given RIDs
+export async function checkExistingSuppliersForRIDs(rids) {
+  try {
+    const existingSuppliers = await Canvassing.checkExistingSuppliersForRIDs(rids);
+    return { success: true, existingSuppliers };
+  } catch (error) {
+    console.error('Error checking existing suppliers:', error);
+    return { success: false, message: 'Failed to check existing suppliers' };
   }
 }
