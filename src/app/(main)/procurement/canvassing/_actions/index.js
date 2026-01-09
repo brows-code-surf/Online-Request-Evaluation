@@ -121,6 +121,37 @@ export async function postCanvassingRequest(pqCode, posterName) {
   }
 }
 
+export async function deleteCanvassingRequest(pqCode, deleterName) {
+  try {
+    // Check if request exists and is in NOT POSTED status
+    const existingRequest = await Canvassing.getCanvassingRequestByPQCode(pqCode);
+    if (!existingRequest) {
+      return { success: false, message: 'Canvassing request not found' };
+    }
+
+    if (existingRequest.header.postStatus !== 0) {
+      return { success: false, message: 'Only NOT POSTED requests can be deleted' };
+    }
+
+    // Delete from database (implement in Canvassing model)
+    const result = await Canvassing.deleteCanvassingRequest(pqCode, deleterName);
+
+    if (result.success) {
+      // Emit real-time event
+      broadcastRequestEvaluationUpdate("canvassing-deleted", {
+        pqCode: pqCode,
+        deleterName: deleterName,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error deleting canvassing request:', error);
+    return { success: false, message: 'Failed to delete canvassing request' };
+  }
+}
+
 export async function getCanvassingStats(user = null) {
   try {
     const stats = await Canvassing.getCanvassingStats(user);

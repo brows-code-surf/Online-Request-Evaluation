@@ -37,7 +37,7 @@ class Canvassing {
                 paramIndex++;
             } else {
                 // Default to canvassing status
-                query += ` AND PQH.POSTSTATUS = 1`;
+                query += ` AND PQH.POSTSTATUS = 0`;
             }
 
             // Filter by created by (only show canvassing requests created by the user for non-admin users)
@@ -60,8 +60,6 @@ class Canvassing {
                 params.push({ name: `pqCode${paramIndex}`, value: `%${filters.pqCode}%` });
                 paramIndex++;
             }
-
-            query += ` ORDER BY PQH.DATEREQUESTED DESC, PQH.PQCODE DESC`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -123,11 +121,13 @@ class Canvassing {
 
             const header = headerResult.recordset[0];
 
-            // Get details
+            // Get details with supplier information
             const detailsQuery = `
-                SELECT * FROM [PURCHASE.QUOTATIONDETAILS.1]
-                WHERE PQCODE = @pqCode
-                ORDER BY ROWID
+                SELECT PQD.*, S.VENDNAME as vendorName
+                FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
+                LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
+                WHERE PQD.PQCODE = @pqCode
+                ORDER BY PQD.ROWID
             `;
             const detailsResult = await connection.request()
                 .input('pqCode', pqCode)
@@ -168,6 +168,7 @@ class Canvassing {
                     unitOfMeasure: detail.UOFM,
                     quantity: detail.QUANTITY,
                     vendorId: detail.VENDORID,
+                    vendorName: detail.vendorName,
                     brand: detail.BRAND,
                     origin: detail.ORIGIN,
                     isImported: detail.IS_IMPORTED,
@@ -217,17 +218,14 @@ class Canvassing {
 
             console.log('Transaction started for canvassing request creation');
 
-            // Generate PQ code
-            const pqCode = await Canvassing.getNextPQCode();
+            // Use reference number as PQ code
+            const pqCode = headerData.referenceNum;
 
             // Extract number from referenceNum (remove 'QUO-' prefix)
             const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
 
-            // Prepare remarks with supplier info
-            let remarks = headerData.pqRemarks || '';
-            if (supplierName) {
-                remarks = supplierName + (remarks ? ' - ' + remarks : '');
-            }
+            // Leave PQREMARKS as blank
+            let remarks = '';
 
             // Insert canvassing header
             const headerQuery = `
@@ -235,7 +233,7 @@ class Canvassing {
                     COMPANY, REFERENCENUM, PQCODE, DATEREQUESTED, POSTSTATUS,
                     PQREMARKS, CREATEDBY, DATEMODIFIED, MODIFIEDBY
                 ) VALUES (
-                    @company, @referenceNum, @pqCode, GETDATE(), 1,
+                    @company, @referenceNum, @pqCode, GETDATE(), 0,
                     @pqRemarks, @createdBy, GETDATE(), @createdBy
                 )
             `;
@@ -285,20 +283,19 @@ class Canvassing {
                     .input('remarks', detail.remarks || '')
                     .input('canvassedBy', detail.canvassedBy || creatorName)
                     .input('budgetCode', detail.budgetCode)
-                    .input('modifiedBy', creatorName)
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
                         UOFM, QUANTITY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
-                        BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
+                        BUDGETCODE, DATECREATED, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
                         @unitOfMeasure, @quantity, @vendorId, @brand, @origin, @isImported,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
-                        @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
+                        @budgetCode, GETDATE(), @isServed
                     )`);
             }
 
@@ -345,7 +342,7 @@ class Canvassing {
     }
 
     // Update canvassing request
-    static async updateCanvassingRequest(pqCode, headerData, detailsData, updaterName) {
+    static async updateCanvassingRequest(headerData, detailsData, updaterName) {
         let connection = null;
         let transaction = null;
 
@@ -359,6 +356,8 @@ class Canvassing {
             await transaction.begin();
 
             console.log('Transaction started for canvassing request update');
+
+            const pqCode = headerData.pqCode;
 
             // Extract number from referenceNum (remove 'QUO-' prefix)
             const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
@@ -425,9 +424,9 @@ class Canvassing {
                     .input('deliverySchedule', detail.deliverySchedule || '')
                     .input('poNumber', detail.poNumber || '')
                     .input('remarks', detail.remarks || '')
-                    .input('canvassedBy', detail.canvassedBy || creatorName)
+                    .input('canvassedBy', detail.canvassedBy || updaterName)
                     .input('budgetCode', detail.budgetCode)
-                    .input('modifiedBy', creatorName)
+                    .input('modifiedBy', updaterName)
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
@@ -504,21 +503,6 @@ class Canvassing {
 
             const pqRowId = headerResult.recordset[0].ROWID;
 
-            // Update approval status
-            const updateApprovalQuery = `
-                UPDATE [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
-                SET IS_APPROVED = 1,
-                    APPROVEDBY = @approverName,
-                    DATEAPPROVED = GETDATE()
-                WHERE PQROWID = @pqRowId
-            `;
-
-            await connection.request()
-                .input('pqRowId', pqRowId)
-                .input('approverName', approverName)
-                .query(updateApprovalQuery);
-
-
 
             // Log activity
             const activityQuery = `
@@ -549,7 +533,7 @@ class Canvassing {
             // Update header post status to 2 (APPROVED/POSTED)
             const updateHeaderQuery = `
                 UPDATE [PURCHASE.QUOTATIONHEADER.1]
-                SET POSTSTATUS = 2,
+                SET POSTSTATUS = 1,
                     DATEMODIFIED = GETDATE(),
                     MODIFIEDBY = @posterName
                 WHERE PQCODE = @pqCode
@@ -560,7 +544,20 @@ class Canvassing {
                 .input('posterName', posterName)
                 .query(updateHeaderQuery);
 
-            if (result.rowsAffected[0] === 0) {
+            const updateDetailsQuery = `
+                UPDATE [PURCHASE.QUOTATIONDETAILS.1]
+                SET PQDPOSTSTATUS = 1,
+                    MODIFIEDDATE = GETDATE(),
+                    MODIFIEDBY = @posterName
+                WHERE PQCODE = @pqCode
+            `;
+
+            const resultDetails = await connection.request()
+                .input('pqCode', pqCode)
+                .input('posterName', posterName)
+                .query(updateDetailsQuery);
+
+            if (result.rowsAffected[0] === 0 || resultDetails.rowsAffected[0] === 0) {
                 throw new Error('Canvassing request not found');
             }
 
@@ -581,6 +578,90 @@ class Canvassing {
         } catch (error) {
             console.error('Error posting canvassing request:', error);
             throw new Error('Failed to post canvassing request: ' + error.message);
+        }
+    }
+
+    // Delete canvassing request
+    static async deleteCanvassingRequest(pqCode, deleterName) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for canvassing request deletion');
+
+            // Delete details first (foreign key constraint)
+            const deleteDetailsQuery = `
+                DELETE FROM [PURCHASE.QUOTATIONDETAILS.1]
+                WHERE PQCODE = @pqCode
+            `;
+
+            const detailsResult = await transaction.request()
+                .input('pqCode', pqCode)
+                .query(deleteDetailsQuery);
+
+            console.log(`${detailsResult.rowsAffected[0]} canvassing request details deleted`);
+
+            // Delete header
+            const deleteHeaderQuery = `
+                DELETE FROM [PURCHASE.QUOTATIONHEADER.1]
+                WHERE PQCODE = @pqCode
+            `;
+
+            const headerResult = await transaction.request()
+                .input('pqCode', pqCode)
+                .query(deleteHeaderQuery);
+
+            if (headerResult.rowsAffected[0] === 0) {
+                throw new Error('Canvassing request not found');
+            }
+
+            console.log('Canvassing request header deleted');
+
+            // Insert audit/history log
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @deleterName, GETDATE())
+            `;
+            await transaction.request()
+                .input('activity', `Canvassing Request ${pqCode} deleted by ${deleterName}`)
+                .input('deleterName', deleterName)
+                .query(activityQuery);
+
+            console.log('Activity log inserted');
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Canvassing request deleted successfully'
+            };
+
+        } catch (error) {
+            console.error('Error deleting canvassing request:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to delete canvassing request: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
         }
     }
 
