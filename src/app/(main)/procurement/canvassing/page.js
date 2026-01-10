@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../../utils/authContext';
 import ProtectedRoute from '@/utils/protectedRoute';
 import HeaderNavBar from '@/app/_components/headerNavBar';
@@ -13,7 +12,6 @@ import CanvassingDetailsModal from './_components/CanvassingDetailsModal';
 import { ToastContainer, toast } from 'react-toastify';
 import {
   getAllCanvassingRequests,
-  getCanvassingRequestByPQCode,
   approveCanvassingRequest,
   postCanvassingRequest,
   deleteCanvassingRequest
@@ -403,7 +401,7 @@ function CanvassingContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {new Date(request.dateRequested).toLocaleDateString()}
+                              {new Date(request.dateRequested).toISOString().split('T')[0]}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

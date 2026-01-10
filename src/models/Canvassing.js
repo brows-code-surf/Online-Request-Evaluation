@@ -92,9 +92,9 @@ class Canvassing {
                     .input('userName', userName)
                     .query(accessQuery);
 
-                if (accessResult.recordset[0].count === 0) {
-                    throw new Error('Access denied: You can only view canvassing requests you created');
-                }
+                // if (accessResult.recordset[0].count === 0) {
+                //     throw new Error('Access denied: You can only view canvassing requests you created');
+                // }
             }
 
             // Get header
@@ -475,52 +475,23 @@ class Canvassing {
         }
     }
 
-    // Approve canvassing request
-    static async approveCanvassingRequest(pqCode, approverName) {
-        let connection;
-        try {
-            connection = await connectToDatabase(process.env.DB_SFC);
-
-            // Get header ROWID
-            const getHeaderQuery = `SELECT ROWID FROM [PURCHASE.QUOTATIONHEADER.1] WHERE PQCODE = @pqCode`;
-            const headerResult = await connection.request()
-                .input('pqCode', pqCode)
-                .query(getHeaderQuery);
-
-            if (headerResult.recordset.length === 0) {
-                throw new Error('Canvassing request not found');
-            }
-
-            const pqRowId = headerResult.recordset[0].ROWID;
-
-
-            // Log activity
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @approverName, GETDATE())
-            `;
-            await connection.request()
-                .input('activity', `Canvassing Request ${pqCode} approved by ${approverName}`)
-                .input('approverName', approverName)
-                .query(activityQuery);
-
-            return {
-                success: true,
-                message: 'Canvassing request approved successfully'
-            };
-        } catch (error) {
-            console.error('Error approving canvassing request:', error);
-            throw new Error('Failed to approve canvassing request: ' + error.message);
-        }
-    }
-
     // Post canvassing request (change status to posted)
     static async postCanvassingRequest(pqCode, posterName) {
-        let connection;
-        try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+        let connection = null;
+        let transaction = null;
 
-            // Update header post status to 2 (APPROVED/POSTED)
+        try {
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for canvassing request posting');
+
+            // Update header post status to 1 (POSTED)
             const updateHeaderQuery = `
                 UPDATE [PURCHASE.QUOTATIONHEADER.1]
                 SET POSTSTATUS = 1,
@@ -529,11 +500,12 @@ class Canvassing {
                 WHERE PQCODE = @pqCode
             `;
 
-            const result = await connection.request()
+            const result = await transaction.request()
                 .input('pqCode', pqCode)
                 .input('posterName', posterName)
                 .query(updateHeaderQuery);
 
+            // Update details post status to 1 (POSTED)
             const updateDetailsQuery = `
                 UPDATE [PURCHASE.QUOTATIONDETAILS.1]
                 SET PQDPOSTSTATUS = 1,
@@ -542,7 +514,7 @@ class Canvassing {
                 WHERE PQCODE = @pqCode
             `;
 
-            const resultDetails = await connection.request()
+            const resultDetails = await transaction.request()
                 .input('pqCode', pqCode)
                 .input('posterName', posterName)
                 .query(updateDetailsQuery);
@@ -556,10 +528,16 @@ class Canvassing {
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
                 VALUES (@activity, @posterName, GETDATE())
             `;
-            await connection.request()
+            await transaction.request()
                 .input('activity', `Canvassing Request ${pqCode} posted by ${posterName}`)
                 .input('posterName', posterName)
                 .query(activityQuery);
+
+            console.log('Activity log inserted');
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
 
             return {
                 success: true,
@@ -567,7 +545,20 @@ class Canvassing {
             };
         } catch (error) {
             console.error('Error posting canvassing request:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw new Error('Failed to post canvassing request: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
         }
     }
 

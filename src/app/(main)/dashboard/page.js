@@ -105,7 +105,7 @@ export default function DashboardClient() {
     }, []);
 
     // Helper function to fetch with timeout
-    const fetchWithTimeout = (promise, timeout = 15000) => {
+    const fetchWithTimeout = (promise, timeout = 30000) => {
         return Promise.race([
             promise,
             new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout))
@@ -117,7 +117,7 @@ export default function DashboardClient() {
             const isInitialLoad = !data;
             if (isInitialLoad) setLoading(true);
             try {
-                const statsData = await fetchWithTimeout(getDashboardStats(user, isUserAdmin, selectedDateRange), 10000);
+                const statsData = await fetchWithTimeout(getDashboardStats(user, isUserAdmin, selectedDateRange), 30000);
                 setData(statsData);
             } catch (error) {
                 console.error('Error fetching stats:', error);

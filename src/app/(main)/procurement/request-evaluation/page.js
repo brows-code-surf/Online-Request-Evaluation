@@ -674,7 +674,7 @@ function RequestEvaluationContent() {
                     setShowSuccessModal(false);
                     // Only unselect the approval after action if not an admin bypass
                     if (!isAdmin()) {
-                        setSelectedApproval(id);
+                        setSelectedApproval(null);
                     }
                     // reloadApprovalsData();
                 }}

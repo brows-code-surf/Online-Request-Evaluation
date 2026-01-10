@@ -164,8 +164,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         // Clear item number when description is empty
         newItems[index].itemNumber = '';
         setFormData(prev => ({ ...prev, items: newItems }));
-      } else if (value.trim().split(/\s+/).filter(word => word.length > 0).length <= 3) {
-        // Generate item number when description has less than 3 words
+      } else {
+        // Generate item number for any non-empty description
         let generatedItemNumber = '';
         try {
           const result = await generateItemNumber(value);
