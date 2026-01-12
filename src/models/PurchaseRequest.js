@@ -161,7 +161,7 @@ class PurchaseRequest {
 
             // Get details
             const detailsQuery = `
-                SELECT * FROM [PURCHASE.REQUESTDETAILS.1]
+                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS FROM [PURCHASE.REQUESTDETAILS.1]
                 WHERE REFERENCENO = @referenceNo
                 ORDER BY ROWID
             `;
@@ -207,7 +207,8 @@ class PurchaseRequest {
                     quantity: detail.QUANTITY,
                     budgetCode: detail.BUDGETCODE,
                     remarks: detail.REMARKS,
-                    dateNeeded: detail.DATENEEDED
+                    dateNeeded: detail.DATENEEDED,
+                    itemStatus: detail.ITEMSTATUS
                 }))
             };
         } catch (error) {
@@ -344,10 +345,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, RID
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @rid
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid
                     )
                 `;
 
@@ -362,6 +363,7 @@ class PurchaseRequest {
                     .input('budgetCode', detail.budgetCode)
                     .input('remarks', detail.remarks || '')
                     .input('dateNeeded', detail.dateNeeded)
+                    .input('itemStatus', detail.itemStatus || '')
                     .input('rid', rid)
                     .query(detailInsertQuery);
             }
@@ -621,10 +623,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, RID
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @rid
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid
                     )
                 `;
 
@@ -639,6 +641,7 @@ class PurchaseRequest {
                     .input('budgetCode', detail.budgetCode)
                     .input('remarks', detail.remarks || '')
                     .input('dateNeeded', detail.dateNeeded)
+                    .input('itemStatus', detail.itemStatus || '')
                     .input('rid', rid)
                     .query(detailInsertQuery);
             }

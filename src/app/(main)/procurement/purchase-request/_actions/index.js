@@ -312,7 +312,7 @@ async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, crea
               <strong>Items:</strong> ${detailsData.length}<br><br>
               Please review this request as soon as possible.`,
         buttonText: 'Review Request',
-        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${referenceNo}`,
         companyEmail: 'support@santeh.com',
         companyPhone: '+1 (555) 123-4567',
         unsubscribeUrl: '#',
@@ -326,7 +326,7 @@ async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, crea
         'New Purchase Request Review',
         `Purchase Request ${referenceNo} created by ${creatorName} requires your review`,
         reviewerUser.empName,
-        `/request-evaluation?id=${referenceNo}`
+        `/procurement/request-evaluation?id=${referenceNo}`
       );
 
       await notification.save(creatorName);
@@ -356,7 +356,7 @@ async function notifyApproverOfReviewedPR(referenceNo, pr, reviewerName) {
               <strong>Request Type:</strong> ${pr.header.requestType}<br><br>
               Please review and approve this request.`,
         buttonText: 'Approve Request',
-        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${referenceNo}`,
         companyEmail: 'support@santeh.com',
         companyPhone: '+1 (555) 123-4567',
         unsubscribeUrl: '#',
@@ -369,7 +369,7 @@ async function notifyApproverOfReviewedPR(referenceNo, pr, reviewerName) {
         'Purchase Request Approval',
         `Purchase Request ${referenceNo} reviewed by ${reviewerName} - requires your approval`,
         approverUser.empName,
-        `/request-evaluation?id=${referenceNo}`
+        `/procurement/request-evaluation?id=${referenceNo}`
       );
 
       await notification.save(reviewerName);
@@ -533,7 +533,7 @@ async function notifyApproversOfNewPR(referenceNo, headerData, detailsData, crea
               <strong>Items:</strong> ${detailsData.length}<br><br>
               Please review and approve this request as soon as possible.`,
         buttonText: 'Review Request',
-        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?id=${referenceNo}`,
+        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${referenceNo}`,
         companyEmail: 'support@santeh.com',
         companyPhone: '+1 (555) 123-4567',
         unsubscribeUrl: '#',
@@ -547,7 +547,7 @@ async function notifyApproversOfNewPR(referenceNo, headerData, detailsData, crea
         'New Purchase Request Approval',
         `Purchase Request ${referenceNo} created by ${creatorName} requires your approval`,
         approverUser.empName,
-        `/request-evaluation?id=${referenceNo}`
+        `/procurement/request-evaluation?id=${referenceNo}`
       );
 
       await notification.save(creatorName);

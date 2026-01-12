@@ -43,6 +43,7 @@ class RequestEvaluation {
                             PRD.BUDGETCODE,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
+                            PRD.ITEMSTATUS,
                             PRH.IS_READ,
                             PRH.REVIEWER,
                             PRH.DATEREVIEWED,
@@ -262,6 +263,18 @@ class RequestEvaluation {
 
             console.log('Header status updated');
 
+            // Update item statuses to match the new request status
+            const updateItemsQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1]
+                                     SET ITEMSTATUS = @newStatus
+                                     WHERE REFERENCENO = @referenceNo`;
+
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('newStatus', newStatus)
+                .query(updateItemsQuery);
+
+            console.log(`Item statuses updated to ${newStatus}`);
+
             // Create notification for the next approver with improved error handling
             const notificationResults = [];
             try {
@@ -428,6 +441,17 @@ class RequestEvaluation {
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
             console.log('Header status updated to REJECTED');
+
+            // Update item statuses to REJECTED
+            const updateItemsQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1]
+                                     SET ITEMSTATUS = 'REJECTED'
+                                     WHERE REFERENCENO = @referenceNo`;
+
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(updateItemsQuery);
+
+            console.log('Item statuses updated to REJECTED');
 
             // COMMIT TRANSACTION - All operations succeeded
             await transaction.commit();

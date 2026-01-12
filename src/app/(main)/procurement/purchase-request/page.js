@@ -292,7 +292,13 @@ function PurchaseRequestContent() {
 
   const handleCreatePurchaseRequest = async (headerData, detailsData) => {
     try {
-      const result = await createPurchaseRequest(headerData, detailsData, user?.empName);
+      // Set itemStatus to "FOR POSTING" for all items when creating
+      const detailsWithStatus = detailsData.map(detail => ({
+        ...detail,
+        itemStatus: 'FOR POSTING'
+      }));
+
+      const result = await createPurchaseRequest(headerData, detailsWithStatus, user?.empName);
       if (result.success) {
         let message = `Purchase request ${result.referenceNo} has been created successfully.`;
         if (result.referenceNumberChanged) {
