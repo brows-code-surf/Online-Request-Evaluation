@@ -1,3 +1,4 @@
+import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 import Notification from './Notification.js';
 
@@ -35,14 +36,14 @@ class RequestEvaluation {
                             PRH.REQUESTEDBY as requestedBy,
                             PRH.COMPANY as company,
                             PRH.LOCNCODE as locationCode,
-                            PRD.ITEMSTATUS as STATUS,
                             PRD.ITEMNMBR,
                             PRD.ITEMDESC,
                             PRD.UOFM,
-                            ISNULL(PRD.QUANTITY, 0) + ISNULL(PRD.QUANTITYADJ, 0) - ISNULL(PRD.QUANTITYCANCEL, 0) as QUANTITY,
-                            PRD.BUDGETNAME,
+                            ISNULL(PRD.QUANTITY, 0) as QUANTITY,
+                            PRD.BUDGETCODE,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
+                            PRD.ITEMSTATUS,
                             PRH.IS_READ,
                             PRH.REVIEWER,
                             PRH.DATEREVIEWED,
@@ -50,7 +51,8 @@ class RequestEvaluation {
                             PRH.DATEAPPROVED,
                             PRH.ADDRESSEDTO,
                             PRH.DATERECEIVED,
-                            PRH.REQUESTSTATUS
+                            PRH.REQUESTSTATUS,
+                            PRH.CANCELREMARKS
                             FROM [PURCHASE.REQUESTDETAILS.1] PRD
                             INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
                             WHERE PRH.REFERENCENO = @REFERENCENO`;
@@ -204,11 +206,22 @@ class RequestEvaluation {
         }
     }
 
+    // Update approved evaluation with transaction safety
     static async updateApprovedEvaluation(referenceNo, approverName, currentStatus) {
         console.log(`updateApprovedEvaluation called with:`, { referenceNo, approverName, currentStatus });
-        let connection;
+        let connection = null;
+        let transaction = null;
+
         try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for approval update');
 
             let newStatus = '';
             let headerUpdateQuery = '';
@@ -216,47 +229,51 @@ class RequestEvaluation {
             // Determine new status and set appropriate fields based on current status
             if (currentStatus === 'FOR CONFIRMATION') {
                 newStatus = 'FOR REQUEST APPROVAL';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET REVIEWEDBY = @approverName, 
-                                        DATEREVIEWED = GETDATE(), 
+                // Only update reviewer fields if a reviewer is assigned
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET REVIEWEDBY = CASE WHEN REVIEWER IS NOT NULL AND REVIEWER != '' THEN @approverName ELSE REVIEWEDBY END,
+                                        DATEREVIEWED = CASE WHEN REVIEWER IS NOT NULL AND REVIEWER != '' THEN GETDATE() ELSE DATEREVIEWED END,
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR REQUEST APPROVAL') {
                 newStatus = 'FOR PURCHASING LEAD TIME';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET APPROVEDBY = @approverName, 
-                                        DATEAPPROVED = GETDATE(), 
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET APPROVEDBY = @approverName,
+                                        DATEAPPROVED = GETDATE(),
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
                 newStatus = 'FOR CANVASSING';
-                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                    SET RECEIVEDBY = @approverName, 
-                                        DATERECEIVED = GETDATE(), 
+                headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                    SET RECEIVEDBY = @approverName,
+                                        DATERECEIVED = GETDATE(),
                                         IS_READ = 0,
-                                        REQUESTSTATUS = @newStatus 
+                                        REQUESTSTATUS = @newStatus
                                     WHERE REFERENCENO = @referenceNo`;
             }
 
-            const requestHeader = connection.request();
+            const requestHeader = transaction.request();
             requestHeader.input('referenceNo', referenceNo);
             requestHeader.input('approverName', approverName);
             requestHeader.input('newStatus', newStatus);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
-            // Update request details with new status
-            const detailsUpdateQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] 
-                                       SET ITEMSTATUS = @newStatus 
-                                       WHERE REFERENCENO = @referenceNo`;
+            console.log('Header status updated');
 
-            const requestDetails = connection.request();
-            requestDetails.input('referenceNo', referenceNo);
-            requestDetails.input('newStatus', newStatus);
+            // Update item statuses to match the new request status
+            const updateItemsQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1]
+                                     SET ITEMSTATUS = @newStatus
+                                     WHERE REFERENCENO = @referenceNo`;
 
-            const resultDetails = await requestDetails.query(detailsUpdateQuery);
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('newStatus', newStatus)
+                .query(updateItemsQuery);
+
+            console.log(`Item statuses updated to ${newStatus}`);
 
             // Create notification for the next approver with improved error handling
             const notificationResults = [];
@@ -270,13 +287,13 @@ class RequestEvaluation {
                 if (newStatus === 'FOR REQUEST APPROVAL') {
                     // Get the approver from the request
                     const approverQuery = `SELECT APPROVER FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const approverResult = await connection.request()
+                    const approverResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(approverQuery);
                 } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
                     // Get the addressed to person from the request
                     const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const addressedToResult = await connection.request()
+                    const addressedToResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(addressedToQuery);
 
@@ -301,7 +318,7 @@ class RequestEvaluation {
                 } else if (newStatus === 'FOR CANVASSING') {
                     // For final approval, notify all participants
                     const participantsQuery = `SELECT REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const participantsResult = await connection.request()
+                    const participantsResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(participantsQuery);
 
@@ -367,52 +384,100 @@ class RequestEvaluation {
                 notificationResults.push({ type: 'system-error', error: notificationError.message });
             }
 
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
             return {
                 headerUpdated: resultHeader.rowsAffected[0] > 0,
-                detailsUpdated: resultDetails.rowsAffected[0] > 0,
                 newStatus: newStatus
             };
 
         } catch (error) {
             console.error('Error updating approved evaluation:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw error;
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 
+    // Reject approved evaluation with transaction safety
     static async rejectApprovedEvaluation(referenceNo, approverName, rejectionReason) {
-        let connection;
-        try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+        let connection = null;
+        let transaction = null;
 
-            const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] 
-                                      SET REQUESTSTATUS = 'REJECTED'
+        try {
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for rejection');
+
+            const headerUpdateQuery = `UPDATE [PURCHASE.REQUESTHEADER.1]
+                                      SET REQUESTSTATUS = 'REJECTED',
+                                          CANCELREMARKS = @rejectionReason
                                       WHERE REFERENCENO = @referenceNo`;
 
-            const requestHeader = connection.request();
+            const requestHeader = transaction.request();
             requestHeader.input('referenceNo', referenceNo);
+            requestHeader.input('rejectionReason', rejectionReason);
 
             const resultHeader = await requestHeader.query(headerUpdateQuery);
 
-            // Update request details status to REJECTED
-            const detailsUpdateQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] 
-                                       SET ITEMSTATUS = 'REJECTED',
-                                       ADJCANCELREMARKS = @rejectionReason
-                                       WHERE REFERENCENO = @referenceNo`;
+            console.log('Header status updated to REJECTED');
 
-            const requestDetails = connection.request();
-            requestDetails.input('referenceNo', referenceNo);
-            requestDetails.input('rejectionReason', rejectionReason);
+            // Update item statuses to REJECTED
+            const updateItemsQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1]
+                                     SET ITEMSTATUS = 'REJECTED'
+                                     WHERE REFERENCENO = @referenceNo`;
 
-            const resultDetails = await requestDetails.query(detailsUpdateQuery);
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(updateItemsQuery);
+
+            console.log('Item statuses updated to REJECTED');
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
 
             return {
-                headerUpdated: resultHeader.rowsAffected[0] > 0,
-                detailsUpdated: resultDetails.rowsAffected[0] > 0
+                headerUpdated: resultHeader.rowsAffected[0] > 0
             };
 
         } catch (error) {
             console.error('Error rejecting evaluation:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw error;
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 
@@ -531,9 +596,9 @@ class RequestEvaluation {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             // Check if table exists
-            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTDETAILS.1');
-            if (!detailsExists) {
-                console.warn('PURCHASE.REQUESTDETAILS.1 table not found.');
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.REQUESTHEADER.1');
+            if (!headerExists) {
+                console.warn('PURCHASE.REQUESTHEADER.1 table not found.');
                 return [];
             }
 
@@ -541,27 +606,28 @@ class RequestEvaluation {
                 SELECT
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'CANCELLED' THEN 'CANCELLED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END as status,
-                    COUNT(*) as count
-                FROM [PURCHASE.REQUESTDETAILS.1] PRD
-                INNER JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PRD.REFERENCENO = PRH.REFERENCENO
+                    COUNT(DISTINCT PRH.REFERENCENO) as count
+                FROM [PURCHASE.REQUESTHEADER.1] PRH
                 GROUP BY
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'APPROVED' THEN 'APPROVED'
-                        WHEN LTRIM(RTRIM(PRD.ITEMSTATUS)) = 'REJECTED' THEN 'REJECTED'
-                        ELSE LTRIM(RTRIM(PRD.ITEMSTATUS))
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'APPROVED' THEN 'APPROVED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'REJECTED' THEN 'REJECTED'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'CANCELLED' THEN 'CANCELLED'
+                        ELSE LTRIM(RTRIM(PRH.REQUESTSTATUS))
                     END
                 ORDER BY status
             `;
@@ -697,7 +763,7 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CAST(DATEREQUESTED AS DATE) as requestDate,
-                    COUNT(DISTINCT ROWID) as requestCount
+                    COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
                 AND REQUESTEDBY = @createdBy

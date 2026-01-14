@@ -301,7 +301,7 @@ export default function ContentLeftPanel({
                                             {approval.jobTitle}
                                         </p>
                                     )}
-                                    {(requestEvalApprovalPage || filterType === 'purchase-request') && approval.id && (
+                                    {(requestEvalApprovalPage || filterType === 'purchase-request' || filterType === 'request-evaluation') && approval.id && (
                                         <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                             {approval.id}
                                         </p>

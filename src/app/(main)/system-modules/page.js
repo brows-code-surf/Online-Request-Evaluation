@@ -33,6 +33,8 @@ function SystemModulesContent() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showActivateModal, setShowActivateModal] = useState(false);
     const [selectedModule, setSelectedModule] = useState(null);
+    const [submodules, setSubmodules] = useState([]);
+    const [currentSubmodule, setCurrentSubmodule] = useState('');
 
     // Form states
     const [formData, setFormData] = useState({

@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Printer } from 'lucide-react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 
 export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) => {
   const { darkMode } = useAuth();
@@ -127,7 +127,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                 <th style="width: 25%;">Item Description</th>
                 <th style="width: 8%;">UOFM</th>
                 <th style="width: 10%;" class="text-center">Quantity</th>
-                <th style="width: 15%;">Budget Name</th>
+                <th style="width: 15%;">Budget Code</th>
                 <th style="width: 12%;">Date Needed</th>
                 <th style="width: 20%;">Remarks</th>
               </tr>
@@ -140,7 +140,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                       <td>${item.itemDescription || '-'}</td>
                       <td>${item.unitOfMeasure || '-'}</td>
                       <td class="text-center">${item.quantity || 0}</td>
-                      <td>${item.budgetName || '-'}</td>
+                      <td>${item.budgetCode || '-'}</td>
                       <td>${item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}</td>
                       <td>${item.remarks || '-'}</td>
                     </tr>
@@ -347,7 +347,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                     <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Item Description</th>
                     <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">UOFM</th>
                     <th className="border border-gray-300 px-3 py-2 text-center text-xs font-bold">Quantity</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Budget Name</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Budget Code</th>
                     <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Date Needed</th>
                     <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Remarks</th>
                   </tr>
@@ -360,7 +360,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.itemDescription || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.unitOfMeasure || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm text-center font-semibold">{item.quantity || 0}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.budgetName || '-'}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.budgetCode || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">
                           {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
                         </td>

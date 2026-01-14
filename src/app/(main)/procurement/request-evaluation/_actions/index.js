@@ -139,9 +139,167 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                     } else {
                         console.log('No approver data found for status:', currentStatus);
                     }
-                } else {
-                    console.log('Current status does not trigger email notification:', currentStatus);
+            } else if (currentStatus === 'FOR PURCHASING LEAD TIME') {
+                // Receiver approval - notify reviewer and approver that request is now processing
+                console.log('Processing receiver approval - notifying reviewer and approver');
+                try {
+                    // Get request details to find reviewer and approver
+                    const requestDetails = await RequestEvaluation.getEvaluationDetails(referenceNo);
+                    if (requestDetails.length > 0) {
+                        const request = requestDetails[0];
+                        const reviewerName = request.REVIEWER;
+                        const approverName = request.APPROVER;
+
+                        console.log('Participants for receiver approval:', { reviewerName, approverName });
+
+                        // Notify reviewer if exists
+                        if (reviewerName && reviewerName.trim()) {
+                            let reviewerEmail = null;
+                            if (reviewerName.includes('@')) {
+                                reviewerEmail = reviewerName;
+                            } else {
+                                reviewerEmail = await UserProfile.getEmailByEmployeeName(reviewerName);
+                            }
+
+                            if (reviewerEmail) {
+                                const subject = 'Request Now Processing';
+                                const body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been received and is now processing.`;
+
+                                const emailData = {
+                                    email: reviewerEmail,
+                                    name: reviewerName,
+                                    subject: subject,
+                                    companyName: 'SANTEH',
+                                    greeting: 'Dear',
+                                    body: body,
+                                    buttonText: 'View Request',
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    companyEmail: 'noreply@santehfeeds.com',
+                                    companyPhone: '+63 (02) 8-XXX-XXXX',
+                                    unsubscribeUrl: '#',
+                                    preferencesUrl: '#'
+                                };
+                                console.log('Sending processing notification to reviewer:', reviewerEmail);
+                                await sendEmailWithTemplate(emailData);
+                                console.log('Reviewer notification email sent successfully');
+
+                                // Create notification for reviewer
+                                try {
+                                    const notification = new Notification(
+                                        'Request Now Processing',
+                                        `Request ${referenceNo} has been received and is now processing.`,
+                                        reviewerName,
+                                        `/request-evaluation?id=${referenceNo}`
+                                    );
+                                    await notification.save(approverName);
+                                    console.log('Notification created for reviewer:', reviewerName);
+                                } catch (notificationError) {
+                                    console.error('Error creating reviewer notification:', notificationError);
+                                }
+                            }
+                        }
+
+                        // Notify approver if exists
+                        if (approverName && approverName.trim()) {
+                            let approverEmail = null;
+                            if (approverName.includes('@')) {
+                                approverEmail = approverName;
+                            } else {
+                                approverEmail = await UserProfile.getEmailByEmployeeName(approverName);
+                            }
+
+                            if (approverEmail) {
+                                const subject = 'Request Now Processing';
+                                const body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been received and is now processing.`;
+
+                                const emailData = {
+                                    email: approverEmail,
+                                    name: approverName,
+                                    subject: subject,
+                                    companyName: 'SANTEH',
+                                    greeting: 'Dear',
+                                    body: body,
+                                    buttonText: 'View Request',
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    companyEmail: 'noreply@santehfeeds.com',
+                                    companyPhone: '+63 (02) 8-XXX-XXXX',
+                                    unsubscribeUrl: '#',
+                                    preferencesUrl: '#'
+                                };
+                                console.log('Sending processing notification to approver:', approverEmail);
+                                await sendEmailWithTemplate(emailData);
+                                console.log('Approver notification email sent successfully');
+
+                                // Create notification for approver
+                                try {
+                                    const notification = new Notification(
+                                        'Request Now Processing',
+                                        `Request ${referenceNo} has been received and is now processing.`,
+                                        approverName,
+                                        `/request-evaluation?id=${referenceNo}`
+                                    );
+                                    await notification.save(approverName);
+                                    console.log('Notification created for approver:', approverName);
+                                } catch (notificationError) {
+                                    console.error('Error creating approver notification:', notificationError);
+                                }
+                            }
+                        }
+
+                        // Notify requester if exists
+                        const requesterName = request.REQUESTEDBY;
+                        if (requesterName && requesterName.trim()) {
+                            let requesterEmail = null;
+                            if (requesterName.includes('@')) {
+                                requesterEmail = requesterName;
+                            } else {
+                                requesterEmail = await UserProfile.getEmailByEmployeeName(requesterName);
+                            }
+
+                            if (requesterEmail) {
+                                const subject = 'Your Request is Now Processing';
+                                const body = `Your request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been received and is now processing.`;
+
+                                const emailData = {
+                                    email: requesterEmail,
+                                    name: requesterName,
+                                    subject: subject,
+                                    companyName: 'SANTEH',
+                                    greeting: 'Dear',
+                                    body: body,
+                                    buttonText: 'View Request',
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    companyEmail: 'noreply@santehfeeds.com',
+                                    companyPhone: '+63 (02) 8-XXX-XXXX',
+                                    unsubscribeUrl: '#',
+                                    preferencesUrl: '#'
+                                };
+                                console.log('Sending processing notification to requester:', requesterEmail);
+                                await sendEmailWithTemplate(emailData);
+                                console.log('Requester notification email sent successfully');
+
+                                // Create notification for requester
+                                try {
+                                    const notification = new Notification(
+                                        'Your Request is Now Processing',
+                                        `Your request ${referenceNo} has been received and is now processing.`,
+                                        requesterName,
+                                        `/request-evaluation?id=${referenceNo}`
+                                    );
+                                    await notification.save(approverName);
+                                    console.log('Notification created for requester:', requesterName);
+                                } catch (notificationError) {
+                                    console.error('Error creating requester notification:', notificationError);
+                                }
+                            }
+                        }
+                    }
+                } catch (emailError) {
+                    console.error('Error sending receiver approval notifications:', emailError);
                 }
+            } else {
+                console.log('Current status does not trigger email notification:', currentStatus);
+            }
             } catch (emailError) {
                 console.error('Error sending notification email:', emailError);
                 // Don't throw error to avoid failing the approval process
@@ -182,6 +340,8 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
 
 export async function rejectEvaluation(referenceNo, approverName, rejectionReason) {
     try {
+        // Get current status before rejection
+        const currentStatus = await RequestEvaluation.getRequestStatus(referenceNo);
         const result = await RequestEvaluation.rejectApprovedEvaluation(referenceNo, approverName, rejectionReason);
 
         // Send email notification for rejection

@@ -1,5 +1,6 @@
 import connectToDatabase from '@/lib/db.js';
 import bcrypt from "bcryptjs";
+import next from 'next';
 
 class UserProfile {
     static async getUserByEmail(email) {
@@ -367,16 +368,52 @@ class UserProfile {
     static async shouldRequireOTP(employeeID) {
         try {
             const nextOTP = await UserProfile.getNextOTP(employeeID);
+            const user = await UserProfile.getUserByEmployeeID(employeeID);
+            const loggedIn = user?.loggedIn;
 
-            if (!nextOTP) {
-                return true; // No NEXT_OTP set, require OTP
+            // Get today's date in YYYY-MM-DD format
+            const today = new Date().toISOString().split('T')[0];
+
+            // Check NEXT_OTP date
+            let nextOTPDateStr = null;
+            if (nextOTP) {
+                let nextOTPDate;
+                if (typeof nextOTP === 'string') {
+                    // Handle different date string formats
+                    let dateStr = nextOTP.trim();
+                    if (dateStr.includes(' ')) {
+                        // Format like '2026-01-05 06:42:00' or '2026-01-05 06:42:00.000'
+                        const parts = dateStr.split(' ');
+                        if (parts.length === 2) {
+                            nextOTPDateStr = parts[0]; // Just the date part
+                        }
+                    } else {
+                        nextOTPDateStr = dateStr.split('T')[0]; // If already ISO, take date part
+                    }
+                } else {
+                    nextOTPDate = new Date(nextOTP);
+                    nextOTPDateStr = nextOTPDate.toISOString().split('T')[0];
+                }
             }
 
-            const now = new Date();
-            const nextOTPDate = new Date(nextOTP);
+            // Check LOGGEDIN date
+            let loggedInDateStr = null;
+            if (loggedIn) {
+                let loggedInDate;
+                if (typeof loggedIn === 'string') {
+                    loggedInDateStr = loggedIn.split(' ')[0]; // Assume format 'YYYY-MM-DD HH:MM:SS'
+                } else {
+                    loggedInDate = new Date(loggedIn);
+                    loggedInDateStr = loggedInDate.toISOString().split('T')[0];
+                }
+            }
 
-            // Require OTP if current time is past NEXT_OTP
-            return now >= nextOTPDate;
+            // Require OTP if NEXT_OTP date is past or equal to today, or if LOGGEDIN date is today
+            const requireDueToNextOTP = nextOTPDateStr && nextOTPDateStr <= today;
+            const requireDueToLoggedIn = loggedInDateStr && loggedInDateStr === today;
+            console.log('shouldRequireOTP:', nextOTPDateStr );
+
+            return requireDueToNextOTP || !nextOTP; // Also require if no NEXT_OTP set
         } catch (error) {
             console.error('Error checking if OTP is required:', error);
             return true; // Default to requiring OTP on error

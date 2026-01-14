@@ -1,20 +1,12 @@
 'use client';
 
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 import { getNextReferenceNumber, generateItemNumber, getFilteredUsersForPurchaseRequest } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
+import BudgetModal from './BudgetModal';
 
-const BUDGET_OPTIONS = [
-  'IT Equipment',
-  'Office Supplies',
-  'Software Licenses',
-  'Marketing',
-  'Travel',
-  'Training',
-  'Maintenance',
-  'Other'
-];
+
 
 const UNIT_OF_MEASURE_OPTIONS = [
   'Each',
@@ -64,13 +56,15 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       itemDescription: '',
       unitOfMeasure: '',
       quantity: '',
-      budgetName: '',
+      budgetCode: '',
       dateNeeded: '',
       remarks: ''
     }]
   });
   const [errors, setErrors] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [currentBudgetItemIndex, setCurrentBudgetItemIndex] = useState(null);
 
   // Get users for dropdowns
   const [users, setUsers] = useState([]);
@@ -109,7 +103,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               itemDescription: detail.itemDescription || '',
               unitOfMeasure: detail.unitOfMeasure || '',
               quantity: detail.quantity || '',
-              budgetName: detail.budgetName || '',
+              budgetCode: detail.budgetCode || '',
               dateNeeded: detail.dateNeeded ? new Date(detail.dateNeeded).toISOString().split('T')[0] : '',
               remarks: detail.remarks || ''
             }))
@@ -118,7 +112,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               itemDescription: '',
               unitOfMeasure: '',
               quantity: '',
-              budgetName: '',
+              budgetCode: '',
               dateNeeded: '',
               remarks: ''
             }]
@@ -164,60 +158,71 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     newItems[index][field] = value;
     setFormData(prev => ({ ...prev, items: newItems }));
 
-    // Auto-generate item number when description changes
-    if (field === 'itemDescription' && value.trim()) {
-      try {
-        const result = await generateItemNumber(value);
-        if (result.success) {
-          let generatedItemNumber = result.itemNumber;
+    // Auto-generate or clear item number when description changes
+    if (field === 'itemDescription') {
+      if (!value.trim()) {
+        // Clear item number when description is empty
+        newItems[index].itemNumber = '';
+        setFormData(prev => ({ ...prev, items: newItems }));
+      } else {
+        // Generate item number for any non-empty description
+        let generatedItemNumber = '';
+        try {
+          const result = await generateItemNumber(value);
+          if (result.success) {
+            generatedItemNumber = result.itemNumber;
 
-          // Check for conflicts with existing items in the form
-          // Find items with same base item number but different descriptions
-          const basePattern = generatedItemNumber.split('-')[0]; // Get base (e.g., 'CIC' from 'CIC-1')
-          const conflictingItems = newItems.filter((item, itemIndex) =>
-            itemIndex !== index && // Not the current item
-            item.itemNumber &&
-            item.itemNumber.startsWith(basePattern) &&
-            item.itemDescription.trim().toLowerCase() !== value.trim().toLowerCase()
-          );
+            // Check for conflicts with existing items in the form only for descriptions with 2 words
+            const wordCount = value.trim().split(/\s+/).filter(word => word.length > 0).length;
+            if (wordCount >= 2) {
+              // Find items with same base item number but different descriptions
+              const basePattern = generatedItemNumber.split('-')[0]; // Get base (e.g., 'CIC' from 'CIC-1')
+              const conflictingItems = newItems.filter((item, itemIndex) =>
+                itemIndex !== index && // Not the current item
+                item.itemNumber &&
+                item.itemNumber.startsWith(basePattern) &&
+                item.itemDescription.trim().toLowerCase() !== value.trim().toLowerCase()
+              );
 
-          if (conflictingItems.length > 0) {
-            // Find the highest number used for this base
-            let highestNumber = 0;
-            conflictingItems.forEach(item => {
-              const itemBase = item.itemNumber.split('-')[0];
-              if (itemBase === basePattern) {
-                if (item.itemNumber.includes('-')) {
-                  const numberPart = parseInt(item.itemNumber.split('-')[1]);
-                  if (!isNaN(numberPart) && numberPart > highestNumber) {
-                    highestNumber = numberPart;
+              if (conflictingItems.length > 0) {
+                // Find the highest number used for this base
+                let highestNumber = 0;
+                conflictingItems.forEach(item => {
+                  const itemBase = item.itemNumber.split('-')[0];
+                  if (itemBase === basePattern) {
+                    if (item.itemNumber.includes('-')) {
+                      const numberPart = parseInt(item.itemNumber.split('-')[1]);
+                      if (!isNaN(numberPart) && numberPart > highestNumber) {
+                        highestNumber = numberPart;
+                      }
+                    } else {
+                      // Exact base match without number, treat as 0
+                      highestNumber = Math.max(highestNumber, 0);
+                    }
                   }
-                } else {
-                  // Exact base match without number, treat as 0
-                  highestNumber = Math.max(highestNumber, 0);
-                }
-              }
-            });
+                });
 
-            // Also check the generated item number itself
-            if (generatedItemNumber.includes('-')) {
-              const genNumberPart = parseInt(generatedItemNumber.split('-')[1]);
-              if (!isNaN(genNumberPart)) {
-                highestNumber = Math.max(highestNumber, genNumberPart);
+                // Also check the generated item number itself
+                if (generatedItemNumber.includes('-')) {
+                  const genNumberPart = parseInt(generatedItemNumber.split('-')[1]);
+                  if (!isNaN(genNumberPart)) {
+                    highestNumber = Math.max(highestNumber, genNumberPart);
+                  }
+                }
+
+                // Increment to get the next available number
+                const nextNumber = highestNumber + 1;
+                generatedItemNumber = `${basePattern}-${nextNumber}`;
               }
             }
-
-            // Increment to get the next available number
-            const nextNumber = highestNumber + 1;
-            generatedItemNumber = `${basePattern}-${nextNumber}`;
           }
 
           newItems[index].itemNumber = generatedItemNumber;
           setFormData(prev => ({ ...prev, items: newItems }));
+        } catch (error) {
+          console.error('Error generating item number:', error);
+          // Continue without item number generation
         }
-      } catch (error) {
-        console.error('Error generating item number:', error);
-        // Continue without item number generation
       }
     }
 
@@ -239,7 +244,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         itemDescription: '',
         unitOfMeasure: '',
         quantity: '',
-        budgetName: '',
+        budgetCode: '',
         dateNeeded: '',
         remarks: ''
       }]
@@ -287,8 +292,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       if (!item.quantity || item.quantity <= 0) {
         newErrors[`items.${index}.quantity`] = 'Valid quantity is required';
       }
-      if (!item.budgetName.trim()) {
-        newErrors[`items.${index}.budgetName`] = 'Budget name is required';
+      if (!item.budgetCode.trim()) {
+        newErrors[`items.${index}.budgetCode`] = 'Budget code is required';
       }
       if (!item.dateNeeded) {
         newErrors[`items.${index}.dateNeeded`] = 'Date needed is required';
@@ -355,7 +360,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       itemDescription: item.itemDescription,
       unitOfMeasure: item.unitOfMeasure,
       quantity: parseFloat(item.quantity),
-      budgetName: item.budgetName,
+      budgetCode: item.budgetCode,
       dateNeeded: item.dateNeeded,
       remarks: item.remarks
     }));
@@ -369,14 +374,27 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     return date.toISOString().split('T')[0];
   };
 
+  const handleOpenBudgetModal = (itemIndex) => {
+    setCurrentBudgetItemIndex(itemIndex);
+    setShowBudgetModal(true);
+  };
+
+  const handleBudgetSelect = (budgetDisplay) => {
+    if (currentBudgetItemIndex !== null) {
+      handleItemChange(currentBudgetItemIndex, 'budgetCode', budgetDisplay);
+    }
+    setShowBudgetModal(false);
+    setCurrentBudgetItemIndex(null);
+  };
+
   return (
-    <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} max-w-6xl mx-auto`}>
+    <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} max-w-6xl mx-auto px-4 sm:px-6 lg:px-8`}>
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
         {/* Header Information Section */}
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm p-6`}>
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-6`}>Header Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg sm:rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm p-4 sm:p-6`}>
+          <h3 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4 sm:mb-6`}>Header Information</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {/* Reference Number */}
             <div>
               <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
@@ -533,40 +551,40 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         </div>
 
         {/* Item Details Section */}
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm p-6`}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item Details</h3>
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg sm:rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm p-4 sm:p-6`}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+            <h3 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item Details</h3>
             <button
               ref={addItemButtonRef}
               type="button"
               onClick={addItem}
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add Item
             </button>
           </div>
 
           {formData.items.map((item, index) => (
-            <div key={index} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-4 mb-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
-              <div className="flex justify-between items-center mb-4">
-                <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
+            <div key={index} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} rounded-lg p-3 sm:p-4 mb-4 border ${darkMode ? 'border-gray-500' : 'border-gray-200'}`}>
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h4 className={`text-sm sm:text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Item {index + 1}</h4>
                 {formData.items.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
                     disabled={loading}
-                    className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                    className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50 text-sm"
                   >
                     Remove
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {/* Item Number */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Item Number <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -575,7 +593,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     readOnly
                     onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
                     data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
                     placeholder="Automated Item Number"
                     disabled={loading}
@@ -584,8 +602,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 </div>
 
                 {/* Item Description */}
-                <div className="md:col-span-2">
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <div className="sm:col-span-2 md:col-span-2">
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Item Description <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -593,7 +611,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     value={item.itemDescription}
                     onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
                     data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
                     placeholder="Enter item description"
                     disabled={loading}
@@ -603,14 +621,14 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
 
                 {/* Unit of Measure */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Unit of Measure <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={item.unitOfMeasure}
                     onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
                     data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
                     disabled={loading}
                   >
@@ -624,7 +642,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
 
                 {/* Quantity */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Quantity <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -634,7 +652,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                     data-error={errors[`items.${index}.quantity`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.quantity`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
                     placeholder="0.00"
                     disabled={loading}
@@ -642,30 +660,41 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   {errors[`items.${index}.quantity`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.quantity`]}</p>}
                 </div>
 
-                {/* Budget Name */}
+                {/* Budget Code */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    Budget Name <span className="text-red-500">*</span>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Budget Code <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={item.budgetName}
-                    onChange={(e) => handleItemChange(index, 'budgetName', e.target.value)}
-                    data-error={errors[`items.${index}.budgetName`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.budgetName`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                      }`}
-                    disabled={loading}
-                  >
-                    <option value="">Select budget</option>
-                    {BUDGET_OPTIONS.map(budget => (
-                      <option key={budget} value={budget} className={darkMode ? 'bg-gray-700' : ''}>{budget}</option>
-                    ))}
-                  </select>
-                  {errors[`items.${index}.budgetName`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetName`]}</p>}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={item.budgetCode}
+                      onChange={(e) => handleItemChange(index, 'budgetCode', e.target.value)}
+                      onClick={() => handleOpenBudgetModal(index)}
+                      data-error={errors[`items.${index}.budgetCode`] ? 'true' : 'false'}
+                      className={`w-full px-2 sm:px-3 py-2 pr-8 sm:pr-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.budgetCode`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                        } cursor-pointer`}
+                      placeholder="Click to select budget"
+                      disabled={loading}
+                      readOnly
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBudgetModal(index)}
+                      disabled={loading}
+                      className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center"
+                    >
+                      <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {errors[`items.${index}.budgetCode`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.budgetCode`]}</p>}
                 </div>
 
                 {/* Date Needed */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Date Needed <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -673,7 +702,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     value={formatDateForInput(item.dateNeeded)}
                     onChange={(e) => handleItemChange(index, 'dateNeeded', e.target.value)}
                     data-error={errors[`items.${index}.dateNeeded`] ? 'true' : 'false'}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.dateNeeded`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
                     disabled={loading}
                   />
@@ -681,14 +710,14 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 </div>
 
                 {/* Item Remarks */}
-                <div className="md:col-span-3">
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <div className="sm:col-span-2 md:col-span-3">
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Item Remarks
                   </label>
                   <textarea
                     value={item.remarks}
                     onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
                       }`}
                     rows={2}
                     placeholder="Enter item-specific remarks..."
@@ -701,7 +730,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <button
             type="button"
             onClick={onCancel}
@@ -739,6 +768,14 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowConfirmModal(false)}
         isLoading={loading}
+      />
+
+      {/* Budget Modal */}
+      <BudgetModal
+        isOpen={showBudgetModal}
+        onClose={() => setShowBudgetModal(false)}
+        onSelect={handleBudgetSelect}
+        darkMode={darkMode}
       />
     </div>
   );

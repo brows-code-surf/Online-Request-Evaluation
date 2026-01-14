@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../../utils/authContext';
+import { useAuth } from '../../../../utils/authContext';
 import ProtectedRoute from '@/utils/protectedRoute';
 import HeaderNavBar from '@/app/_components/headerNavBar';
-import ContentLeftPanel from '../_components/contentLeftPanel';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
-import SearchModal from '../_components/SearchModal';
+import SearchModal from '../../_components/SearchModal';
 
 import SuccessModal from '@/app/(main)/_components/successModal';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
 import { ToastContainer, toast } from 'react-toastify';
@@ -58,9 +58,9 @@ function PurchaseRequestContent() {
         const approvalsData = data.purchaseRequests.map(pr => ({
           ...pr,
           id: pr.referenceNo,
-          title: `${pr.company} - ${pr.requestStatus}`,
+          title: pr.company,
           requester: pr.requestedBy,
-          status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
+          status: pr.requestStatus,
           requestDate: pr.dateRequested,
           department: pr.company,
           isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -96,9 +96,9 @@ function PurchaseRequestContent() {
           const approvalsData = purchaseRequestsData.map(pr => ({
             ...pr,
             id: pr.referenceNo,
-            title: `${pr.company} - ${pr.requestStatus}`,
+            title: pr.company,
             requester: pr.requestedBy,
-            status: pr.isPosted ? 'POSTED' : 'NOT POSTED',
+            status: pr.requestStatus,
             requestDate: pr.dateRequested,
             department: pr.company,
             isRead: pr.isRead ? 'READ' : 'NOT READ',
@@ -182,9 +182,10 @@ function PurchaseRequestContent() {
             approver: details.purchaseRequest.header.approver || selectedPurchaseRequest.approver,
             dateReceived: details.purchaseRequest.header.dateReceived || selectedPurchaseRequest.dateReceived,
             addressedTo: details.purchaseRequest.header.addressedTo || selectedPurchaseRequest.addressedTo,
+            cancelRemarks: details.purchaseRequest.header.cancelRemarks,
             // Also update other header fields that might be relevant
             reviewedBy: details.purchaseRequest.header.reviewedBy || selectedPurchaseRequest.reviewedBy,
-            approvedBy: details.purchaseRequest.header.approvedBy || selectedPurchaseRequest.approvedBy,
+            approvedBy: details.purchaseRequest.header.approvedBy || selectedPurchaseRequest.approver,
             receivedBy: details.purchaseRequest.header.receivedBy || selectedPurchaseRequest.receivedBy
           });
         } else {
@@ -291,7 +292,13 @@ function PurchaseRequestContent() {
 
   const handleCreatePurchaseRequest = async (headerData, detailsData) => {
     try {
-      const result = await createPurchaseRequest(headerData, detailsData, user?.empName);
+      // Set itemStatus to "FOR POSTING" for all items when creating
+      const detailsWithStatus = detailsData.map(detail => ({
+        ...detail,
+        itemStatus: 'FOR POSTING'
+      }));
+
+      const result = await createPurchaseRequest(headerData, detailsWithStatus, user?.empName);
       if (result.success) {
         let message = `Purchase request ${result.referenceNo} has been created successfully.`;
         if (result.referenceNumberChanged) {
@@ -340,9 +347,11 @@ function PurchaseRequestContent() {
     }
   };
 
-  const handleCancelPurchaseRequest = async (referenceNo) => {
+  const handleCancelPurchaseRequest = async (referenceNo, cancelReason = '') => {
+    console.log('handleCancelPurchaseRequest called with:', { referenceNo, cancelReason });
     try {
-      const result = await cancelPurchaseRequest(referenceNo, user?.empName);
+      const result = await cancelPurchaseRequest(referenceNo, user?.empName, cancelReason);
+      console.log('Cancel result:', result);
       if (result.success) {
         setSuccessMessage({
           title: 'Purchase Request Cancelled',
@@ -559,7 +568,7 @@ function PurchaseRequestContent() {
               {user && isAdmin() && (
                 <button
                   onClick={() => setShowSearchModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-2xl transform hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50 backdrop-blur-md hover:backdrop-blur-sm opacity-70 hover:opacity-100"
                   title="Search Purchase Requests"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -571,7 +580,7 @@ function PurchaseRequestContent() {
               {/* Create Button */}
               <button
                 onClick={() => setCurrentView('create')}
-                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-2xl transform hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 backdrop-blur-md hover:backdrop-blur-sm opacity-70 hover:opacity-100"
                 title="Create Purchase Request"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

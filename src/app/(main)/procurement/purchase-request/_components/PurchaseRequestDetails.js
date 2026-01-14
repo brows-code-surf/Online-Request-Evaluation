@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
@@ -44,6 +44,7 @@ export default function PurchaseRequestDetails({
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [cancelRemarks, setCancelRemarks] = useState('');
   const menuRef = useRef(null);
 
   // Real-time updates for this specific purchase request
@@ -184,17 +185,19 @@ export default function PurchaseRequestDetails({
   };
 
   const handleCancelConfirm = async () => {
+    console.log('Canceling with remarks:', cancelRemarks);
     setShowCancelModal(false);
     setActionLoading(true);
 
     try {
       if (onCancel) {
-        await onCancel(purchaseRequest.referenceNo);
+        await onCancel(purchaseRequest.referenceNo, cancelRemarks);
       }
     } catch (error) {
       console.error('Error canceling purchase request:', error);
     } finally {
       setActionLoading(false);
+      setCancelRemarks('');
     }
   };
 
@@ -271,7 +274,7 @@ export default function PurchaseRequestDetails({
                   Post
                 </button>
               )}
-              {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
+              {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   disabled={loading || actionLoading}
@@ -383,7 +386,7 @@ export default function PurchaseRequestDetails({
                       <span className="truncate">Post Request</span>
                     </button>
                   )}
-                  {!purchaseRequest.isPosted && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
+                  {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                     <button
                       onClick={() => {
                         setShowCancelModal(true);
@@ -489,6 +492,28 @@ export default function PurchaseRequestDetails({
           </div>
         )}
 
+        {/* Cancel Remarks */}
+        {(purchaseRequest.requestStatus === 'REJECTED' || purchaseRequest.requestStatus === 'CANCELLED') && (
+          <div className="mb-6">
+            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>
+              {purchaseRequest.requestStatus === 'REJECTED' ? 'Rejection Reason' : 'Cancellation Reason'}
+            </h3>
+            <div className={`leading-relaxed p-4 rounded-lg border ${darkMode ? 'text-gray-300 bg-red-900/20 border-red-600' : 'text-gray-700 bg-red-50 border-red-200'}`}>
+              <div className="flex items-start gap-3">
+                <svg className={`w-5 h-5 mt-0.5 flex-shrink-0 ${purchaseRequest.requestStatus === 'REJECTED' ? 'text-red-500' : 'text-orange-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="flex-1">
+                  {purchaseRequest.cancelRemarks && purchaseRequest.cancelRemarks.trim()
+                    ? purchaseRequest.cancelRemarks
+                    : 'No reason provided'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Items Table */}
         <div className="mb-6">
           <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Items</h3>
@@ -500,7 +525,7 @@ export default function PurchaseRequestDetails({
                   <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Description</th>
                   <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>UOFM</th>
                   <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Name</th>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Code</th>
                   <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Date Needed</th>
                   <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Remarks</th>
                 </tr>
@@ -513,7 +538,7 @@ export default function PurchaseRequestDetails({
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemDescription || '-'}</td>
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure || '-'}</td>
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.quantity || 0}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetName || '-'}</td>
+                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetCode || '-'}</td>
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
                         {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
                       </td>
@@ -568,15 +593,23 @@ export default function PurchaseRequestDetails({
       />
 
       {/* Cancel Modal */}
-      <ConfirmModal
+      <RejectRequestModal
         isOpen={showCancelModal}
-        title="Cancel Purchase Request"
-        message="Are you sure you want to cancel this purchase request? This action cannot be undone and will mark the request as cancelled."
-        confirmButtonText="Cancel Request"
-        confirmButtonColor="red"
+        remarks={cancelRemarks}
+        onRemarksChange={setCancelRemarks}
         onConfirm={handleCancelConfirm}
-        onCancel={() => setShowCancelModal(false)}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setCancelRemarks('');
+        }}
         isLoading={actionLoading}
+        title="Cancel Purchase Request"
+        message="Please provide a reason for cancelling this purchase request. This will be recorded and displayed to relevant parties."
+        label="Cancellation Remarks"
+        placeholder="Enter reason for cancellation..."
+        confirmButtonText="Confirm Cancel"
+        confirmButtonColor="red"
+        iconPath="M6 18L18 6M6 6l12 12"
       />
 
       {/* Print Modal */}

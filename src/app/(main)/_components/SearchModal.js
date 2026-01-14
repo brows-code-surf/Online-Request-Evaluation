@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getAllPurchaseRequests } from '../purchase-request/_actions';
-import { fetchEvaluationLeftPanel } from '../request-evaluation/_actions';
+import { getAllPurchaseRequests } from '../procurement/purchase-request/_actions';
+import { fetchEvaluationLeftPanel } from '../procurement/request-evaluation/_actions';
 import { useAuth } from '@/utils/authContext';
 import SkeletonLoader from '../../_components/skeletonLoader';
 
@@ -187,20 +187,20 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
           onDoubleClick={() => handleRowDoubleClick(item)}
           className={`border-b ${darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} cursor-pointer transition-colors`}
         >
-          <td className="px-4 py-3 font-medium">{item.referenceNo}</td>
-          <td className="px-4 py-3">{item.company}</td>
-          <td className="px-4 py-3">{item.requestedBy}</td>
-          <td className="px-4 py-3">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.requestStatus)}`}>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs">{item.referenceNo}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.company}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.requestedBy}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3">
+            <span className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.requestStatus)}`}>
               {item.requestStatus}
             </span>
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">
             {new Date(item.dateRequested).toLocaleDateString()}
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 sm:px-4 py-2 sm:py-3">
             {item.isRush && (
-              <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+              <span className="px-1 sm:px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
                 RUSH
               </span>
             )}
@@ -214,20 +214,20 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
           onDoubleClick={() => handleRowDoubleClick(item)}
           className={`border-b ${darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} cursor-pointer transition-colors`}
         >
-          <td className="px-4 py-3 font-medium">{item.id}</td>
-          <td className="px-4 py-3">{item.department}</td>
-          <td className="px-4 py-3">{item.requester}</td>
-          <td className="px-4 py-3">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs">{item.id}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.department}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.requester}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3">
+            <span className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
               {item.status}
             </span>
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">
             {new Date(item.requestDate).toLocaleDateString()}
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 sm:px-4 py-2 sm:py-3">
             {item.isRush && (
-              <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+              <span className="px-1 sm:px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
                 RUSH
               </span>
             )}
@@ -240,43 +240,43 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
-      <div className={`w-full max-w-6xl max-h-[90vh] rounded-lg shadow-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden`}>
+    <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[1000] p-2 sm:p-4">
+      <div className={`w-full max-w-7xl max-h-[95vh] sm:max-h-[90vh] rounded-lg sm:rounded-xl shadow-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden`}>
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+        <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
           <div className="flex items-center justify-between">
-            <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               {getTitle()}
             </h2>
             <button
               onClick={onClose}
-              className={`p-2 rounded-full hover:${darkMode ? 'bg-gray-700' : 'bg-gray-100'} transition-colors`}
+              className={`p-1.5 sm:p-2 rounded-full hover:${darkMode ? 'bg-gray-700' : 'bg-gray-100'} transition-colors`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-4 mt-4">
-            <div className="flex-1 min-w-64">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-3 sm:mt-4">
+            <div className="flex-1 min-w-0">
               <input
                 type="text"
                 placeholder={getPlaceholder()}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className={`px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${
                   darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               >
@@ -290,7 +290,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className={`px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${
                   darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               >
@@ -310,7 +310,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
               <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                 <tr>
                   {getTableHeaders().map((header, index) => (
-                    <th key={index} className="px-4 py-3 text-left font-semibold">{header}</th>
+                    <th key={index} className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 text-left">{header}</th>
                   ))}
                 </tr>
               </thead>
@@ -344,8 +344,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
                     {filteredItems.map((item, index) => renderTableRow(item, index))}
                     {filteredItems.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="px-4 py-12 text-center">
-                          <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <td colSpan="6" className="text-xs px-4 py-12 text-center">
+                          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             No {type === 'purchase-request' ? 'purchase requests' : 'request evaluations'} found
                           </p>
                         </td>
@@ -359,12 +359,12 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
         </div>
 
         {/* Footer */}
-        <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className={`px-2 sm:px-4 lg:px-8 py-3 sm:py-4 border-t ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0`}>
+          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Double-click on a row to view details and take actions
           </p>
           <div className="flex gap-2">
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               {filteredItems.length} of {items.length} {type === 'purchase-request' ? 'requests' : 'evaluations'}
             </span>
           </div>

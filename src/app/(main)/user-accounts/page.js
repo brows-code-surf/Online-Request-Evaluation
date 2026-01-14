@@ -7,7 +7,7 @@ import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../utils/authContext';
 import UserProfileHeader from '../_components/userProfileHeader';
 import UserPassword from '../_components/userPassword';
-import { updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive } from './_actions';
+import { updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive, changeEmployeeName } from './_actions';
 import { JobTitles, Departments, JobLevel } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
 import ContentLeftPanel from '../_components/contentLeftPanel';
@@ -17,7 +17,7 @@ import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
 import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
 
 function UserAccountsContent() {
-    const { user, loading, darkMode } = useAuth();
+    const { user, loading, darkMode, isAdmin } = useAuth();
     const [pageLoading, setPageLoading] = useState(true);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -188,8 +188,20 @@ function UserAccountsContent() {
             return;
         }
 
-        setConfirmAction('saveProfile');
-        setConfirmMessage(`Are you sure you want to update ${selectedUser.requester}'s profile information? This action cannot be undone.`);
+        // Check if name is being changed
+        const originalName = selectedUser.requester;
+        const newName = profileData.empName.trim();
+        const isNameChanging = originalName !== newName;
+
+        if (isNameChanging) {
+            // Name is changing - use name change process
+            setConfirmAction('changeNameViaProfile');
+            setConfirmMessage(`Are you sure you want to change ${selectedUser.requester}'s name to "${newName}"? This will update their name in all related records across the system and cannot be undone.`);
+        } else {
+            // Regular profile update
+            setConfirmAction('saveProfile');
+            setConfirmMessage(`Are you sure you want to update ${selectedUser.requester}'s profile information? This action cannot be undone.`);
+        }
         setShowConfirmModal(true);
     };
 
@@ -366,14 +378,65 @@ function UserAccountsContent() {
         setShowConfirmPassword(false);
     };
 
+
+
+    const executeNameChangeViaProfile = async () => {
+        setSaveLoading(true);
+        setSuccessMessage('');
+        setErrorMessage('');
+        try {
+            const newName = profileData.empName.trim();
+            const result = await changeEmployeeName(selectedUser.employeeID, newName, user.employeeID);
+            if (result.success) {
+                setSuccessMessage(`${selectedUser.requester}'s name has been changed to "${newName}" successfully! ${result.totalAffectedRows} records updated across ${result.updatedTables.length} tables.`);
+                setIsEditing(false);
+
+                // Update the users list with the new name
+                setUsers(users.map(u =>
+                    u.employeeID === selectedUser.employeeID
+                        ? {
+                            ...u,
+                            requester: newName,
+                            title: newName
+                        }
+                        : u
+                ));
+
+                // Update the selected user to reflect changes
+                setSelectedUser(prev => prev ? {
+                    ...prev,
+                    requester: newName,
+                    title: newName
+                } : null);
+
+                setTimeout(() => setSuccessMessage(''), 5000);
+            } else {
+                const errorMessages = result.errors.map(err => {
+                    if (err.general) return err.general;
+                    if (err.table) return `${err.table}: ${err.error}`;
+                    return err;
+                }).join('; ');
+                setErrorMessage(`Failed to change name: ${errorMessages}`);
+            }
+        } catch (error) {
+            setErrorMessage('An error occurred. Please try again.');
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
     const handleConfirmAction = async () => {
         switch (confirmAction) {
             case 'saveProfile':
                 await executeProfileUpdate();
                 break;
+            case 'changeNameViaProfile':
+                await executeNameChangeViaProfile();
+                break;
             case 'changePassword':
                 await executePasswordChange();
                 break;
+
             case 'setInactive':
                 await executeSetInactive();
                 break;
@@ -425,7 +488,7 @@ function UserAccountsContent() {
     // Set up Pusher listeners for real-time user account updates
     useSocketMultiple('user-account-broadcast', {
         'user-profile-updated': useCallback((data) => {
-            console.log('User profile updated event received:', data);
+            // console.log('User profile updated event received:', data);
             // Update the users list with the new profile data
             setUsers(prevUsers => prevUsers.map(u =>
                 u.employeeID === data.employeeID
@@ -455,7 +518,7 @@ function UserAccountsContent() {
             }
         }, [selectedUser?.employeeID]),
         'user-status-changed': useCallback((data) => {
-            console.log('User status changed event received:', data);
+            // console.log('User status changed event received:', data);
             // Update the users list with the new status
             setUsers(prevUsers => prevUsers.map(u =>
                 u.employeeID === data.employeeID
@@ -472,7 +535,35 @@ function UserAccountsContent() {
             console.log('New user approved event received - refetching all users');
             // Refetch all users to ensure complete data is loaded
             fetchAllUsers();
-        }, [])
+        }, []),
+        'user-name-changed': useCallback((data) => {
+            console.log('User name changed event received:', data);
+            // Update the users list with the new name
+            setUsers(prevUsers => prevUsers.map(u =>
+                u.employeeID === data.employeeID
+                    ? {
+                        ...u,
+                        requester: data.newName,
+                        title: data.newName
+                    }
+                    : u
+            ));
+
+            // Update selected user if it's the one whose name changed
+            if (selectedUser?.employeeID === data.employeeID) {
+                setSelectedUser(prev => prev ? {
+                    ...prev,
+                    requester: data.newName,
+                    title: data.newName
+                } : null);
+
+                // Update profile data
+                setProfileData(prev => ({
+                    ...prev,
+                    empName: data.newName
+                }));
+            }
+        }, [selectedUser?.employeeID])
     });
 
     if (loading || pageLoading) {
@@ -604,6 +695,8 @@ function UserAccountsContent() {
                                         onToggleCurrentPassword={() => setShowCurrentPassword(!showCurrentPassword)}
                                         onToggleNewPassword={() => setShowNewPassword(!showNewPassword)}
                                     />
+
+
 
                                     {/* Set Active/Inactive Buttons */}
                                     <div className={`mt-6 pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'} flex gap-3`}>

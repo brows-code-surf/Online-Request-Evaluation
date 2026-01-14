@@ -159,6 +159,20 @@ export default function EditModuleModal({
                                 </div>
                             )}
 
+
+                            {/* Module Name */}
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Module Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={onInputChange}
+                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
+                                />
+                                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
+                            </div>
+
                             {/* Module Identifier */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Identifier</label>
@@ -178,20 +192,7 @@ export default function EditModuleModal({
                                     }
                                 </p>
                             </div>
-
-                            {/* Module Name */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Module Name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={onInputChange}
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
-                            </div>
-
+                            
                             {/* Description */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Description</label>

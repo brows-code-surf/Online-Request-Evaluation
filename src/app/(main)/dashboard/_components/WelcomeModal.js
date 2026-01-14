@@ -102,19 +102,6 @@ export const WelcomeModal = ({ isOpen, onClose }) => {
                 >
                   Get Started
                 </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={onClose}
-                  className={`px-6 py-2 font-medium rounded-lg border transition-all duration-200 ${
-                    darkMode
-                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Continue
-                </motion.button>
               </div>
             </div>
           </div>

@@ -1,6 +1,18 @@
 import { motion } from "framer-motion";
 import { Clock, User } from "lucide-react";
 
+const formatDateTime = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'UTC'
+    });
+};
+
 export const RecentLogins = ({ users, delay, darkMode }) => {
   return (
     <motion.div
@@ -35,14 +47,7 @@ export const RecentLogins = ({ users, delay, darkMode }) => {
                 <div className="flex items-center space-x-1">
                   <Clock className={`h-3 w-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} truncate`}>
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit'
-                    }) : 'Never'}
+                    {formatDateTime(user.lastLogin) || 'Never'}
                   </p>
                 </div>
               </div>
