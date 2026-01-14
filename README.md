@@ -71,11 +71,15 @@ npm start
 
 ## Project Structure
 
-- `src/app/` - Next.js app router pages and API routes
-- `src/models/` - Database models and schemas
-- `src/lib/` - Database connections and utility libraries
-- `src/utils/` - Helper functions and constants
-- `src/hooks/` - Custom React hooks
+```
+src/
+├── app/          # Next.js app router pages and API routes
+├── hooks/        # Custom React hooks
+├── lib/          # Database connections and utility libraries
+├── models/       # Database models and schemas
+└── utils/        # Helper functions and constants
+```
+
 - `public/` - Static assets and images
 
 ## Tech Stack
@@ -84,7 +88,7 @@ npm start
 - **Backend**: Node.js, Express
 - **Database**: MongoDB, MSSQL, MySQL
 - **Real-time**: Socket.io, Pusher
-- **Authentication**: NextAuth.js
+- **Authentication**: NextAuth
 - **Email**: SendGrid, Nodemailer
 - **Charts**: Recharts
 - **Icons**: Heroicons, Lucide React

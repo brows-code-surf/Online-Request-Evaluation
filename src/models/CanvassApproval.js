@@ -43,16 +43,6 @@ class CanvassApproval {
             `;
 
             const params = [];
-            let paramIndex = 1;
-
-            // Filter by created by (only show canvassing requests created by the user for non-admin users)
-            // Admin users can see all canvassing items for approval
-            // if (!isAdmin && user) {
-            //     const userName = user.empName;
-            //     query += ` AND UPPER(PQH.CREATEDBY) = UPPER(@userName${paramIndex})`;
-            //     params.push({ name: `userName${paramIndex}`, value: userName });
-            //     paramIndex++;
-            // }
 
             query += ` ORDER BY PQD.ITEMDESC ASC, PQH.DATEREQUESTED, PQD.ROWID`;
 
