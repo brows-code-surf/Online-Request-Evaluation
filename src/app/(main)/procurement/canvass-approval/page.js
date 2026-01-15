@@ -12,19 +12,25 @@ import Loader from '@/app/_components/loader';
 import { ToastContainer, toast } from 'react-toastify';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import {
-  getAllCanvassingItemsForApproval,
+  getAllCanvassingItems,
   approveCanvassingItem,
   rejectCanvassingItem
 } from './_actions';
-import CanvassingDetailsModal from '../canvassing/_components/CanvassingDetailsModal';
+import ItemDetailsModal from './_components/ItemDetailsModal';
+import SearchModal from '@/app/(main)/_components/SearchModal';
+import Pagination from '@/app/(main)/_components/Pagination';
 
 function CanvassApprovalContent() {
   const { darkMode, user } = useAuth();
 
   const [canvassingItems, setCanvassingItems] = useState([]);
+  const [allItems, setAllItems] = useState([]); // Store all items for stats calculation
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'list', 'create'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -38,12 +44,20 @@ function CanvassApprovalContent() {
   const [rejectReason, setRejectReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   // Function to reload canvassing items data without page refresh
   const reloadCanvassingItemsData = async () => {
     try {
-      const data = await getAllCanvassingItemsForApproval(user);
+      const data = await getAllCanvassingItems(user);
       if (data.success) {
-        setCanvassingItems(data.items);
+        // Store all items for stats calculation
+        setAllItems(data.items);
+        // Only show pending items
+        const pendingItems = data.items.filter(item => item.status === 'PENDING');
+        setCanvassingItems(pendingItems);
         return { success: true };
       }
       return { success: false };
@@ -59,9 +73,13 @@ function CanvassApprovalContent() {
 
       setLoading(true);
       try {
-        const result = await getAllCanvassingItemsForApproval(user);
+        const result = await getAllCanvassingItems(user);
         if (result.success) {
-          setCanvassingItems(result.items);
+          // Store all items for stats calculation
+          setAllItems(result.items);
+          // Only show pending items
+          const pendingItems = result.items.filter(item => item.status === 'PENDING');
+          setCanvassingItems(pendingItems);
         }
       } catch (error) {
         console.error('Failed to load canvassing items:', error);
@@ -164,26 +182,69 @@ function CanvassApprovalContent() {
 
 
 
-  // Filter items based on search term
-  const filteredItems = canvassingItems.filter((item) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      item.pqCode?.toLowerCase().includes(searchLower) ||
-      item.itemNumber?.toLowerCase().includes(searchLower) ||
-      item.itemDescription?.toLowerCase().includes(searchLower) ||
-      item.createdBy?.toLowerCase().includes(searchLower) ||
-      item.vendorName?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Calculate stats from all items
+  const stats = {
+    pending: allItems.filter(item => item.status === 'PENDING').length,
+    approved: allItems.filter(item => item.status === 'APPROVED').length,
+    rejected: allItems.filter(item => item.status === 'REJECTED').length,
+    total: allItems.length
+  };
+
+  // Filter and sort canvassing items
+  const filteredItems = canvassingItems
+    .filter(item => {
+      const matchesSearch = searchQuery === '' ||
+        [item.pqCode, item.itemNumber, item.itemDescription, item.createdBy, item.vendorName, item.status, item.approvedBy, item.approvalRemarks].some(field =>
+          field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+      const matchesStatus = filterStatus === '' || filterStatus === 'all' ||
+        item.status === filterStatus;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date') {
+        return new Date(b.dateRequested) - new Date(a.dateRequested);
+      } else if (sortBy === 'requester') {
+        return a.createdBy.localeCompare(b.createdBy);
+      } else if (sortBy === 'status') {
+        return a.status.localeCompare(b.status);
+      } else if (sortBy === 'reference') {
+        return a.pqCode.localeCompare(b.pqCode);
+      }
+      return 0;
+    });
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'POSTED':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'APPROVED':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Calculate paginated items
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Real-time updates from canvassing page
   useSocketMultiple("canvassing-posted", {
@@ -237,8 +298,24 @@ function CanvassApprovalContent() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>For Approval</p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{filteredItems.length}</p>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Total Items</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.total}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow-sm p-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Pending</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.pending}</p>
                 </div>
               </div>
             </div>
@@ -253,8 +330,8 @@ function CanvassApprovalContent() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Approved Today</p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>0</p>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Approved</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.approved}</p>
                 </div>
               </div>
             </div>
@@ -269,24 +346,8 @@ function CanvassApprovalContent() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Rejected Today</p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>0</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow-sm p-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Pending Items</p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{filteredItems.length}</p>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Rejected</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.rejected}</p>
                 </div>
               </div>
             </div>
@@ -306,21 +367,25 @@ function CanvassApprovalContent() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="relative">
+                    <div className="flex-1 min-w-0">
                       <input
                         type="text"
-                        placeholder="Search items by PQ code, item number, description..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className={`w-80 px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
-                          }`}
+                        placeholder="Search by item, vendor, status..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                       />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
                     </div>
+
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className={`px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    >
+                      <option value="">No Sorting</option>
+                      <option value="date">Sort by Date</option>
+                      <option value="requester">Sort by Requester</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -351,7 +416,7 @@ function CanvassApprovalContent() {
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                      {filteredItems.slice(0, 10).map((item, index) => (
+                      {paginatedItems.map((item, index) => (
                         <tr key={item.id || `${item.pqCode}-${index}`} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                           <td className="px-6 py-4">
                             <div className="max-w-xs">
@@ -364,6 +429,23 @@ function CanvassApprovalContent() {
                               <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 {item.unitOfMeasure} | {item.budgetCode}
                               </div>
+                              {item.status !== 'PENDING' && (
+                                <div className="mt-1">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
+                                    {item.status}
+                                  </span>
+                                  {item.status === 'APPROVED' && item.approvedBy && (
+                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                                      by {item.approvedBy}
+                                    </div>
+                                  )}
+                                  {item.status === 'REJECTED' && item.approvalRemarks && (
+                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 truncate max-w-32`}>
+                                      {item.approvalRemarks}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -404,26 +486,30 @@ function CanvassApprovalContent() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
                               </button>
-                              <button
-                                onClick={() => handleApproveClick(item)}
-                                disabled={isProcessing}
-                                className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Approve Item"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleRejectClick(item)}
-                                disabled={isProcessing}
-                                className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Reject Item"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
+                              {item.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveClick(item)}
+                                    disabled={isProcessing}
+                                    className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Approve Item"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectClick(item)}
+                                    disabled={isProcessing}
+                                    className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Reject Item"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -442,6 +528,20 @@ function CanvassApprovalContent() {
                   </div>
                 )}
               </div>
+
+              {/* Pagination */}
+              {filteredItems.length > 0 && (
+                <div className="px-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredItems.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={handlePageChange}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -460,13 +560,14 @@ function CanvassApprovalContent() {
       />
 
       {/* Item Details Modal */}
-      <CanvassingDetailsModal
+      <ItemDetailsModal
         isOpen={showDetailsModal}
         onClose={() => {
           setShowDetailsModal(false);
           setSelectedItem(null);
         }}
         pqCode={selectedItem?.pqCode}
+        selectedItem={selectedItem}
         darkMode={darkMode}
         user={user}
       />
@@ -512,6 +613,31 @@ function CanvassApprovalContent() {
         label="Rejection Remarks"
         placeholder="Enter reason for rejection..."
       />
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSelect={(item) => {
+          setSelectedItem(item);
+          setShowDetailsModal(true);
+          setShowSearchModal(false);
+        }}
+        darkMode={darkMode}
+        type="canvassing-approval"
+      />
+
+      {/* Floating Action Button - Search */}
+      <button
+        onClick={() => setShowSearchModal(true)}
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-4 rounded-full shadow-lg hover:shadow-2xl transform hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50 backdrop-blur-md hover:backdrop-blur-sm opacity-70 hover:opacity-100"
+        title="Search Canvassing Items"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+
     </div>
   );
 }

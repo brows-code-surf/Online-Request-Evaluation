@@ -3,13 +3,13 @@
 import CanvassApproval from '@/models/CanvassApproval.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
-export async function getAllCanvassingItemsForApproval(user = null, isAdmin = false) {
+export async function getAllCanvassingItems(user = null, isAdmin = false) {
   try {
-    const items = await CanvassApproval.getAllCanvassingItemsForApproval(user, isAdmin);
+    const items = await CanvassApproval.getAllCanvassingItems(user, isAdmin);
     return { success: true, items };
   } catch (error) {
-    console.error('Error getting canvassing items for approval:', error);
-    return { success: false, message: 'Failed to fetch canvassing items for approval' };
+    console.error('Error getting all canvassing items:', error);
+    return { success: false, message: 'Failed to fetch all canvassing items' };
   }
 }
 

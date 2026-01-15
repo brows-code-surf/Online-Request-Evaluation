@@ -143,7 +143,7 @@ export async function updateAccess(rowId, hasAccess, modifiedBy) {
 export async function getAvailableModules() {
   try {
     const MODULE = (await import('@/models/Module.js')).default;
-    const modules = await MODULE.getAllModules();
+    const modules = await MODULE.getActiveModules();
 
     // Group modules by parent and children
     const groupedModules = [];
