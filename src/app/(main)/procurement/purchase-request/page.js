@@ -273,9 +273,9 @@ function PurchaseRequestContent() {
       const requestStatus = titleParts.length > 1 ? titleParts[1] : '';
 
       const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
-                (filterStatus === 'RUSH' ? approval.isRush :
-                 filterStatus === 'POSTED' || filterStatus === 'NOT POSTED' ? approval.status === filterStatus :
-                 requestStatus === filterStatus);
+        (filterStatus === 'RUSH' ? approval.isRush :
+          filterStatus === 'POSTED' || filterStatus === 'NOT POSTED' ? approval.status === filterStatus :
+            requestStatus === filterStatus);
 
       return matchesSearch && matchesStatus;
     })
@@ -410,10 +410,16 @@ function PurchaseRequestContent() {
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'FOR PURCHASING LEAD TIME':
         return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800 border-green-300';
       case 'REJECTED':
         return 'bg-red-100 text-red-800 border-red-300';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'FOR CANVASSING':
+        return 'bg-sky-100 text-sky-800 border-sky-300';
+      case 'PARTIALLY SERVED':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+      case 'PROCESSING':
+        return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -521,18 +527,18 @@ function PurchaseRequestContent() {
                 {detailsLoading ? (
                   <SkeletonRequestEvaluationDetail />
                 ) : (
-              <PurchaseRequestDetails
-                purchaseRequest={selectedPurchaseRequest}
-                onClose={() => setSelectedPurchaseRequest(null)}
-                onPost={handlePostPurchaseRequest}
-                onCancel={handleCancelPurchaseRequest}
-                onEdit={handleEditPurchaseRequest}
-                onDataRefresh={() => {
-                  // Trigger reload of details for the current purchase request
-                  setDetailsReloadKey(prev => prev + 1);
-                }}
-                loading={false}
-              />
+                  <PurchaseRequestDetails
+                    purchaseRequest={selectedPurchaseRequest}
+                    onClose={() => setSelectedPurchaseRequest(null)}
+                    onPost={handlePostPurchaseRequest}
+                    onCancel={handleCancelPurchaseRequest}
+                    onEdit={handleEditPurchaseRequest}
+                    onDataRefresh={() => {
+                      // Trigger reload of details for the current purchase request
+                      setDetailsReloadKey(prev => prev + 1);
+                    }}
+                    loading={false}
+                  />
                 )}
               </div>
             ) : (

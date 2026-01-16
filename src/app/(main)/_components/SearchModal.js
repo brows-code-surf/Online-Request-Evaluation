@@ -53,13 +53,13 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
       const matchesSearch = searchQuery === '' ||
         (type === 'purchase-request'
           ? [item.referenceNo, item.requestedBy, item.company, item.requestStatus, item.dateRequested].some(field =>
-              field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
-            )
+            field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
+          )
           : type === 'canvassing-approval'
-          ? [item.pqCode, item.itemNumber, item.itemDescription, item.createdBy, item.vendorName, item.status, item.approvedBy, item.approvalRemarks, item.dateRequested?.toString()].some(field =>
+            ? [item.pqCode, item.itemNumber, item.itemDescription, item.createdBy, item.vendorName, item.status, item.approvedBy, item.approvalRemarks, item.dateRequested?.toString()].some(field =>
               field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
             )
-          : [item.requester, item.title, item.id, item.status, item.department, item.location, item.employeeID, item.description, item.isRush , item.requestDate?.toString()].some(field =>
+            : [item.requester, item.title, item.id, item.status, item.department, item.location, item.employeeID, item.description, item.isRush, item.requestDate?.toString()].some(field =>
               field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
             )
         );
@@ -68,8 +68,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
         (type === 'purchase-request'
           ? item.requestStatus === filterStatus
           : type === 'canvassing-approval'
-          ? (filterStatus === 'all' || item.status === filterStatus)
-          : (filterStatus === 'all' || item.status === filterStatus)
+            ? (filterStatus === 'all' || item.status === filterStatus)
+            : (filterStatus === 'all' || item.status === filterStatus)
         );
 
       return matchesSearch && matchesStatus;
@@ -106,12 +106,14 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
           return 'bg-yellow-100 text-yellow-800 border-yellow-300';
         case 'FOR PURCHASING LEAD TIME':
           return 'bg-orange-100 text-orange-800 border-orange-300';
-        case 'COMPLETED':
-          return 'bg-green-100 text-green-800 border-green-300';
+        case 'PARTIALLY_SERVED':
+          return 'bg-indigo-100 text-indigo-800 border-indigo-300';
         case 'REJECTED':
           return 'bg-red-100 text-red-800 border-red-300';
         case 'CANCELLED':
-          return 'bg-gray-100 text-gray-800 border-gray-300';
+          return 'bg-red-100 text-red-800 border-red-300';
+        case 'FOR CANVASSING':
+          return 'bg-sky-100 text-sky-800 border-sky-300';
         default:
           return 'bg-gray-100 text-gray-800 border-gray-300';
       }
@@ -323,9 +325,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
                 placeholder={getPlaceholder()}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className={`w-full px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
               />
             </div>
 
@@ -333,9 +334,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${
-                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
               >
                 {getStatusOptions().map(option => (
                   <option key={option.value} value={option.value}>
@@ -347,9 +347,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${
-                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className={`px-2 sm:px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
               >
                 <option value="date">Sort by Date</option>
                 <option value="requester">Sort by Requester</option>

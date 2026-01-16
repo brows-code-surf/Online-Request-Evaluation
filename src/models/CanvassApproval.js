@@ -204,7 +204,7 @@ class CanvassApproval {
             if (prCode && rid) {
                 const updatePRQuery = `
                     UPDATE [PURCHASE.REQUESTDETAILS.1]
-                    SET ITEMSTATUS = 'QUOTATION APPROVED'
+                    SET ITEMSTATUS = 'FOR P.O.'
                     WHERE REFERENCENO = @prCode AND RID = @rid
                 `;
 
@@ -212,6 +212,33 @@ class CanvassApproval {
                     .input('prCode', prCode)
                     .input('rid', rid)
                     .query(updatePRQuery);
+
+                // Check if all items for this purchase request are now 'FOR P.O.'
+                const checkAllItemsQuery = `
+                    SELECT COUNT(*) as totalItems, COUNT(CASE WHEN ITEMSTATUS = 'FOR P.O.' THEN 1 END) as poItems
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    WHERE REFERENCENO = @prCode
+                `;
+
+                const checkResult = await connection.request()
+                    .input('prCode', prCode)
+                    .query(checkAllItemsQuery);
+
+                const { totalItems, poItems } = checkResult.recordset[0];
+                const allItemsArePO = totalItems > 0 && totalItems === poItems;
+
+                // Only update header to 'PROCESSING' if all items are 'FOR P.O.'
+                if (allItemsArePO) {
+                    const updatePRHQuery = `
+                        UPDATE [PURCHASE.REQUESTHEADER.1]
+                        SET REQUESTSTATUS = 'PROCESSING'
+                        WHERE REFERENCENO = @prCode
+                    `;
+
+                    await connection.request()
+                        .input('prCode', prCode)
+                        .query(updatePRHQuery);
+                }
             }
 
             // Log activity

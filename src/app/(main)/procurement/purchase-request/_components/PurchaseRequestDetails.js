@@ -13,7 +13,9 @@ const STATUS_OPTIONS = [
   { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time', color: 'bg-orange-100 text-orange-800' },
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
-  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' }
+  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
+  { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
+  { value: 'PROCESSING', label: 'Processing', color: 'bg-fuchsia-100 text-fuchsia-800' },
 ];
 
 const ITEM_STATUS_OPTIONS = [
@@ -21,7 +23,9 @@ const ITEM_STATUS_OPTIONS = [
   { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time', color: 'bg-orange-100 text-orange-800' },
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
-  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' }
+  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
+  { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
+  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' }
 ];
 
 export default function PurchaseRequestDetails({
@@ -205,6 +209,8 @@ export default function PurchaseRequestDetails({
     return `Requested on ${formatDate(purchaseRequest.dateRequested)}`;
   };
 
+  const showItemStatusColumn = purchaseRequest.requestStatus !== 'FOR CONFIRMATION' && purchaseRequest.requestStatus !== 'FOR REQUEST APPROVAL' && purchaseRequest.requestStatus !== 'FOR PURCHASING LEAD TIME';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -234,9 +240,8 @@ export default function PurchaseRequestDetails({
               <button
                 onClick={() => setShowPrintModal(true)}
                 disabled={loading || actionLoading}
-                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium ${darkMode ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[100px] ${
-                  actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                }`}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium ${darkMode ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[100px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
                 aria-label="Print purchase request"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,9 +253,8 @@ export default function PurchaseRequestDetails({
                 <button
                   onClick={() => onEdit && onEdit(purchaseRequest)}
                   disabled={loading || actionLoading}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
-                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                  }`}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                    }`}
                   aria-label="Edit purchase request"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,9 +267,8 @@ export default function PurchaseRequestDetails({
                 <button
                   onClick={() => handleAction('post')}
                   disabled={loading || actionLoading}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
-                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                  }`}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                    }`}
                   aria-label="Post purchase request"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,9 +281,8 @@ export default function PurchaseRequestDetails({
                 <button
                   onClick={() => setShowCancelModal(true)}
                   disabled={loading || actionLoading}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${
-                    actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                  }`}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                    }`}
                   aria-label="Cancel purchase request"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,13 +297,11 @@ export default function PurchaseRequestDetails({
             <div className="sm:hidden" ref={menuRef}>
               <button
                 onClick={() => setShowActionMenu(!showActionMenu)}
-                className={`inline-flex items-center justify-center p-3 rounded-lg border transition-all duration-200 ease-in-out ${
-                  darkMode
-                    ? 'border-gray-600 hover:bg-gray-700 hover:border-gray-500 focus:bg-gray-700 focus:border-gray-500 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900'
-                    : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white'
-                } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none ${
-                  actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                }`}
+                className={`inline-flex items-center justify-center p-3 rounded-lg border transition-all duration-200 ease-in-out ${darkMode
+                  ? 'border-gray-600 hover:bg-gray-700 hover:border-gray-500 focus:bg-gray-700 focus:border-gray-500 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900'
+                  : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white'
+                  } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
                 disabled={loading || actionLoading}
                 aria-label="More actions"
                 aria-expanded={showActionMenu}
@@ -325,13 +325,11 @@ export default function PurchaseRequestDetails({
                       setShowActionMenu(false);
                     }}
                     disabled={loading || actionLoading}
-                    className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
-                      darkMode
-                        ? 'text-gray-300 hover:bg-gray-700 hover:text-white focus:bg-gray-700 focus:text-white'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:bg-gray-50 focus:text-gray-900'
-                    } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500 ${
-                      actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                    }`}
+                    className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                      ? 'text-gray-300 hover:bg-gray-700 hover:text-white focus:bg-gray-700 focus:text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:bg-gray-50 focus:text-gray-900'
+                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
                     role="menuitem"
                     aria-label="Print purchase request"
                   >
@@ -347,13 +345,11 @@ export default function PurchaseRequestDetails({
                         setShowActionMenu(false);
                       }}
                       disabled={loading || actionLoading}
-                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
-                        darkMode
-                          ? 'text-amber-400 hover:bg-amber-900/20 hover:text-amber-300 focus:bg-amber-900/20 focus:text-amber-300'
-                          : 'text-amber-700 hover:bg-amber-50 hover:text-amber-800 focus:bg-amber-50 focus:text-amber-800'
-                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 ${
-                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                      }`}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                        ? 'text-amber-400 hover:bg-amber-900/20 hover:text-amber-300 focus:bg-amber-900/20 focus:text-amber-300'
+                        : 'text-amber-700 hover:bg-amber-50 hover:text-amber-800 focus:bg-amber-50 focus:text-amber-800'
+                        } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                        }`}
                       role="menuitem"
                       aria-label="Edit purchase request"
                     >
@@ -370,13 +366,11 @@ export default function PurchaseRequestDetails({
                         setShowActionMenu(false);
                       }}
                       disabled={loading || actionLoading}
-                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
-                        darkMode
-                          ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
-                          : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
-                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${
-                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                      }`}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                        ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
+                        : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
+                        } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                        }`}
                       role="menuitem"
                       aria-label="Post purchase request"
                     >
@@ -393,13 +387,11 @@ export default function PurchaseRequestDetails({
                         setShowActionMenu(false);
                       }}
                       disabled={loading || actionLoading}
-                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${
-                        darkMode
-                          ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-red-300'
-                          : 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800'
-                      } last:rounded-b-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 ${
-                        actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                      }`}
+                      className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                        ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-red-300'
+                        : 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800'
+                        } last:rounded-b-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                        }`}
                       role="menuitem"
                       aria-label="Cancel purchase request"
                     >
@@ -522,12 +514,15 @@ export default function PurchaseRequestDetails({
               <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                 <tr>
                   <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Code</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Description</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>UOFM</th>
-                  <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Code</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Date Needed</th>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Remarks</th>
+                  <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${showItemStatusColumn ? 'w-80' : ' '}`}>Item Description</th>
+                  <th className={`px-1 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'} w-15`}>UOFM</th>
+                  <th className={`px-2 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
+                  <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Code</th>
+                  <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Date Needed</th>
+                  {showItemStatusColumn && (
+                    <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Status</th>
+                  )}
+                  <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Remarks</th>
                 </tr>
               </thead>
               <tbody>
@@ -535,19 +530,26 @@ export default function PurchaseRequestDetails({
                   purchaseRequest.details.map((item, index) => (
                     <tr key={index} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition`}>
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemNumber || '-'}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.itemDescription || '-'}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure || '-'}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.quantity || 0}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetCode || '-'}</td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
+                      <td className={`px-2 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} ${showItemStatusColumn ? 'w-80' : ' '}`} title={item.itemDescription}>{item.itemDescription || '-'}</td>
+                      <td className={`px-1 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} w-15`}>{item.unitOfMeasure || '-'}</td>
+                      <td className={`px-2 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.quantity || 0}</td>
+                      <td className={`px-2 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetCode || '-'}</td>
+                      <td className={`px-2 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
                         {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
                       </td>
+                      {showItemStatusColumn && (
+                        <td className={`px-2 py-3 text-sm`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(item.itemStatus, 'item')}`}>
+                            {item.itemStatus || '-'}
+                          </span>
+                        </td>
+                      )}
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <td colSpan={showItemStatusColumn ? 8 : 7} className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       No items found for this request
                     </td>
                   </tr>
