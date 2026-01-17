@@ -50,6 +50,14 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
 
   const filteredItems = items
     .filter(item => {
+      // For request-evaluation, only show items in evaluation statuses
+      if (type === 'request-evaluation') {
+        const allowedStatuses = ['FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME'];
+        if (!allowedStatuses.includes(item.status)) {
+          return false;
+        }
+      }
+
       const matchesSearch = searchQuery === '' ||
         (type === 'purchase-request'
           ? [item.referenceNo, item.requestedBy, item.company, item.requestStatus, item.dateRequested].some(field =>

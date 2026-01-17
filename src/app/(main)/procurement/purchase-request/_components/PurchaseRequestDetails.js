@@ -506,10 +506,12 @@ export default function PurchaseRequestDetails({
           </div>
         )}
 
-        {/* Items Table */}
+        {/* Items Table / Cards */}
         <div className="mb-6">
           <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Items</h3>
-          <div className={`overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
+
+          {/* Desktop Table View */}
+          <div className={`hidden sm:block overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
             <table className="w-full">
               <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                 <tr>
@@ -556,6 +558,81 @@ export default function PurchaseRequestDetails({
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-4">
+            {purchaseRequest.details && purchaseRequest.details.length > 0 ? (
+              purchaseRequest.details.map((item, index) => (
+                <div key={index} className={`p-4 border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'} rounded-lg shadow-sm`}>
+                  <div className="space-y-3">
+                    {/* Item Code and Status */}
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {item.itemNumber || '-'}
+                      </span>
+                      {showItemStatusColumn && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(item.itemStatus, 'item')}`}>
+                          {item.itemStatus || '-'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Item Description */}
+                    <div>
+                      <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Description</p>
+                      <p className={`text-sm leading-relaxed ${darkMode ? 'text-white' : 'text-gray-900'} break-words`}>
+                        {item.itemDescription || '-'}
+                      </p>
+                    </div>
+
+                    {/* Quantity and UOFM */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Quantity</p>
+                          <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.quantity || 0}</p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>UOFM</p>
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Budget Code and Date Needed */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Budget Code</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetCode || '-'}</p>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Date Needed</p>
+                        <p className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Remarks */}
+                    {item.remarks && (
+                      <div>
+                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Remarks</p>
+                        <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'} break-words`}>
+                          {item.remarks}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className={`p-8 text-center border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'} rounded-lg`}>
+                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No items found for this request
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

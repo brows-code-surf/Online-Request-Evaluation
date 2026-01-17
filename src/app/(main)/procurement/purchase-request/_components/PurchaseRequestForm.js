@@ -747,7 +747,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
             {loading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                {editData ? 'Updating...' : 'Creating...'}
+                {editData ? 'Updating...' : 'Creating Purchase Request ...'}
               </div>
             ) : (
               editData ? 'Update Purchase Request' : 'Create Purchase Request'
