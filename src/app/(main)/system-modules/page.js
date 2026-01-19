@@ -97,9 +97,9 @@ function SystemModulesContent() {
             if (!formData.module?.trim()) {
                 errors.module = 'Submodule identifier is required';
             } else {
-                // Submodule identifiers should be lowercase with hyphens/underscores
-                if (!/^[a-z0-9-_]+$/.test(formData.module)) {
-                    errors.module = 'Submodule identifier must use lowercase letters, numbers, hyphens, and underscores';
+                // Submodule identifiers should be lowercase with hyphens/underscores and forward slashes
+                if (!/^[a-z0-9-_\/]+$/.test(formData.module)) {
+                    errors.module = 'Submodule identifier must use lowercase letters, numbers, hyphens, underscores, and forward slashes';
                 }
             }
         } else {
