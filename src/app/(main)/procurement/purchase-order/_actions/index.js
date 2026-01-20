@@ -1,7 +1,6 @@
 'use server';
 
 import PurchaseOrder from '@/models/PurchaseOrder.js';
-import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 export async function getAllPurchaseOrders(filters = {}, user = null, isAdmin = false) {
@@ -146,6 +145,16 @@ export async function getAllPaymentTerms() {
   } catch (error) {
     console.error('Error getting payment terms:', error);
     return { success: false, message: 'Failed to fetch payment terms' };
+  }
+}
+
+export async function getSupplierContactPersons(vendorId) {
+  try {
+    const contactPersons = await PurchaseOrder.getSupplierContactPersons(vendorId);
+    return { success: true, contactPersons };
+  } catch (error) {
+    console.error('Error getting supplier contact persons:', error);
+    return { success: false, message: 'Failed to fetch contact persons' };
   }
 }
 

@@ -37,6 +37,7 @@ class PurchaseOrder {
                     h.REMARKS,
                     h.SUBTOTAL,
                     h.BUDGETNOLIST,
+                    h.PRLISTS,
                     COUNT(d.RID) as itemCount
                 FROM [PURCHASE.ORDERHEADER.1] h
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
@@ -86,7 +87,7 @@ class PurchaseOrder {
                 GROUP BY h.ROWID, h.POSTSTATUS, h.PONUMBER, h.DATECREATED, h.CREATEDBY, h.VENDORID, h.VENDNAME,
                          h.PYMTRMID, h.REFDOCTYPE, h.DELIVERY_TO, h.PODATE, h.DATENEEDED, h.PROMISEDDATE,
                          h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY, h.APPROVEDBY, h.IS_BUDGETNO,
-                         h.IS_PRNO, h.CAPEX, h.IS_PERADVISE, h.REMARKS, h.SUBTOTAL, h.BUDGETNOLIST
+                         h.IS_PRNO, h.CAPEX, h.IS_PERADVISE, h.REMARKS, h.SUBTOTAL, h.BUDGETNOLIST, h.PRLISTS
                 ORDER BY h.DATECREATED DESC, h.PONUMBER DESC
             `;
 
@@ -119,6 +120,7 @@ class PurchaseOrder {
                 remarks: record.REMARKS,
                 subtotal: record.SUBTOTAL,
                 budgetNoList: record.BUDGETNOLIST,
+                prList: record.PRLISTS,
                 itemCount: record.itemCount
             }));
         } catch (error) {
@@ -203,7 +205,8 @@ class PurchaseOrder {
                     isPerAdvise: header.IS_PERADVISE,
                     remarks: header.REMARKS,
                     subtotal: header.SUBTOTAL,
-                    budgetNoList: header.BUDGETNOLIST
+                    budgetNoList: header.BUDGETNOLIST,
+                    prList: header.PRLISTS
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,
@@ -278,13 +281,13 @@ class PurchaseOrder {
                 INSERT INTO [PURCHASE.ORDERHEADER.1] (
                     PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME, PYMTRMID,
                     REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE, PROMISEDSHIPDATE,
-                    CANVASSEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
-                    SUBTOTAL, BUDGETNOLIST, POSTSTATUS
+                    CANVASSEDBY, CONFIRMEDBY, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                    SUBTOTAL, BUDGETNOLIST, PRLISTS, POSTSTATUS
                 ) VALUES (
                     @poNumber, GETDATE(), @createdBy, @vendorId, @vendName, @pymtrmid,
                     @refDocType, @deliveryTo, GETDATE(), @dateNeeded, @promisedDate, @promisedShipDate,
-                    @canvassedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
-                    @subtotal, @budgetNoList, @postStatus
+                    @canvassedBy, @confirmedBy, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
+                    @subtotal, @budgetNoList, @prList, @postStatus
                 )
             `;
 
@@ -300,6 +303,8 @@ class PurchaseOrder {
                 .input('promisedDate', headerData.promisedDate || null)
                 .input('promisedShipDate', headerData.promisedShipDate || null)
                 .input('canvassedBy', headerData.canvassedBy || creatorName)
+                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('approvedBy', headerData.approvedBy || '')
                 .input('isBudgetNo', headerData.isBudgetNo || 0)
                 .input('isPrNo', headerData.isPrNo || 0)
                 .input('capex', headerData.capex || 0)
@@ -307,6 +312,7 @@ class PurchaseOrder {
                 .input('remarks', headerData.remarks || '')
                 .input('subtotal', headerData.subtotal || 0)
                 .input('budgetNoList', headerData.budgetNoList || '')
+                .input('prList', headerData.prList || '')
                 .input('postStatus', 0) // NOT POSTED
                 .query(headerQuery);
 
@@ -616,7 +622,7 @@ class PurchaseOrder {
 
             const query = `
                 SELECT DISTINCT VENDORID as vendorId, VENDNAME as vendorName, PYMTRMID as paymentTerms
-                FROM [PURCHASE.ORDERHEADER.1]
+                FROM [SUPPLIER.1]
                 WHERE VENDORID IS NOT NULL AND VENDORID != ''
                 ORDER BY VENDNAME
             `;
@@ -633,15 +639,15 @@ class PurchaseOrder {
         }
     }
 
-    // Get all payment terms from existing POs
+    // Get all payment terms from PAYMENT.TERMS.1 table
     static async getAllPaymentTerms() {
         let connection;
         try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+            connection = await connectToDatabase(process.env.DB_NAME);
 
             const query = `
-                SELECT DISTINCT PYMTRMID as paymentTermId, PYMTRMID as description
-                FROM [PURCHASE.ORDERHEADER.1]
+                SELECT DISTINCT PYMTRMID as paymentTermId
+                FROM [PAYMENT.TERMS.1]
                 WHERE PYMTRMID IS NOT NULL AND PYMTRMID != ''
                 ORDER BY PYMTRMID
             `;
@@ -654,6 +660,36 @@ class PurchaseOrder {
         } catch (error) {
             console.error('Error fetching payment terms:', error);
             throw new Error('Failed to fetch payment terms: ' + error.message);
+        }
+    }
+
+    //Get all supplier contact person
+    static async getSupplierContactPersons(vendorId) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+            const query = `
+                SELECT ROWID, VENDORID, CONTACTFOR, CONTACTPERSON, MOBILENO, EMAILADDRESS, ACTIVE, CREATEDBY
+                FROM [SUPPLIER.CONTACTPERSON.1]
+                WHERE VENDORID = @vendorId AND ACTIVE = 1
+                ORDER BY CONTACTPERSON
+            `;
+            const result = await connection.request()
+                .input('vendorId', vendorId)
+                .query(query);
+            return result.recordset.map(record => ({
+                rowId: record.ROWID,
+                vendorId: record.VENDORID,
+                contactFor: record.CONTACTFOR,
+                contactPerson: record.CONTACTPERSON,
+                mobileNo: record.MOBILENO,
+                emailAddress: record.EMAILADDRESS,
+                active: record.ACTIVE,
+                createdBy: record.CREATEDBY
+            }));
+        } catch (error) {
+            console.error('Error fetching supplier contact persons:', error);
+            throw new Error('Failed to fetch supplier contact persons: ' + error.message);
         }
     }
 

@@ -9,7 +9,8 @@ import {
   getNextPONumber,
   getConfirmedBy,
   getApprovedBy,
-  getDeliveryLocations
+  getDeliveryLocations,
+  getSupplierContactPersons
 } from '../_actions';
 import ItemSelectionModal from './ItemSelectionModal';
 
@@ -47,6 +48,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     canvassedBy: '',
     confirmedBy: '',
     approvedBy: '',
+    contactPerson: '',
     docType: 'N/A'
   });
   const [confirmedByOptions, setConfirmedByOptions] = useState([]);
@@ -56,6 +58,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [showConfirmedByDropdown, setShowConfirmedByDropdown] = useState(false);
   const [showApprovedByDropdown, setShowApprovedByDropdown] = useState(false);
   const [showDeliveryToDropdown, setShowDeliveryToDropdown] = useState(false);
+  const [contactPersons, setContactPersons] = useState([]);
+  const [showContactPersonDropdown, setShowContactPersonDropdown] = useState(false);
 
   // Load suppliers, payment terms, PO number, and dropdown data
   useEffect(() => {
@@ -153,6 +157,34 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     }
   };
 
+  const loadContactPersons = async (vendorId) => {
+    if (!vendorId) {
+      setContactPersons([]);
+      setPoData(prev => ({ ...prev, contactPerson: '' }));
+      return;
+    }
+
+    try {
+      const result = await getSupplierContactPersons(vendorId);
+      if (result.success) {
+        setContactPersons(result.contactPersons);
+        // Preselect the first contact person if available
+        if (result.contactPersons.length > 0) {
+          setPoData(prev => ({ ...prev, contactPerson: result.contactPersons[0].contactPerson }));
+        } else {
+          setPoData(prev => ({ ...prev, contactPerson: '' }));
+        }
+      } else {
+        setContactPersons([]);
+        setPoData(prev => ({ ...prev, contactPerson: '' }));
+      }
+    } catch (error) {
+      console.error('Error loading contact persons:', error);
+      setContactPersons([]);
+      setPoData(prev => ({ ...prev, contactPerson: '' }));
+    }
+  };
+
   const updateSelectedItem = (uniqueId, field, value) => {
     setSelectedItems(prev => prev.map(item =>
       item.uniqueId === uniqueId ? { ...item, [field]: value } : item
@@ -191,7 +223,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         dateNeeded: poData.dateNeeded ? new Date(poData.dateNeeded) : null,
         promisedDate: poData.promisedDate ? new Date(poData.promisedDate) : null,
         promisedShipDate: poData.promisedShipDate ? new Date(poData.promisedShipDate) : null,
-        canvassedBy: poData.canvassedBy || user?.empName || '',
+        canvassedBy: selectedItems.length > 0 ? [...new Set(selectedItems.map(item => item.addressedTo).filter(Boolean))].join(', ') : (poData.canvassedBy || user?.empName || ''),
         confirmedBy: poData.confirmedBy,
         approvedBy: poData.approvedBy,
         isBudgetNo: poData.isBudgetNo,
@@ -199,7 +231,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         capex: poData.capex,
         isPerAdvise: poData.isPerAdvise,
         remarks: poData.remarks,
-        budgetNoList: poData.budgetNoList,
+        budgetNoList: poData.isBudgetNo ? 'Budget No. ' + selectedItems.map(item => `${item.itemNumber}-${item.budgetCode}`).filter(Boolean).join(', ') : '',
+        prList: poData.isPrNo ? 'PR No. ' + selectedItems.map(item => `${item.itemNumber}-${item.prCode}`).filter(Boolean).join(', ') : '',
         subtotal: selectedItems.reduce((sum, item) => sum + (item.unitCost * item.qtyOrder), 0)
       };
 
@@ -229,6 +262,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedSupplier('');
         setSelectedVendorId('');
         setSelectedPaymentTerm('');
+        setContactPersons([]);
         setPoData({
           poNumber: '',
           remarks: '',
@@ -243,7 +277,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
           budgetNoList: '',
           canvassedBy: '',
           confirmedBy: '',
-          approvedBy: ''
+          approvedBy: '',
+          contactPerson: ''
         });
         onClose();
       } else {
@@ -267,6 +302,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       setSelectedPaymentTerm('');
       setPaymentTermSearch('');
       setShowPaymentTermDropdown(false);
+      setContactPersons([]);
       setPoData({
         poNumber: '',
         remarks: '',
@@ -281,7 +317,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         budgetNoList: '',
         canvassedBy: '',
         confirmedBy: '',
-        approvedBy: ''
+        approvedBy: '',
+        contactPerson: ''
       });
       onClose();
     }
@@ -332,50 +369,16 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
               </div>
             </div>
 
-            {/* No Step Indicator - Single Form */}
-
             {/* Scrollable Content */}
             <div className="px-6 py-4 overflow-y-auto flex-1">
               <div className="space-y-8 pb-6">
-                {/* Items Selection */}
-                <div>
-                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Select Items from Canvassing
-                  </h4>
-                  <div className="flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowItemSelectionModal(true)}
-                      className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${darkMode
-                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                      {selectedItems.length > 0 ? `${selectedItems.length} Item${selectedItems.length !== 1 ? 's' : ''} Selected` : 'Select Items'}
-                    </button>
-                    {selectedItems.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedItems([])}
-                        className="px-3 py-2 text-red-600 hover:text-red-700 text-sm font-medium transition-colors duration-200"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  {selectedItems.length === 0 && (
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Click "Select Items" to choose items from approved canvassing requests
-                    </p>
-                  )}
-                </div>
 
                 {/* Supplier Information */}
                 <div>
                   <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Supplier Information
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="relative">
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Supplier <span className="text-red-500">*</span>
@@ -418,6 +421,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                 onClick={() => {
                                   setSelectedSupplier(supplier.vendorName);
                                   setSelectedVendorId(supplier.vendorId);
+                                  setSelectedPaymentTerm(supplier.paymentTerms || '');
+                                  loadContactPersons(supplier.vendorId);
                                   setSupplierSearch('');
                                   setShowSupplierDropdown(false);
                                 }}
@@ -480,7 +485,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                             )
                             .map((term) => (
                               <div
-                                key={term.id}
+                                key={term.paymentTermId}
                                 onClick={() => {
                                   setSelectedPaymentTerm(term.paymentTermId);
                                   setPaymentTermSearch('');
@@ -505,7 +510,119 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         </div>
                       )}
                     </div>
+
+                    <div className="relative">
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Contact Person
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={poData.contactPerson}
+                          onChange={(e) => {
+                            setPoData(prev => ({ ...prev, contactPerson: e.target.value }));
+                          }}
+                          onFocus={() => setShowContactPersonDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowContactPersonDropdown(false), 200)}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                            }`}
+                          placeholder="Select contact person"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowContactPersonDropdown(!showContactPersonDropdown)}
+                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
+                      {showContactPersonDropdown && (
+                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                          }`}>
+                          {contactPersons.map((person) => (
+                            <div
+                              key={person.contactPerson}
+                              onClick={() => {
+                                setPoData(prev => ({ ...prev, contactPerson: person.contactPerson }));
+                                setShowContactPersonDropdown(false);
+                              }}
+                              className={`px-3 py-2 cursor-pointer ${darkMode
+                                ? 'text-white hover:bg-gray-600'
+                                : 'text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                              <div>
+                                <div className="font-medium">{person.contactPerson}</div>
+                                {person.mobileNo && (
+                                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Mobile: {person.mobileNo}
+                                  </div>
+                                )}
+                                {person.emailAddress && (
+                                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Email: {person.emailAddress}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {contactPersons.length === 0 && (
+                            <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              No contact persons available
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                </div>
+                
+                 {/* Items Selection */}
+                <div>
+                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Select Items from Canvassing
+                  </h4>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedSupplier.trim()) {
+                          toast.error('Please select a supplier first before selecting items');
+                          return;
+                        }
+                        setShowItemSelectionModal(true);
+                      }}
+                      disabled={!selectedSupplier.trim()}
+                      className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${
+                        !selectedSupplier.trim()
+                          ? 'opacity-50 cursor-not-allowed'
+                          : darkMode
+                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {selectedItems.length > 0 ? `${selectedItems.length} Item${selectedItems.length !== 1 ? 's' : ''} Selected` : 'Select Items'}
+                    </button>
+                    {selectedItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedItems([])}
+                        className="px-3 py-2 text-red-600 hover:text-red-700 text-sm font-medium transition-colors duration-200"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                  {selectedItems.length === 0 && (
+                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {!selectedSupplier.trim()
+                        ? 'Please select a supplier first, then click "Select Items" to choose items from approved canvassing requests'
+                        : 'Click "Select Items" to choose items from approved canvassing requests'
+                      }
+                    </p>
+                  )}
                 </div>
 
                 {/* Approval Information */}
@@ -521,7 +638,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                       <div className="relative">
                         <input
                           type="text"
-                          value={poData.canvassedBy || (selectedItems.length > 0 ? selectedItems[0].addressedTo || '' : '')}
+                          value={poData.canvassedBy || (selectedItems.length > 0 ? [...new Set(selectedItems.map(item => item.addressedTo).filter(Boolean))].join(', ') : '')}
                           onChange={(e) => setPoData(prev => ({ ...prev, canvassedBy: e.target.value }))}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                             }`}
@@ -533,7 +650,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
 
                     <div className="relative">
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Confirmed By <span className="text-red-500">*</span>
+                        For Confirmation By <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -546,7 +663,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                           onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                             }`}
-                          placeholder="Select confirmed by"
+                          placeholder="Select for confirmation by"
                           required
                         />
                         <button
@@ -583,7 +700,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
 
                     <div className="relative">
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Approved By <span className="text-red-500">*</span>
+                        For Approval By <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -596,7 +713,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                           onBlur={() => setTimeout(() => setShowApprovedByDropdown(false), 200)}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                             }`}
-                          placeholder="Select approved by"
+                          placeholder="Select for approval by"
                           required
                         />
                         <button
@@ -729,74 +846,82 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     </div>
                   </div>
 
-                  {/* Doc Type */}
-                  <div className="mb-6">
-                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Doc Type
-                    </label>
-                    <select
-                      value={poData.docType}
-                      onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
-                    >
-                      {DOC_TYPE_OPTIONS.map((docType) => (
-                        <option key={docType} value={docType}>
-                          {docType}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Doc Type and Flags in 2 columns */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Doc Type */}
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Doc Type
+                      </label>
+                      <select
+                        value={poData.docType}
+                        onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                          }`}
+                      >
+                        {DOC_TYPE_OPTIONS.map((docType) => (
+                          <option key={docType} value={docType}>
+                            {docType}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Flags */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="isBudgetNo"
-                        checked={poData.isBudgetNo}
-                        onChange={(e) => setPoData(prev => ({ ...prev, isBudgetNo: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="isBudgetNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        W/Budget No.
+                    {/* Flags */}
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Options
                       </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="isPrNo"
-                        checked={poData.isPrNo}
-                        onChange={(e) => setPoData(prev => ({ ...prev, isPrNo: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="isPrNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        W/PR No.
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="capex"
-                        checked={poData.capex}
-                        onChange={(e) => setPoData(prev => ({ ...prev, capex: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="capex" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        CAPEX
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="isPerAdvise"
-                        checked={poData.isPerAdvise}
-                        onChange={(e) => setPoData(prev => ({ ...prev, isPerAdvise: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="isPerAdvise" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        As Per Advise
-                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="isBudgetNo"
+                            checked={poData.isBudgetNo}
+                            onChange={(e) => setPoData(prev => ({ ...prev, isBudgetNo: e.target.checked }))}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="isBudgetNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            W/Budget No.
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="capex"
+                            checked={poData.capex}
+                            onChange={(e) => setPoData(prev => ({ ...prev, capex: e.target.checked }))}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="capex" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            CAPEX
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="isPrNo"
+                            checked={poData.isPrNo}
+                            onChange={(e) => setPoData(prev => ({ ...prev, isPrNo: e.target.checked }))}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="isPrNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            W/PR No.
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="isPerAdvise"
+                            checked={poData.isPerAdvise}
+                            onChange={(e) => setPoData(prev => ({ ...prev, isPerAdvise: e.target.checked }))}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="isPerAdvise" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            As Per Advise
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -877,25 +1002,27 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                     type="number"
                                     step="0.01"
                                     min="0"
+                                    max={item.quantity || item.qtyOrder}
                                     value={item.qtyOrder || ''}
-                                    onChange={(e) => updateSelectedItem(item.uniqueId, 'qtyOrder', parseFloat(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const newValue = parseFloat(e.target.value) || 0;
+                                      const maxAllowed = item.quantity || item.qtyOrder;
+                                      if (newValue <= maxAllowed) {
+                                        updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
+                                      }
+                                    }}
                                     className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                                       }`}
+                                    title={`Max quantity: ${item.quantity || item.qtyOrder} ${item.uofm}`}
                                   />
                                   <span className={`ml-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     {item.uofm}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={item.unitCost || ''}
-                                    onChange={(e) => updateSelectedItem(item.uniqueId, 'unitCost', parseFloat(e.target.value) || 0)}
-                                    className={`w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                      }`}
-                                  />
+                                  <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    ₱{(item.unitCost || 0).toLocaleString()}
+                                  </span>
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -953,7 +1080,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
           onClose={() => setShowItemSelectionModal(false)}
           darkMode={darkMode}
           user={user}
-          selectedItems={selectedItems} 
+          selectedItems={selectedItems}
+          selectedSupplier={selectedSupplier}
           onItemsSelected={handleItemsSelected}
         />
       </div>

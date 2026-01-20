@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { getCanvassingDataForPO } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
-function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, onItemsSelected }) {
+function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, selectedSupplier, onItemsSelected }) {
   const [loading, setLoading] = useState(false);
   const [availableItems, setAvailableItems] = useState([]);
   const [currentSelectedItems, setCurrentSelectedItems] = useState(selectedItems || []);
-  const [filterByAssignedTo, setFilterByAssignedTo] = useState(true);
+  const [filterByAssignedTo, setFilterByAssignedTo] = useState(false);
   const [tableSearchTerm, setTableSearchTerm] = useState('');
 
-  // Filter available items based on search term
+  // Filter available items based on search term and selected supplier
   const filteredAvailableItems = availableItems.filter((item) => {
     const searchTerm = tableSearchTerm.toLowerCase();
     const matchesSearch = (
@@ -24,12 +24,12 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
       item.supplierName?.toLowerCase().includes(searchTerm)
     );
 
-    // If any items are selected, filter to show only items with the same itemDescription
-    const matchesSelectedItemDesc = currentSelectedItems.length > 0
-      ? currentSelectedItems.some(selected => selected.itemDescription === item.itemDescription)
+    // Filter by selected supplier if one is provided
+    const matchesSupplier = selectedSupplier
+      ? item.supplierName?.toLowerCase() === selectedSupplier.toLowerCase()
       : true;
 
-    return matchesSearch && matchesSelectedItemDesc;
+    return matchesSearch && matchesSupplier;
   });
 
   // Load available canvassing items
@@ -129,6 +129,20 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
 
             {/* Content */}
             <div className="px-6 py-4 flex-1 overflow-y-auto">
+              {/* Supplier Header */}
+              {selectedSupplier && (
+                <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-blue-900/50 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
+                  <div className="flex items-center">
+                    <svg className={`w-5 h-5 mr-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className={`font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                      Selected Supplier: {selectedSupplier}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Controls */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
@@ -185,8 +199,9 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <tr>
+
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Select
+                            PR No
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PQ Code
@@ -194,9 +209,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Item Details
                           </th>
-                          <th className={`hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Supplier
-                          </th>
+
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Quantity
                           </th>
@@ -220,9 +233,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                                 <SkeletonLoader height="h-3" width="w-24" />
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-20" />
-                            </td>
+
                             <td className="px-4 py-3">
                               <SkeletonLoader height="h-4" width="w-16" />
                             </td>
@@ -254,14 +265,15 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                             Select
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            PR No
+                          </th>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PQ Code
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Item Details
                           </th>
-                          <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Supplier
-                          </th>
+
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Quantity
                           </th>
@@ -282,6 +294,11 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                               />
                             </td>
                             <td className="px-2 sm:px-4 py-3">
+                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.prCode}
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-4 py-3">
                               <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {item.pqCode}
                               </div>
@@ -296,11 +313,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, on
                                 </div>
                               </div>
                             </td>
-                            <td className={`hidden md:table-cell px-2 sm:px-4 py-3`}>
-                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.supplierName}
-                              </div>
-                            </td>
+
                             <td className="px-2 sm:px-4 py-3">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {item.quantity} {item.uofm}

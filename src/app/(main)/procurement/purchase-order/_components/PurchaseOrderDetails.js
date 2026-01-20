@@ -1,11 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../../../../utils/authContext';
+import { PurchaseOrderPrintModal } from './PurchaseOrderPrintModal';
 
-function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCancel }) {
+function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onDataRefresh, loading = false }) {
+  const { user, darkMode, isAdmin } = useAuth();
   const [posting, setPosting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowActionMenu(false);
+      }
+    };
+
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionMenu]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -29,7 +53,7 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
 
     setPosting(true);
     try {
-      await onPost?.(purchaseOrder.header.PONUMBER);
+      await onPost?.(purchaseOrder.header.poNumber);
     } catch (error) {
       console.error('Error posting purchase order:', error);
       toast.error('Failed to post purchase order');
@@ -46,7 +70,7 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
 
     setCancelling(true);
     try {
-      await onCancel?.(purchaseOrder.header.PONUMBER, reason.trim());
+      await onCancel?.(purchaseOrder.header.poNumber, reason.trim());
     } catch (error) {
       console.error('Error canceling purchase order:', error);
       toast.error('Failed to cancel purchase order');
@@ -71,105 +95,264 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
 
   const { header, details } = purchaseOrder;
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC'
+    });
+  };
+
+  const getDateCreated = () => {
+    return `Created on ${formatDate(header.dateCreated)}`;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header Information */}
-      <div className={`p-6 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Purchase Order {header.PONUMBER}
-            </h2>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border mt-2 ${getStatusColor(header.POSTSTATUS)}`}>
-              {getStatusText(header.POSTSTATUS)}
+      {/* Header */}
+      <div className={`p-4 rounded-lg`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+              SANTEH {header.poNumber}
+            </h1>
+            <div className="flex items-center gap-3">
+              <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(header.postStatus)}`}>
+                {getStatusText(header.postStatus)}
+              </span>
+              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {getDateCreated()}
+              </span>
             </div>
           </div>
-          <div className="flex space-x-2">
-            {header.POSTSTATUS === 0 && (
-              <>
-                <button
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          <div className="relative">
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex gap-3">
+              <button
+                onClick={() => setShowPrintModal(true)}
+                disabled={loading || actionLoading}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium ${darkMode ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[100px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
+                aria-label="Print purchase order"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print
+              </button>
+              {header.postStatus === 0 && (
+                <>
+                  <button
+                    onClick={() => handlePost()}
+                    disabled={loading || actionLoading}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                    aria-label="Post purchase order"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Post
+                  </button>
+                  <button
+                    onClick={() => handleCancel()}
+                    disabled={loading || actionLoading}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                    aria-label="Cancel purchase order"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="sm:hidden" ref={menuRef}>
+              <button
+                onClick={() => setShowActionMenu(!showActionMenu)}
+                className={`inline-flex items-center justify-center p-3 rounded-lg border transition-all duration-200 ease-in-out ${darkMode
+                  ? 'border-gray-600 hover:bg-gray-700 hover:border-gray-500 focus:bg-gray-700 focus:border-gray-500 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900'
+                  : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:bg-gray-50 focus:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white'
+                  } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
+                disabled={loading || actionLoading}
+                aria-label="More actions"
+                aria-expanded={showActionMenu}
+                aria-haspopup="menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+                </svg>
+              </button>
+
+              {/* Mobile dropdown menu */}
+              {showActionMenu && (
+                <div
+                  className={`absolute right-0 mt-3 w-56 ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} rounded-lg shadow-xl border z-50`}
+                  role="menu"
+                  aria-orientation="vertical"
                 >
-                  {cancelling ? 'Cancelling...' : 'Cancel PO'}
-                </button>
-                <button
-                  onClick={handlePost}
-                  disabled={posting}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  {posting ? 'Posting...' : 'Post PO'}
-                </button>
-              </>
-            )}
+                  <button
+                    onClick={() => {
+                      setShowPrintModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    disabled={loading || actionLoading}
+                    className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                      ? 'text-gray-300 hover:bg-gray-700 hover:text-white focus:bg-gray-700 focus:text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:bg-gray-50 focus:text-gray-900'
+                      } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} first:rounded-t-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                    role="menuitem"
+                    aria-label="Print purchase order"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    <span className="truncate">Print Order</span>
+                  </button>
+                  {header.postStatus === 0 && (
+                    <>
+                      <button
+                        onClick={() => {
+                          handlePost();
+                          setShowActionMenu(false);
+                        }}
+                        disabled={loading || actionLoading}
+                        className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                          ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
+                          : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
+                          } last:rounded-b-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                          }`}
+                        role="menuitem"
+                        aria-label="Post purchase order"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span className="truncate">Post Order</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleCancel();
+                          setShowActionMenu(false);
+                        }}
+                        disabled={loading || actionLoading}
+                        className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                          ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-red-300'
+                          : 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800'
+                          } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                          }`}
+                        role="menuitem"
+                        aria-label="Cancel purchase order"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span className="truncate">Cancel Order</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Header Information */}
+      <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg mb-6 border`}>
+        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Order Information</h3>
 
         {/* PO Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
-            <h3 className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Supplier Information
             </h3>
             <div className="space-y-2">
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Vendor ID:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.VENDORID || 'N/A'}</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.vendorId || 'N/A'}</span>
               </div>
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Vendor Name:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.VENDNAME || 'N/A'}</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.vendName || 'N/A'}</span>
               </div>
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Payment Terms:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.PYMTRMID || 'N/A'}</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.pymtrmid || 'N/A'}</span>
+              </div>
+              <div>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.deliveryTo || 'N/A'}</span>
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Order Information
             </h3>
             <div className="space-y-2">
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {header.PODATE ? new Date(header.PODATE).toLocaleDateString() : 'N/A'}
+                  {header.poDate ? new Date(header.poDate).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Date Needed:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {header.DATENEEDED ? new Date(header.DATENEEDED).toLocaleDateString() : 'N/A'}
+                  {header.dateNeeded ? new Date(header.dateNeeded).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
-              <div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.DELIVERY_TO || 'N/A'}</span>
-              </div>
+              {header.promisedDate && (
+                <div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Date:</span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {new Date(header.promisedDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {header.promisedShipDate && (
+                <div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Ship Date:</span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {new Date(header.promisedShipDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           <div>
-            <h3 className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Processing Information
             </h3>
             <div className="space-y-2">
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created By:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.CREATEDBY || 'N/A'}</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.createdBy || 'N/A'}</span>
               </div>
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created Date:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {header.DATECREATED ? new Date(header.DATECREATED).toLocaleDateString() : 'N/A'}
+                  {header.dateCreated ? new Date(header.dateCreated).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Canvassed By:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.CANVASSEDBY || 'N/A'}</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.canvassedBy || 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -177,26 +360,26 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
 
         {/* Flags */}
         <div className="mt-6">
-          <h3 className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Order Flags
           </h3>
           <div className="flex flex-wrap gap-2">
-            {header.IS_BUDGETNO && (
+            {header.isBudgetNo === 1 && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800`}>
                 Budget No.
               </span>
             )}
-            {header.IS_PRNO && (
+            {header.isPrNo === 1 && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800`}>
                 PR No.
               </span>
             )}
-            {header.CAPEX && (
+            {header.capex === 1 && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800`}>
                 CAPEX
               </span>
             )}
-            {header.IS_PERADVISE && (
+            {header.isPerAdvise === 1 && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800`}>
                 Per Advise
               </span>
@@ -205,14 +388,26 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
         </div>
 
         {/* Remarks */}
-        {header.REMARKS && (
+        {(header.remarks || (header.isBudgetNo === 1 && header.budgetNoList) || (header.isPrNo === 1 && header.prList)) && (
           <div className="mt-6">
-            <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Remarks
+            <h3 className={`text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Remarks:
             </h3>
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {header.REMARKS}
-            </p>
+            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} space-y-2`}>
+              {header.remarks && (
+                <p>{header.remarks}</p>
+              )}
+              {header.isBudgetNo === 1 && header.budgetNoList && (
+                <div>
+                  <span className="ml-2">{header.budgetNoList}</span>
+                </div>
+              )}
+              {header.isPrNo === 1 && header.prList && (
+                <div>
+                  <span className="ml-2">{header.prList}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -248,55 +443,54 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
             </thead>
             <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
               {details.map((item, index) => (
-                <tr key={item.RID} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                <tr key={item.rid} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                   <td className="px-6 py-4">
                     <div>
                       <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {item.ITEMDESC}
+                        {item.itemDesc}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Item No: {item.ITEMNMBR}
+                        Item No: {item.itemNmbr}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Budget: {item.BUDGETNO}
+                        Budget: {item.budgetNo}
                       </div>
-                      {(item.BRAND || item.ORIGIN) && (
+                      {(item.brand || item.origin) && (
                         <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {item.BRAND && `Brand: ${item.BRAND}`}
-                          {item.BRAND && item.ORIGIN && ' • '}
-                          {item.ORIGIN && `Origin: ${item.ORIGIN}`}
+                          {item.brand && `Brand: ${item.brand}`}
+                          {item.brand && item.origin && ' • '}
+                          {item.origin && `Origin: ${item.origin}`}
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {item.QTYORDER} {item.UOFM}
+                      {item.qtyOrder} {item.uofm}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.UNITCOST?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.EXTDCOST?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.ITEMSTATUS === 'PENDING'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.itemStatus === 'PENDING'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : item.ITEMSTATUS === 'DELIVERED'
+                          : item.itemStatus === 'DELIVERED'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {item.ITEMSTATUS || 'PENDING'}
+                        }`}>
+                        {item.itemStatus || 'PENDING'}
                       </span>
                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Served: {item.QTYSERVED || 0}
+                        Served: {item.qtyServed || 0}
                       </div>
                     </div>
                   </td>
@@ -309,7 +503,7 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
                   Subtotal:
                 </td>
                 <td className={`px-6 py-4 text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  ₱{header.SUBTOTAL?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                  ₱{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </td>
                 <td></td>
               </tr>
@@ -318,32 +512,12 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, darkMode, onPost, onCanc
         </div>
       </div>
 
-      {/* Additional Information */}
-      {(header.PROMISEDDATE || header.PROMISEDSHIPDATE) && (
-        <div className={`p-6 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Delivery Schedule
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {header.PROMISEDDATE && (
-              <div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Date:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {new Date(header.PROMISEDDATE).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-            {header.PROMISEDSHIPDATE && (
-              <div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Ship Date:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {new Date(header.PROMISEDSHIPDATE).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Print Modal */}
+      <PurchaseOrderPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        purchaseOrder={purchaseOrder}
+      />
     </div>
   );
 }
