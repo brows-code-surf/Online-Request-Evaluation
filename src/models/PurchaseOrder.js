@@ -15,6 +15,7 @@ class PurchaseOrder {
                 SELECT DISTINCT
                     h.ROWID,
                     h.POSTSTATUS,
+                    h.PO_STATUS,
                     h.PONUMBER,
                     h.DATECREATED,
                     h.CREATEDBY,
@@ -84,7 +85,7 @@ class PurchaseOrder {
             }
 
             query += `
-                GROUP BY h.ROWID, h.POSTSTATUS, h.PONUMBER, h.DATECREATED, h.CREATEDBY, h.VENDORID, h.VENDNAME,
+                GROUP BY h.ROWID, h.POSTSTATUS, h.PO_STATUS, h.PONUMBER, h.DATECREATED, h.CREATEDBY, h.VENDORID, h.VENDNAME,
                          h.PYMTRMID, h.REFDOCTYPE, h.DELIVERY_TO, h.PODATE, h.DATENEEDED, h.PROMISEDDATE,
                          h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY, h.APPROVEDBY, h.IS_BUDGETNO,
                          h.IS_PRNO, h.CAPEX, h.IS_PERADVISE, h.REMARKS, h.SUBTOTAL, h.BUDGETNOLIST, h.PRLISTS
@@ -98,6 +99,7 @@ class PurchaseOrder {
             return result.recordset.map(record => ({
                 id: record.ROWID,
                 postStatus: record.POSTSTATUS,
+                poStatus: record.PO_STATUS || 'PENDING',
                 poNumber: record.PONUMBER,
                 dateCreated: record.DATECREATED,
                 createdBy: record.CREATEDBY,
@@ -170,8 +172,7 @@ class PurchaseOrder {
             // Get details
             const detailsQuery = `
                 SELECT ROWID, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
-                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, ITEMSTATUS, BUDGETNO,
-                       PODATE, CREATEDBY, DATEMODIFIED, MODIFIEDBY
+                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO
                 FROM [PURCHASE.ORDERDETAILS.1]
                 WHERE PONUMBER = @poNumber
                 ORDER BY ROWID
@@ -198,7 +199,9 @@ class PurchaseOrder {
                     promisedShipDate: header.PROMISEDSHIPDATE,
                     canvassedBy: header.CANVASSEDBY,
                     confirmedBy: header.CONFIRMEDBY,
+                    dateConfirmed: header.DATECONFIRMED,
                     approvedBy: header.APPROVEDBY,
+                    dateApproved: header.DATEAPPROVED,
                     isBudgetNo: header.IS_BUDGETNO,
                     isPrNo: header.IS_PRNO,
                     capex: header.CAPEX,
@@ -206,7 +209,8 @@ class PurchaseOrder {
                     remarks: header.REMARKS,
                     subtotal: header.SUBTOTAL,
                     budgetNoList: header.BUDGETNOLIST,
-                    prList: header.PRLISTS
+                    prList: header.PRLISTS,
+                    poStatus: header.PO_STATUS || 'PENDING'
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,
@@ -225,12 +229,8 @@ class PurchaseOrder {
                     brand: detail.BRAND,
                     origin: detail.ORIGIN,
                     qtyServed: detail.QTYSERVED,
-                    itemStatus: detail.ITEMSTATUS,
-                    budgetNo: detail.BUDGETNO,
-                    poDate: detail.PODATE,
-                    createdBy: detail.CREATEDBY,
-                    dateModified: detail.DATEMODIFIED,
-                    modifiedBy: detail.MODIFIEDBY
+                    // itemStatus: detail.ITEMSTATUS,
+                    budgetNo: detail.BUDGETNO
                 }))
             };
         } catch (error) {
@@ -282,12 +282,12 @@ class PurchaseOrder {
                     PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME, PYMTRMID,
                     REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE, PROMISEDSHIPDATE,
                     CANVASSEDBY, CONFIRMEDBY, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
-                    SUBTOTAL, BUDGETNOLIST, PRLISTS, POSTSTATUS
+                    SUBTOTAL, BUDGETNOLIST, PRLISTS, POSTSTATUS, PO_STATUS
                 ) VALUES (
                     @poNumber, GETDATE(), @createdBy, @vendorId, @vendName, @pymtrmid,
                     @refDocType, @deliveryTo, GETDATE(), @dateNeeded, @promisedDate, @promisedShipDate,
                     @canvassedBy, @confirmedBy, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
-                    @subtotal, @budgetNoList, @prList, @postStatus
+                    @subtotal, @budgetNoList, @prList, @postStatus, @poStatus
                 )
             `;
 
@@ -297,7 +297,7 @@ class PurchaseOrder {
                 .input('vendorId', headerData.vendorId || '')
                 .input('vendName', headerData.vendName || '')
                 .input('pymtrmid', headerData.pymtrmid || '')
-                .input('refDocType', headerData.refDocType || 'CANVASSING')
+                .input('refDocType', headerData.refDocType || '')
                 .input('deliveryTo', headerData.deliveryTo || '')
                 .input('dateNeeded', headerData.dateNeeded || null)
                 .input('promisedDate', headerData.promisedDate || null)
@@ -314,6 +314,7 @@ class PurchaseOrder {
                 .input('budgetNoList', headerData.budgetNoList || '')
                 .input('prList', headerData.prList || '')
                 .input('postStatus', 0) // NOT POSTED
+                .input('poStatus', 'PENDING')
                 .query(headerQuery);
 
             console.log('Purchase order header inserted');
@@ -321,17 +322,17 @@ class PurchaseOrder {
             // Insert Purchase Order items/details
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
-                const rid = `${poNumber}-${i + 1}`; // Use PO number + item index for RID
+                const rid = detail.rid;
 
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.ORDERDETAILS.1] (
                         PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER,
                         QTYCANCEL, QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN,
-                        QTYSERVED, ITEMSTATUS, BUDGETNO, PODATE, CREATEDBY
+                        QTYSERVED, ITEMSTATUS, BUDGETNO
                     ) VALUES (
                         @poNumber, @rid, @pqCode, @prCode, @itemNmbr, @itemDesc, @uofm, @qtyOrder,
                         @qtyCancel, @qtyAllocated, @unitCost, @extdCost, @brand, @origin,
-                        @qtyServed, @itemStatus, @budgetNo, GETDATE(), @createdBy
+                        @qtyServed, @itemStatus, @budgetNo
                     )
                 `;
 
@@ -353,7 +354,6 @@ class PurchaseOrder {
                     .input('qtyServed', detail.qtyServed || 0)
                     .input('itemStatus', detail.itemStatus || 'PENDING')
                     .input('budgetNo', detail.budgetNo || '')
-                    .input('createdBy', creatorName)
                     .query(detailInsertQuery);
             }
 
@@ -400,18 +400,208 @@ class PurchaseOrder {
         }
     }
 
-    // Post purchase order (set POSTSTATUS = 1)
-    static async postPurchaseOrder(poNumber, posterName) {
-        let connection;
-        try {
-            connection = await connectToDatabase(process.env.DB_SFC);
+    // Update purchase order with transaction safety
+    static async updatePurchaseOrder(poNumber, headerData, detailsData, updaterName) {
+        let connection = null;
+        let transaction = null;
 
-            // Check if PO exists
+        try {
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for purchase order update');
+
+            // Check if PO exists and is not posted
             const checkQuery = `
-                SELECT POSTSTATUS FROM [PURCHASE.ORDERHEADER.1]
+                SELECT POSTSTATUS, ROWID FROM [PURCHASE.ORDERHEADER.1]
                 WHERE PONUMBER = @poNumber
             `;
-            const checkResult = await connection.request()
+            const checkResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(checkQuery);
+
+            if (checkResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            if (checkResult.recordset[0].POSTSTATUS === 1) {
+                throw new Error('Cannot update posted purchase orders');
+            }
+
+            // Update Purchase Order header
+            const headerUpdateQuery = `
+                UPDATE [PURCHASE.ORDERHEADER.1] SET
+                    VENDORID = @vendorId,
+                    VENDNAME = @vendName,
+                    PYMTRMID = @pymtrmid,
+                    REFDOCTYPE = @refDocType,
+                    DELIVERY_TO = @deliveryTo,
+                    DATENEEDED = @dateNeeded,
+                    PROMISEDDATE = @promisedDate,
+                    PROMISEDSHIPDATE = @promisedShipDate,
+                    CANVASSEDBY = @canvassedBy,
+                    CONFIRMEDBY = @confirmedBy,
+                    APPROVEDBY = @approvedBy,
+                    IS_BUDGETNO = @isBudgetNo,
+                    IS_PRNO = @isPrNo,
+                    CAPEX = @capex,
+                    IS_PERADVISE = @isPerAdvise,
+                    REMARKS = @remarks,
+                    SUBTOTAL = @subtotal,
+                    BUDGETNOLIST = @budgetNoList,
+                    PRLISTS = @prList,
+                    CONTACTPERSON = @contactPerson,
+                    DATEMODIFIED = GETDATE(),
+                    MODIFIEDBY = @modifiedBy
+                WHERE PONUMBER = @poNumber
+            `;
+
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .input('vendorId', headerData.vendorId || '')
+                .input('vendName', headerData.vendName || '')
+                .input('pymtrmid', headerData.pymtrmid || '')
+                .input('refDocType', headerData.refDocType || '')
+                .input('deliveryTo', headerData.deliveryTo || '')
+                .input('dateNeeded', headerData.dateNeeded || null)
+                .input('promisedDate', headerData.promisedDate || null)
+                .input('promisedShipDate', headerData.promisedShipDate || null)
+                .input('canvassedBy', headerData.canvassedBy || updaterName)
+                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('approvedBy', headerData.approvedBy || '')
+                .input('isBudgetNo', headerData.isBudgetNo || 0)
+                .input('isPrNo', headerData.isPrNo || 0)
+                .input('capex', headerData.capex || 0)
+                .input('isPerAdvise', headerData.isPerAdvise || 0)
+                .input('remarks', headerData.remarks || '')
+                .input('subtotal', headerData.subtotal || 0)
+                .input('budgetNoList', headerData.budgetNoList || '')
+                .input('prList', headerData.prList || '')
+                .input('contactPerson', headerData.contactPerson || '')
+                .input('modifiedBy', updaterName)
+                .query(headerUpdateQuery);
+
+            console.log('Purchase order header updated');
+
+            // Delete existing details and reinsert (simplified approach)
+            const deleteDetailsQuery = `
+                DELETE FROM [PURCHASE.ORDERDETAILS.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .query(deleteDetailsQuery);
+
+            // Insert updated details
+            for (let i = 0; i < detailsData.length; i++) {
+                const detail = detailsData[i];
+                const rid = detail.rid; // Use the RID from the request
+
+                const detailInsertQuery = `
+                    INSERT INTO [PURCHASE.ORDERDETAILS.1] (
+                        PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER,
+                        QTYCANCEL, QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN,
+                        QTYSERVED, ITEMSTATUS, BUDGETNO
+                    ) VALUES (
+                        @poNumber, @rid, @pqCode, @prCode, @itemNmbr, @itemDesc, @uofm, @qtyOrder,
+                        @qtyCancel, @qtyAllocated, @unitCost, @extdCost, @brand, @origin,
+                        @qtyServed, @itemStatus, @budgetNo
+                    )
+                `;
+
+                await transaction.request()
+                    .input('poNumber', poNumber)
+                    .input('rid', rid)
+                    .input('pqCode', detail.pqCode || '')
+                    .input('prCode', detail.prCode || '')
+                    .input('itemNmbr', detail.itemNmbr || '')
+                    .input('itemDesc', detail.itemDesc || '')
+                    .input('uofm', detail.uofm || '')
+                    .input('qtyOrder', detail.qtyOrder || 0)
+                    .input('qtyCancel', detail.qtyCancel || 0)
+                    .input('qtyAllocated', detail.qtyAllocated || 0)
+                    .input('unitCost', detail.unitCost || 0)
+                    .input('extdCost', (detail.unitCost || 0) * (detail.qtyOrder || 0))
+                    .input('brand', detail.brand || '')
+                    .input('origin', detail.origin || '')
+                    .input('qtyServed', detail.qtyServed || 0)
+                    .input('itemStatus', detail.itemStatus || 'PENDING')
+                    .input('budgetNo', detail.budgetNo || '')
+                    .query(detailInsertQuery);
+            }
+
+            console.log(`${detailsData.length} purchase order details updated`);
+
+            // Insert audit/history log
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @creatorName, GETDATE())
+            `;
+            await transaction.request()
+                .input('activity', `Purchase Order ${poNumber} updated by ${updaterName}`)
+                .input('creatorName', updaterName)
+                .query(activityQuery);
+
+            console.log('Activity log inserted');
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Purchase order updated successfully'
+            };
+
+        } catch (error) {
+            console.error('Error updating purchase order:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to update purchase order: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
+        }
+    }
+
+    // Post purchase order (set POSTSTATUS = 1)
+    static async postPurchaseOrder(poNumber, posterName) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for purchase order posting');
+
+            // Check if PO exists and get RIDs
+            const checkQuery = `
+                SELECT h.POSTSTATUS, d.RID
+                FROM [PURCHASE.ORDERHEADER.1] h
+                LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
+                WHERE h.PONUMBER = @poNumber
+            `;
+            const checkResult = await transaction.request()
                 .input('poNumber', poNumber)
                 .query(checkQuery);
 
@@ -423,33 +613,108 @@ class PurchaseOrder {
                 throw new Error('Purchase order is already posted');
             }
 
+            // Get unique RIDs from PO details
+            const rids = [...new Set(checkResult.recordset.map(row => row.RID).filter(rid => rid))];
+
             // Update POSTSTATUS to 1
-            const updateQuery = `
+            const updatePOQuery = `
                 UPDATE [PURCHASE.ORDERHEADER.1]
                 SET POSTSTATUS = 1,
-                    POSTEDBY = @posterName,
-                    DATEPOSTED = GETDATE()
+                    MODIFIEDBY = @modifiedBy,
+                    DATEMODIFIED = GETDATE()
                 WHERE PONUMBER = @poNumber
             `;
 
-            const result = await connection.request()
+            const poResult = await transaction.request()
                 .input('poNumber', poNumber)
-                .input('posterName', posterName)
-                .query(updateQuery);
+                .input('modifiedBy', posterName)
+                .query(updatePOQuery);
 
-            if (result.rowsAffected[0] === 0) {
+            if (poResult.rowsAffected[0] === 0) {
                 throw new Error('Purchase order not found or already posted');
+            }
+
+            // Update request item statuses to "P.O. POSTED" where RID matches
+            let affectedPrCodes = [];
+            if (rids.length > 0) {
+                // First, get the REFERENCENOs (PRCODEs) for the RIDs being updated
+                const getPrCodesQuery = `
+                    SELECT DISTINCT REFERENCENO
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    WHERE RID IN (${rids.map((rid, index) => `@rid${index}`).join(',')})
+                `;
+
+                const prCodeRequest = transaction.request();
+                rids.forEach((rid, index) => {
+                    prCodeRequest.input(`rid${index}`, rid);
+                });
+
+                const prCodeResult = await prCodeRequest.query(getPrCodesQuery);
+                affectedPrCodes = prCodeResult.recordset.map(row => row.REFERENCENO);
+
+                // Update request item statuses to "P.O. POSTED" where RID matches
+                const ridParameters = rids.map((rid, index) => `@rid${index}`).join(',');
+                const updateRequestQuery = `
+                    UPDATE [PURCHASE.REQUESTDETAILS.1]
+                    SET ITEMSTATUS = 'P.O. POSTED'
+                    WHERE RID IN (${ridParameters})
+                `;
+
+                const request = transaction.request();
+                rids.forEach((rid, index) => {
+                    request.input(`rid${index}`, rid);
+                });
+
+                await request.query(updateRequestQuery);
+                console.log(`Updated ${rids.length} request items to "P.O. POSTED" status`);
+            }
+
+            // Check and update request header status if all items are P.O. POSTED
+            for (const prCode of affectedPrCodes) {
+                // Check if all items for this REFERENCENO are P.O. POSTED
+                const checkAllPostedQuery = `
+                    SELECT
+                        COUNT(*) as totalItems,
+                        COUNT(CASE WHEN ITEMSTATUS = 'P.O. POSTED' THEN 1 END) as postedItems
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    WHERE REFERENCENO = @prCode
+                `;
+
+                const checkResult = await transaction.request()
+                    .input('prCode', prCode)
+                    .query(checkAllPostedQuery);
+
+                const { totalItems, postedItems } = checkResult.recordset[0];
+
+                // If all items are P.O. POSTED, update the request header status
+                if (totalItems > 0 && totalItems === postedItems) {
+                    const updateHeaderQuery = `
+                        UPDATE [PURCHASE.REQUESTHEADER.1]
+                        SET REQUESTSTATUS = 'P.O. POSTED'
+                        WHERE REFERENCENO = @prCode
+                    `;
+
+                    await transaction.request()
+                        .input('prCode', prCode)
+                        .query(updateHeaderQuery);
+
+                    console.log(`Updated request ${prCode} header status to "P.O. POSTED"`);
+                }
             }
 
             // Log activity for posted order
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @posterName, GETDATE())
+                VALUES (@activity, @modifiedBy, GETDATE())
             `;
-            await connection.request()
+            await transaction.request()
                 .input('activity', `Purchase Order ${poNumber} posted by ${posterName}`)
-                .input('posterName', posterName)
+                .input('modifiedBy', posterName)
                 .query(activityQuery);
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully for PO posting');
 
             return {
                 success: true,
@@ -457,64 +722,161 @@ class PurchaseOrder {
             };
         } catch (error) {
             console.error('Error posting purchase order:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw new Error('Failed to post purchase order: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 
-    // Cancel purchase order
-    static async cancelPurchaseOrder(poNumber, cancellerName, cancelReason = '') {
+    // Delete purchase order
+    static async deletePurchaseOrder(poNumber, deleterName) {
         let connection;
         try {
-            console.log('cancelPurchaseOrder called with:', { poNumber, cancellerName, cancelReason });
+            console.log('deletePurchaseOrder called with:', { poNumber, deleterName });
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Update header status to CANCELLED
-            const updateHeaderQuery = `
-                UPDATE [PURCHASE.ORDERHEADER.1]
-                SET POSTSTATUS = 2,
-                    CANCELREMARKS = @cancelReason
+            // Update header status to DELETED (POSTSTATUS = 2)
+            const deleteHeaderQuery = `
+                DELETE FROM [PURCHASE.ORDERHEADER.1]
                 WHERE PONUMBER = @poNumber
             `;
 
-            console.log('Executing query:', updateHeaderQuery);
-            console.log('With parameters:', { poNumber, cancelReason });
+            console.log('Executing query:', deleteHeaderQuery);
+            console.log('With parameters:', { poNumber });
 
             const headerResult = await connection.request()
                 .input('poNumber', poNumber)
-                .input('cancelReason', cancelReason)
-                .query(updateHeaderQuery);
+                .query(deleteHeaderQuery);
 
-            console.log('Update result:', headerResult);
+            console.log('Delete result:', headerResult);
 
             if (headerResult.rowsAffected[0] === 0) {
                 throw new Error('Purchase order not found');
             }
 
-            // Verify the update by checking the result
-            const verifyQuery = `SELECT CANCELREMARKS FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
-            const verifyResult = await connection.request()
+            const deleteDetailQuery = `
+                DELETE FROM [PURCHASE.ORDERDETAILS.1]
+                WHERE PONUMBER = @poNumber
+            `;
+
+            console.log('Executing query:', deleteDetailQuery);
+            console.log('With parameters:', { poNumber });
+
+            const detailResult = await connection.request()
                 .input('poNumber', poNumber)
-                .query(verifyQuery);
+                .query(deleteDetailQuery);
 
-            console.log('Verification query result:', verifyResult.recordset);
+            console.log('Delete result:', detailResult);
 
-            // Log activity for cancelled order
+            if (detailResult.rowsAffected[0] === 0) {
+                throw new Error('Purchase order details not found');
+            }
+
+            // Log activity for deleted order
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @cancellerName, GETDATE())
+                VALUES (@activity, @deleterName, GETDATE())
             `;
             await connection.request()
-                .input('activity', `Purchase Order ${poNumber} cancelled by ${cancellerName}`)
-                .input('cancellerName', cancellerName)
+                .input('activity', `Purchase Order ${poNumber} deleted by ${deleterName}`)
+                .input('deleterName', deleterName)
                 .query(activityQuery);
 
             return {
                 success: true,
-                message: 'Purchase order cancelled successfully'
+                message: 'Purchase order deleted successfully'
             };
         } catch (error) {
-            console.error('Error canceling purchase order:', error);
-            throw new Error('Failed to cancel purchase order: ' + error.message);
+            console.error('Error deleting purchase order:', error);
+            throw new Error('Failed to delete purchase order: ' + error.message);
+        }
+    }
+
+    // Submit purchase order for processing (update PO_STATUS to 'FOR P.O. CONFIRMATION')
+    static async submitPurchaseOrderForProcessing(poNumber, submitterName) {
+        let connection;
+        try {
+            console.log('submitPurchaseOrderForProcessing called with:', { poNumber, submitterName });
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if PO exists and get current status
+            const checkQuery = `
+                SELECT POSTSTATUS, PO_STATUS FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const checkResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(checkQuery);
+
+            if (checkResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            const currentPOStatus = checkResult.recordset[0].PO_STATUS;
+            const postStatus = checkResult.recordset[0].POSTSTATUS;
+
+            // Prevent submission if already posted
+            if (postStatus === 1) {
+                throw new Error('Purchase order is already posted');
+            }
+
+            // Prevent re-submission if already submitted for confirmation
+            if (currentPOStatus === 'FOR P.O. CONFIRMATION') {
+                throw new Error('Purchase order is already submitted for confirmation');
+            }
+
+            // Prevent submission if already approved (should use post action instead)
+            if (currentPOStatus === 'P.O. APPROVED') {
+                throw new Error('Purchase order is already approved. Please use the Post action instead.');
+            }
+
+            // Update PO_STATUS to 'FOR P.O. CONFIRMATION'
+            const updateQuery = `
+                UPDATE [PURCHASE.ORDERHEADER.1]
+                SET PO_STATUS = 'FOR P.O. CONFIRMATION',
+                    DATEMODIFIED = GETDATE(),
+                    MODIFIEDBY = @modifiedBy
+                WHERE PONUMBER = @poNumber
+            `;
+
+            const updateResult = await connection.request()
+                .input('poNumber', poNumber)
+                .input('modifiedBy', submitterName)
+                .query(updateQuery);
+
+            if (updateResult.rowsAffected[0] === 0) {
+                throw new Error('Failed to update purchase order status');
+            }
+
+            // Log activity
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @submitterName, GETDATE())
+            `;
+            await connection.request()
+                .input('activity', `Purchase Order ${poNumber} submitted for processing by ${submitterName}`)
+                .input('submitterName', submitterName)
+                .query(activityQuery);
+
+            return {
+                success: true,
+                message: 'Purchase order submitted for processing successfully'
+            };
+        } catch (error) {
+            console.error('Error submitting purchase order for processing:', error);
+            throw new Error('Failed to submit purchase order for processing: ' + error.message);
         }
     }
 
@@ -548,12 +910,14 @@ class PurchaseOrder {
                     pqd.FINALPRICE as FINAL_PRICE,
                     pqd.REMARKS,
                     pr.COMPANY,
-                    pr.ADDRESSEDTO
+                    pr.ADDRESSEDTO,
+                    ISNULL(SUM(pod.QTYORDER), 0) as TOTAL_QTY_ORDERED
                 FROM [PURCHASE.QUOTATIONAPPROVALSTATUS.1] pqas
                 INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] pqd ON pqas.PQROWID = pqd.ROWID
                 INNER JOIN [PURCHASE.QUOTATIONHEADER.1] pqh ON pqd.PQCODE = pqh.PQCODE
                 LEFT JOIN [SUPPLIER.1] s ON pqd.VENDORID = s.VENDORID
                 INNER JOIN [PURCHASE.REQUESTHEADER.1] pr ON pqd.PRCODE = pr.REFERENCENO
+                LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON pqd.RID = pod.RID
                 WHERE pqas.IS_APPROVED = 1
                 AND pqh.POSTSTATUS = 1
                 AND pqd.IS_SERVED = 0
@@ -570,7 +934,15 @@ class PurchaseOrder {
                 paramIndex++;
             }
 
-            query += ' ORDER BY pqh.DATEREQUESTED DESC, pqd.RID';
+            query += `
+                GROUP BY pqas.PQROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqd.VENDORID, s.VENDNAME,
+                         pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
+                         pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
+                         pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,
+                         pr.COMPANY, pr.ADDRESSEDTO
+                HAVING pqd.QUANTITY - ISNULL(SUM(pod.QTYORDER), 0) != 0
+                ORDER BY pqh.DATEREQUESTED DESC, pqd.RID
+            `;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -593,6 +965,8 @@ class PurchaseOrder {
                 itemDescription: record.ITEM_DESCRIPTION,
                 uofm: record.UOFM,
                 quantity: record.QUANTITY,
+                totalQtyOrdered: record.TOTAL_QTY_ORDERED,
+                remaining: record.QUANTITY - record.TOTAL_QTY_ORDERED,
                 budgetCode: record.BUDGET_CODE,
                 offeredPrice: record.OFFERED_PRICE,
                 bidPrice: record.BID_PRICE,
@@ -840,6 +1214,29 @@ class PurchaseOrder {
         } catch (error) {
             console.error('Error fetching delivery locations:', error);
             throw new Error('Failed to fetch delivery locations: ' + error.message);
+        }
+    }
+
+    // Get document types from PURCHASE.ORDERHEADER.1 table (distinct values)
+    static async getDocumentTypes() {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                SELECT DISTINCT REFDOCTYPE as doctype
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE REFDOCTYPE IS NOT NULL AND REFDOCTYPE != ''
+                ORDER BY REFDOCTYPE
+            `;
+
+            const result = await connection.request().query(query);
+            return result.recordset.map(record => ({
+                doctype: record.doctype
+            }));
+        } catch (error) {
+            console.error('Error fetching document types:', error);
+            throw new Error('Failed to fetch document types: ' + error.message);
         }
     }
 }

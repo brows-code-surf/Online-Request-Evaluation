@@ -8,6 +8,7 @@ import HeaderNavBar from '@/app/_components/headerNavBar';
 import ContentLeftPanel from '../../_components/contentLeftPanel';
 import PurchaseOrderDetails from './_components/PurchaseOrderDetails';
 import CreatePurchaseOrderModal from './_components/CreatePurchaseOrderModal';
+import EditPurchaseOrderModal from './_components/EditPurchaseOrderModal';
 import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
@@ -17,7 +18,7 @@ import {
   getAllPurchaseOrders,
   getPurchaseOrderByPONumber,
   postPurchaseOrder,
-  cancelPurchaseOrder
+  deletePurchaseOrder
 } from './_actions';
 
 function PurchaseOrderContent() {
@@ -36,6 +37,8 @@ function PurchaseOrderContent() {
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editPurchaseOrder, setEditPurchaseOrder] = useState(null);
 
   // Function to reload purchase orders data without page refresh
   const reloadPurchaseOrdersData = async () => {
@@ -53,7 +56,7 @@ function PurchaseOrderContent() {
           id: po.poNumber,
           title: po.vendName || 'Unknown Vendor',
           requester: po.createdBy,
-          status: po.postStatus === 1 ? 'POSTED' : 'NOT POSTED',
+          status: po.poStatus || 'PENDING',
           requestDate: po.dateCreated,
           department: po.vendName || 'Unknown Vendor',
           isRead: true, // Assuming all are read for now
@@ -165,7 +168,7 @@ function PurchaseOrderContent() {
           id: urlSelected.poNumber,
           title: urlSelected.vendName || 'Unknown Vendor',
           requester: urlSelected.createdBy,
-          status: urlSelected.postStatus === 1 ? 'POSTED' : 'NOT POSTED',
+          status: urlSelected.poStatus || 'PENDING',
           requestDate: urlSelected.dateCreated,
           department: urlSelected.vendName || 'Unknown Vendor',
           isRead: true,
@@ -193,9 +196,9 @@ function PurchaseOrderContent() {
     .map(po => ({
       ...po,
       id: po.poNumber,
-      title: po.vendName || 'Unknown Vendor',
+      title: po.poNumber || 'Unknown Vendor',
       requester: po.createdBy,
-      status: po.postStatus === 1 ? 'POSTED' : 'NOT POSTED',
+      status: po.poStatus || 'PENDING',
       requestDate: po.dateCreated,
       department: po.vendName || 'Unknown Vendor',
       isRead: true,
@@ -209,8 +212,7 @@ function PurchaseOrderContent() {
         );
 
       const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
-        (filterStatus === 'POSTED' && approval.status === 'POSTED') ||
-        (filterStatus === 'NOT POSTED' && approval.status === 'NOT POSTED');
+        approval.status === filterStatus;
 
       return matchesSearch && matchesStatus;
     })
@@ -229,6 +231,21 @@ function PurchaseOrderContent() {
     // This will be called after successful creation in the modal
     await reloadPurchaseOrdersData();
     setShowCreateModal(false);
+  };
+
+  const handleEditPurchaseOrder = (purchaseOrder) => {
+    setEditPurchaseOrder(purchaseOrder);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = async () => {
+    await reloadPurchaseOrdersData();
+    setShowEditModal(false);
+    setEditPurchaseOrder(null);
+    // Refresh details if it's the current PO
+    if (selectedPurchaseOrder?.poNumber === editPurchaseOrder?.header?.poNumber) {
+      setDetailsReloadKey(prev => prev + 1);
+    }
   };
 
   const handlePostPurchaseOrder = async (poNumber) => {
@@ -250,31 +267,33 @@ function PurchaseOrderContent() {
     }
   };
 
-  const handleCancelPurchaseOrder = async (poNumber, cancelReason = '') => {
+  const handleDeletePurchaseOrder = async (poNumber) => {
     try {
-      const result = await cancelPurchaseOrder(poNumber, user?.empName, cancelReason);
+      const result = await deletePurchaseOrder(poNumber, user?.empName);
       if (result.success) {
-        toast.success('Purchase order cancelled successfully');
+        toast.success('Purchase order deleted successfully');
         await reloadPurchaseOrdersData();
-        // Clear selection if it's the cancelled PO
+        // Clear selection if it's the deleted PO
         if (selectedPurchaseOrder?.poNumber === poNumber) {
           setSelectedPurchaseOrder(null);
           setPurchaseOrderDetails(null);
         }
       } else {
-        toast.error('Failed to cancel purchase order: ' + result.message);
+        toast.error('Failed to delete purchase order: ' + result.message);
       }
     } catch (error) {
-      console.error('Error canceling purchase order:', error);
-      toast.error('Failed to cancel purchase order');
+      console.error('Error deleting purchase order:', error);
+      toast.error('Failed to delete purchase order');
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'POSTED':
+      case 'P.O. APPROVED':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'NOT POSTED':
+      case 'FOR P.O. CONFIRMATION':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -352,7 +371,9 @@ function PurchaseOrderContent() {
                     purchaseOrder={purchaseOrderDetails}
                     onClose={() => setSelectedPurchaseOrder(null)}
                     onPost={handlePostPurchaseOrder}
-                    onCancel={handleCancelPurchaseOrder}
+                    onDelete={handleDeletePurchaseOrder}
+                    onEdit={handleEditPurchaseOrder}
+                    onDataRefresh={() => setDetailsReloadKey(prev => prev + 1)}
                     darkMode={darkMode}
                   />
                 )}
@@ -390,6 +411,20 @@ function PurchaseOrderContent() {
         darkMode={darkMode}
         user={user}
         onSuccess={handleCreatePurchaseOrder}
+      />
+
+      {/* Edit Purchase Order Modal */}
+      <EditPurchaseOrderModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditPurchaseOrder(null);
+        }}
+        darkMode={darkMode}
+        user={user}
+        purchaseOrder={editPurchaseOrder}
+        onSuccess={handleEditSuccess}
+        purchaseOrders={purchaseOrders}
       />
 
       {/* Toast Container */}

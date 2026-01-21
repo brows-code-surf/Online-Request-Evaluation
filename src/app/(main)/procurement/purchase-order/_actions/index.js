@@ -76,20 +76,16 @@ export async function createPurchaseOrder(headerData, detailsData, creatorName) 
 
 export async function updatePurchaseOrder(poNumber, headerData, detailsData, updaterName) {
   try {
-    // Check if PO exists and is not posted
-    const existingPO = await PurchaseOrder.getPurchaseOrderByPONumber(poNumber);
-    if (!existingPO) {
-      return { success: false, message: 'Purchase order not found' };
+    const result = await PurchaseOrder.updatePurchaseOrder(poNumber, headerData, detailsData, updaterName);
+
+    if (result.success) {
+      return {
+        success: true,
+        message: result.message
+      };
+    } else {
+      return { success: false, message: result.message };
     }
-
-    if (existingPO.header.POSTSTATUS === 1) {
-      return { success: false, message: 'Cannot update posted purchase orders' };
-    }
-
-    // For now, we'll implement a simple update - delete and reinsert
-    // In a production system, you'd want more sophisticated update logic
-
-    return { success: false, message: 'Update functionality not yet implemented' };
   } catch (error) {
     console.error('Error updating purchase order:', error);
     return { success: false, message: 'Failed to update purchase order' };
@@ -98,23 +94,55 @@ export async function updatePurchaseOrder(poNumber, headerData, detailsData, upd
 
 export async function postPurchaseOrder(poNumber, posterName) {
   try {
-    // This would update the POSTSTATUS to 1
-    // Implementation depends on your specific requirements
-    return { success: false, message: 'Post functionality not yet implemented' };
+    const result = await PurchaseOrder.postPurchaseOrder(poNumber, posterName);
+
+    if (result.success) {
+      return {
+        success: true,
+        message: result.message
+      };
+    } else {
+      return { success: false, message: result.message };
+    }
   } catch (error) {
     console.error('Error posting purchase order:', error);
     return { success: false, message: 'Failed to post purchase order' };
   }
 }
 
-export async function cancelPurchaseOrder(poNumber, cancelerName, cancelReason = '') {
+export async function submitPurchaseOrderForProcessing(poNumber, submitterName) {
   try {
-    // This would mark the PO as cancelled
-    // Implementation depends on your specific requirements
-    return { success: false, message: 'Cancel functionality not yet implemented' };
+    const result = await PurchaseOrder.submitPurchaseOrderForProcessing(poNumber, submitterName);
+
+    if (result.success) {
+      return {
+        success: true,
+        message: result.message
+      };
+    } else {
+      return { success: false, message: result.message };
+    }
   } catch (error) {
-    console.error('Error canceling purchase order:', error);
-    return { success: false, message: 'Failed to cancel purchase order' };
+    console.error('Error submitting purchase order for processing:', error);
+    return { success: false, message: 'Failed to submit purchase order for processing' };
+  }
+}
+
+export async function deletePurchaseOrder(poNumber, deleterName) {
+  try {
+    const result = await PurchaseOrder.deletePurchaseOrder(poNumber, deleterName);
+
+    if (result.success) {
+      return {
+        success: true,
+        message: result.message
+      };
+    } else {
+      return { success: false, message: result.message };
+    }
+  } catch (error) {
+    console.error('Error deleting purchase order:', error);
+    return { success: false, message: 'Failed to delete purchase order' };
   }
 }
 
@@ -195,5 +223,15 @@ export async function getDeliveryLocations() {
   } catch (error) {
     console.error('Error getting delivery locations:', error);
     return { success: false, message: 'Failed to fetch delivery locations' };
+  }
+}
+
+export async function getDocumentTypes() {
+  try {
+    const documentTypes = await PurchaseOrder.getDocumentTypes();
+    return { success: true, documentTypes };
+  } catch (error) {
+    console.error('Error getting document types:', error);
+    return { success: false, message: 'Failed to fetch document types' };
   }
 }

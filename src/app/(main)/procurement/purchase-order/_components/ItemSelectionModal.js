@@ -36,9 +36,32 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
   useEffect(() => {
     if (isOpen) {
       loadAvailableItems();
-      setCurrentSelectedItems(selectedItems || []);
     }
-  }, [isOpen, filterByAssignedTo, selectedItems]);
+  }, [isOpen, filterByAssignedTo]);
+
+  // Preselect items when available items are loaded and selectedItems are provided
+  useEffect(() => {
+    if (availableItems.length > 0 && selectedItems && selectedItems.length > 0) {
+      const preselectedItems = availableItems.filter(availableItem =>
+        selectedItems.some(selectedItem =>
+          selectedItem.rid === availableItem.rid
+        )
+      ).map(item => {
+        const selectedItem = selectedItems.find(selected => selected.rid === item.rid);
+        const qtyOrder = selectedItem ? selectedItem.qtyOrder || 0 : 0;
+        return {
+          ...item,
+          unitCost: item.unitCost || 0,
+          qtyOrder: qtyOrder,
+          remaining: item.remaining + qtyOrder // Include current PO qtyOrder in remaining
+        };
+      });
+
+      setCurrentSelectedItems(preselectedItems);
+    } else if (availableItems.length > 0 && (!selectedItems || selectedItems.length === 0)) {
+      setCurrentSelectedItems([]);
+    }
+  }, [availableItems, selectedItems]);
 
   const loadAvailableItems = async () => {
     setLoading(true);
@@ -49,7 +72,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
           ...item,
           uniqueId: `${item.pqCode}-${item.rid || index}`,
           unitCost: item.finalPrice || item.bidPrice || item.offeredPrice || 0,
-          qtyOrder: item.quantity || 0
+          qtyOrder: item.remaining || 0
         })));
       } else {
         console.error('Failed to load available canvassing items');
@@ -316,7 +339,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
 
                             <td className="px-2 sm:px-4 py-3">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.quantity} {item.uofm}
+                                {item.remaining} {item.uofm}
                               </span>
                             </td>
                             <td className="px-2 sm:px-4 py-3">

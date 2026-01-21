@@ -4,13 +4,20 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../utils/authContext';
 import { PurchaseOrderPrintModal } from './PurchaseOrderPrintModal';
+import ConfirmModal from '../../../_components/confirmModal';
+import RejectRequestModal from '../../../_components/rejectRequestModal';
+import { submitPurchaseOrderForProcessing } from '../_actions';
 
-function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onDataRefresh, loading = false }) {
+function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit, onDataRefresh, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
   const [posting, setPosting] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const menuRef = useRef(null);
 
@@ -33,9 +40,12 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 1:
+      case 'P.O. APPROVED':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 0:
+      case 'FOR P.O. CONFIRMATION':
+      case 'FOR P.O. APPROVAL':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -43,17 +53,67 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
   };
 
   const getStatusText = (status) => {
-    return status === 1 ? 'POSTED' : 'NOT POSTED';
-  };
+    if (!status) return 'PENDING';
 
-  const handlePost = async () => {
-    if (!window.confirm('Are you sure you want to post this purchase order? This action cannot be undone.')) {
-      return;
+    // Ensure status is a string before calling trim()
+    const statusStr = String(status);
+
+    // Clean up the status text (trim whitespace)
+    const cleanStatus = statusStr.trim();
+
+    // Handle potential database duplication issue
+    // If status appears twice consecutively, return just once
+    const statusPatterns = [
+      'FOR P.O. CONFIRMATION',
+      'P.O. APPROVED',
+      'PENDING'
+    ];
+
+    for (const pattern of statusPatterns) {
+      if (cleanStatus === pattern + pattern || cleanStatus === pattern + ' ' + pattern) {
+        return pattern;
+      }
     }
 
+    return cleanStatus;
+  };
+
+  const handleSubmit = () => {
+    setShowSubmitModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const result = await submitPurchaseOrderForProcessing(
+        purchaseOrder.header.poNumber,
+        user.empName
+      );
+
+      if (result.success) {
+        toast.success('Purchase order submitted for processing');
+        setShowSubmitModal(false);
+        await onDataRefresh?.();
+      } else {
+        toast.error(result.message || 'Failed to submit purchase order');
+      }
+    } catch (error) {
+      console.error('Error submitting purchase order:', error);
+      toast.error('Failed to submit purchase order for processing');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePost = () => {
+    setShowPostModal(true);
+  };
+
+  const handleConfirmPost = async () => {
     setPosting(true);
     try {
       await onPost?.(purchaseOrder.header.poNumber);
+      setShowPostModal(false);
     } catch (error) {
       console.error('Error posting purchase order:', error);
       toast.error('Failed to post purchase order');
@@ -62,20 +122,20 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
     }
   };
 
-  const handleCancel = async () => {
-    const reason = window.prompt('Please enter the reason for cancellation:');
-    if (!reason || !reason.trim()) {
-      return;
-    }
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
 
-    setCancelling(true);
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
     try {
-      await onCancel?.(purchaseOrder.header.poNumber, reason.trim());
+      await onDelete?.(purchaseOrder.header.poNumber, '');
+      setShowDeleteModal(false);
     } catch (error) {
-      console.error('Error canceling purchase order:', error);
-      toast.error('Failed to cancel purchase order');
+      console.error('Error deleting purchase order:', error);
+      toast.error('Failed to delete purchase order');
     } finally {
-      setCancelling(false);
+      setDeleting(false);
     }
   };
 
@@ -94,6 +154,9 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
   }
 
   const { header, details } = purchaseOrder;
+
+  const isEditDisabled = loading || actionLoading ||
+    ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED'].includes(header.poStatus);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -118,12 +181,12 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
       <div className={`p-4 rounded-lg`}>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
-              SANTEH {header.poNumber}
-            </h1>
+            <h4 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+              Purchase Order No: <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.poNumber}</span>
+            </h4>
             <div className="flex items-center gap-3">
-              <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(header.postStatus)}`}>
-                {getStatusText(header.postStatus)}
+              <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(header.poStatus)}`}>
+                {getStatusText(header.poStatus)}
               </span>
               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {getDateCreated()}
@@ -148,28 +211,55 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
               {header.postStatus === 0 && (
                 <>
                   <button
-                    onClick={() => handlePost()}
-                    disabled={loading || actionLoading}
-                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                    onClick={() => onEdit?.(purchaseOrder)}
+                    disabled={isEditDisabled}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                       }`}
-                    aria-label="Post purchase order"
+                    aria-label="Edit purchase order"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    Post
+                    Edit
                   </button>
+                  {header.poStatus === 'P.O. APPROVED' ? (
+                    <button
+                      onClick={() => handlePost()}
+                      disabled={loading || actionLoading}
+                      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                        }`}
+                      aria-label="Post purchase order"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Post
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSubmit()}
+                      disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
+                      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                        }`}
+                      aria-label="Submit purchase order for processing"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      {header.poStatus === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleCancel()}
-                    disabled={loading || actionLoading}
+                    onClick={() => handleDelete()}
+                    disabled={isEditDisabled}
                     className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                       }`}
-                    aria-label="Cancel purchase order"
+                    aria-label="Delete purchase order"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    Cancel
+                    Delete
                   </button>
                 </>
               )}
@@ -224,41 +314,82 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
                     <>
                       <button
                         onClick={() => {
-                          handlePost();
+                          onEdit?.(purchaseOrder);
                           setShowActionMenu(false);
                         }}
-                        disabled={loading || actionLoading}
+                        disabled={isEditDisabled}
                         className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
-                          ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
-                          : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
-                          } last:rounded-b-lg disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                          ? 'text-blue-400 hover:bg-blue-900/20 hover:text-blue-300 focus:bg-blue-900/20 focus:text-blue-300'
+                          : 'text-blue-700 hover:bg-blue-50 hover:text-blue-800 focus:bg-blue-50 focus:text-blue-800'
+                          } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                           }`}
                         role="menuitem"
-                        aria-label="Post purchase order"
+                        aria-label="Edit purchase order"
                       >
                         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        <span className="truncate">Post Order</span>
+                        <span className="truncate">Edit Order</span>
                       </button>
+                      {header.poStatus === 'P.O. APPROVED' ? (
+                        <button
+                          onClick={() => {
+                            handlePost();
+                            setShowActionMenu(false);
+                          }}
+                          disabled={loading || actionLoading}
+                          className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                            ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
+                            : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
+                            } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                            }`}
+                          role="menuitem"
+                          aria-label="Post purchase order"
+                        >
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          <span className="truncate">Post Order</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            handleSubmit();
+                            setShowActionMenu(false);
+                          }}
+                          disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
+                          className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
+                            ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
+                            : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
+                            } disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                            }`}
+                          role="menuitem"
+                          aria-label="Submit purchase order for processing"
+                        >
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          <span className="truncate">{header.poStatus === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => {
-                          handleCancel();
+                          handleDelete();
                           setShowActionMenu(false);
                         }}
-                        disabled={loading || actionLoading}
+                        disabled={isEditDisabled}
                         className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
-                          ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-red-300'
+                          ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 focus:bg-red-900/20 focus:text-blue-300'
                           : 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800'
                           } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                           }`}
                         role="menuitem"
-                        aria-label="Cancel purchase order"
+                        aria-label="Delete purchase order"
                       >
                         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        <span className="truncate">Cancel Order</span>
+                        <span className="truncate">Delete Order</span>
                       </button>
                     </>
                   )}
@@ -305,12 +436,6 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
             </h3>
             <div className="space-y-2">
               <div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {header.poDate ? new Date(header.poDate).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-              <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Date Needed:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {header.dateNeeded ? new Date(header.dateNeeded).toLocaleDateString() : 'N/A'}
@@ -332,6 +457,10 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
                   </span>
                 </div>
               )}
+              <div>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Reference Document Type:</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.refDocType || 'N/A'}</span>
+              </div>
             </div>
           </div>
 
@@ -340,20 +469,31 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
               Processing Information
             </h3>
             <div className="space-y-2">
+
               <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created By:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.createdBy || 'N/A'}</span>
               </div>
               <div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created Date:</span>
-                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {header.dateCreated ? new Date(header.dateCreated).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-              <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Canvassed By:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.canvassedBy || 'N/A'}</span>
               </div>
+              {header.confirmedBy && (
+                <div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {header.dateConfirmed ? 'Confirmed By:' : 'For Confirmation:'}
+                  </span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy}</span>
+                </div>
+              )}
+              {header.approvedBy && (
+                <div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {header.dateApproved ? 'Approved By:' : 'For Approval:'}
+                  </span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.approvedBy}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -481,11 +621,11 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.itemStatus === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : item.itemStatus === 'DELIVERED'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${!item.itemStatus || item.itemStatus === 'PENDING'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : item.itemStatus === 'DELIVERED'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                         }`}>
                         {item.itemStatus || 'PENDING'}
                       </span>
@@ -517,6 +657,42 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onCancel, onData
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         purchaseOrder={purchaseOrder}
+      />
+
+      {/* Submit Modal */}
+      <ConfirmModal
+        isOpen={showSubmitModal}
+        title="Submit for Processing"
+        message="Are you sure you want to submit this purchase order for processing?"
+        confirmButtonText="Submit"
+        onConfirm={handleConfirmSubmit}
+        onCancel={() => setShowSubmitModal(false)}
+        isLoading={submitting}
+        confirmButtonColor="green"
+      />
+
+      {/* Post Modal */}
+      <ConfirmModal
+        isOpen={showPostModal}
+        title="Confirm Post"
+        message="Are you sure you want to post this purchase order? This action cannot be undone."
+        confirmButtonText="Post Order"
+        onConfirm={handleConfirmPost}
+        onCancel={() => setShowPostModal(false)}
+        isLoading={posting}
+        confirmButtonColor="green"
+      />
+
+      {/* Delete Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Confirm Delete"
+        message="Are you sure you want to delete this purchase order? This action cannot be undone."
+        confirmButtonText="Delete Order"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+        isLoading={deleting}
+        confirmButtonColor="red"
       />
     </div>
   );

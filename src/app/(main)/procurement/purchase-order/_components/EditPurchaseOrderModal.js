@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import {
-  createPurchaseOrder,
+  updatePurchaseOrder,
   getAllSuppliers,
   getAllPaymentTerms,
-  getNextPONumber,
   getConfirmedBy,
   getApprovedBy,
   getDeliveryLocations,
-  getSupplierContactPersons
+  getSupplierContactPersons,
+  getDocumentTypes
 } from '../_actions';
 import ItemSelectionModal from './ItemSelectionModal';
 
@@ -21,7 +21,7 @@ const DOC_TYPE_OPTIONS = [
   'N/A'
 ];
 
-function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }) {
+function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder, onSuccess, purchaseOrders = [] }) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -31,7 +31,6 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [paymentTerms, setPaymentTerms] = useState([]);
   const [selectedPaymentTerm, setSelectedPaymentTerm] = useState('');
-
   const [paymentTermSearch, setPaymentTermSearch] = useState('');
   const [showPaymentTermDropdown, setShowPaymentTermDropdown] = useState(false);
   const [poData, setPoData] = useState({
@@ -50,11 +49,12 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     confirmedBy: '',
     approvedBy: '',
     contactPerson: '',
-    docType: 'N/A'
+    docType: ''
   });
   const [confirmedByOptions, setConfirmedByOptions] = useState([]);
   const [approvedByOptions, setApprovedByOptions] = useState([]);
   const [deliveryLocations, setDeliveryLocations] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
   const [showItemSelectionModal, setShowItemSelectionModal] = useState(false);
   const [showConfirmedByDropdown, setShowConfirmedByDropdown] = useState(false);
   const [showApprovedByDropdown, setShowApprovedByDropdown] = useState(false);
@@ -62,17 +62,80 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [contactPersons, setContactPersons] = useState([]);
   const [showContactPersonDropdown, setShowContactPersonDropdown] = useState(false);
 
-  // Load suppliers, payment terms, PO number, and dropdown data
+  // Load initial data when modal opens or purchaseOrder changes
   useEffect(() => {
-    if (isOpen) {
-      loadSuppliers();
-      loadPaymentTerms();
-      loadPONumber();
-      loadConfirmedBy();
-      loadApprovedBy();
-      loadDeliveryLocations();
+    if (isOpen && purchaseOrder) {
+      loadInitialData();
+      loadDocumentTypes();
     }
-  }, [isOpen]);
+  }, [isOpen, purchaseOrder]);
+
+  const loadInitialData = async () => {
+    if (!purchaseOrder) return;
+
+    // Load dropdown data
+    await Promise.all([
+      loadSuppliers(),
+      loadPaymentTerms(),
+      loadConfirmedBy(),
+      loadApprovedBy(),
+      loadDeliveryLocations()
+    ]);
+
+    // Set form data from purchase order
+    const header = purchaseOrder.header;
+    const details = purchaseOrder.details || [];
+
+    setPoData({
+      poNumber: header.poNumber || '',
+      remarks: header.remarks || '',
+      deliveryTo: header.deliveryTo || '',
+      dateNeeded: header.dateNeeded ? new Date(header.dateNeeded).toISOString().split('T')[0] : '',
+      promisedDate: header.promisedDate ? new Date(header.promisedDate).toISOString().split('T')[0] : '',
+      promisedShipDate: header.promisedShipDate ? new Date(header.promisedShipDate).toISOString().split('T')[0] : '',
+      isBudgetNo: header.isBudgetNo === 1,
+      isPrNo: header.isPrNo === 1,
+      capex: header.capex === 1,
+      isPerAdvise: header.isPerAdvise === 1,
+      budgetNoList: header.budgetNoList || '',
+      canvassedBy: header.canvassedBy || '',
+      confirmedBy: header.confirmedBy || '',
+      approvedBy: header.approvedBy || '',
+      contactPerson: header.contactPerson || '',
+      docType: header.refDocType || ''
+    });
+
+    // Set supplier
+    setSelectedSupplier(header.vendName || '');
+    setSelectedVendorId(header.vendorId || '');
+    setSelectedPaymentTerm(header.pymtrmid || '');
+
+    // Load contact persons for the supplier
+    if (header.vendorId) {
+      loadContactPersons(header.vendorId);
+    }
+
+    // Convert details to selected items format
+    const items = details.map((detail, index) => ({
+      uniqueId: `item-${index}`,
+      rid: detail.rid || '', // Include the RID from the existing purchase order
+      pqCode: detail.pqCode || '',
+      prCode: detail.prCode || '',
+      itemNumber: detail.itemNmbr || '',
+      itemDescription: detail.itemDesc || '',
+      uofm: detail.uofm || '',
+      qtyOrder: detail.qtyOrder || 0,
+      unitCost: detail.unitCost || 0,
+      brand: detail.brand || '',
+      origin: detail.origin || '',
+      budgetCode: detail.budgetNo || '',
+      addressedTo: header.canvassedBy || '',
+      quantity: detail.qtyOrder || 0, // Max available quantity
+      remaining: detail.qtyOrder || 0 // For edit, remaining is current qtyOrder
+    }));
+
+    setSelectedItems(items);
+  };
 
   const loadSuppliers = async () => {
     try {
@@ -99,20 +162,6 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     } catch (error) {
       console.error('Error loading payment terms:', error);
       toast.error('Failed to load payment terms');
-    }
-  };
-
-  const loadPONumber = async () => {
-    try {
-      const result = await getNextPONumber();
-      if (result.success) {
-        setPoData(prev => ({ ...prev, poNumber: result.poNumber }));
-      } else {
-        toast.error('Failed to load PO number');
-      }
-    } catch (error) {
-      console.error('Error loading PO number:', error);
-      toast.error('Failed to load PO number');
     }
   };
 
@@ -158,6 +207,22 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     }
   };
 
+  const loadDocumentTypes = () => {
+    try {
+      // Extract unique document types from existing purchase orders
+      const uniqueDocTypes = [...new Set(
+        purchaseOrders
+          .map(po => po.refDocType)
+          .filter(docType => docType && docType.trim() !== '')
+      )];
+
+      setDocumentTypes(uniqueDocTypes.map(doctype => ({ doctype })));
+    } catch (error) {
+      console.error('Error loading document types:', error);
+      setDocumentTypes([]);
+    }
+  };
+
   const loadContactPersons = async (vendorId) => {
     if (!vendorId) {
       setContactPersons([]);
@@ -169,20 +234,12 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       const result = await getSupplierContactPersons(vendorId);
       if (result.success) {
         setContactPersons(result.contactPersons);
-        // Preselect the first contact person if available
-        if (result.contactPersons.length > 0) {
-          setPoData(prev => ({ ...prev, contactPerson: result.contactPersons[0].contactPerson }));
-        } else {
-          setPoData(prev => ({ ...prev, contactPerson: '' }));
-        }
       } else {
         setContactPersons([]);
-        setPoData(prev => ({ ...prev, contactPerson: '' }));
       }
     } catch (error) {
       console.error('Error loading contact persons:', error);
       setContactPersons([]);
-      setPoData(prev => ({ ...prev, contactPerson: '' }));
     }
   };
 
@@ -220,7 +277,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         pymtrmid: selectedPaymentTerm,
         refDocType: poData.docType,
         deliveryTo: poData.deliveryTo,
-        poDate: new Date(),
+        poDate: purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate) : new Date(),
         dateNeeded: poData.dateNeeded ? new Date(poData.dateNeeded) : null,
         promisedDate: poData.promisedDate ? new Date(poData.promisedDate) : null,
         promisedShipDate: poData.promisedShipDate ? new Date(poData.promisedShipDate) : null,
@@ -234,12 +291,13 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         remarks: poData.remarks,
         budgetNoList: poData.isBudgetNo ? 'Budget No. ' + selectedItems.map(item => `${item.itemNumber}-${item.budgetCode}`).filter(Boolean).join(', ') : '',
         prList: poData.isPrNo ? 'PR No. ' + selectedItems.map(item => `${item.itemNumber}-${item.prCode}`).filter(Boolean).join(', ') : '',
-        subtotal: selectedItems.reduce((sum, item) => sum + (item.unitCost * item.qtyOrder), 0)
+        subtotal: selectedItems.reduce((sum, item) => sum + (item.unitCost * item.qtyOrder), 0),
+        contactPerson: poData.contactPerson
       };
 
       // Prepare details data
       const detailsData = selectedItems.map(item => ({
-        rid: item.rid, // Use the RID from the request
+        rid: item.rid, // Include the RID from the existing purchase order
         pqCode: item.pqCode,
         prCode: item.prCode,
         itemNmbr: item.itemNumber,
@@ -250,20 +308,20 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         brand: item.brand || '',
         origin: item.origin || '',
         budgetNo: item.budgetCode,
-        itemStatus: 'PENDING'
+        itemStatus: item.itemStatus || 'PENDING'
       }));
 
-      const result = await createPurchaseOrder(headerData, detailsData, user?.empName);
+      const result = await updatePurchaseOrder(poData.poNumber, headerData, detailsData, user?.empName);
 
       if (result.success) {
-        toast.success('Purchase order created successfully!');
+        toast.success('Purchase order updated successfully!');
         onSuccess?.();
 
         // Reset form
         setSelectedItems([]);
         setSelectedSupplier('');
         setSelectedVendorId('');
-        setSelectedPaymentTerm('');        
+        setSelectedPaymentTerm('');
         setContactPersons([]);
         setPoData({
           poNumber: '',
@@ -280,15 +338,16 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
           canvassedBy: '',
           confirmedBy: '',
           approvedBy: '',
-          contactPerson: ''
+          contactPerson: '',
+          docType: 'N/A'
         });
         onClose();
       } else {
-        toast.error(result.message || 'Failed to create purchase order');
+        toast.error(result.message || 'Failed to update purchase order');
       }
     } catch (error) {
-      console.error('Error creating purchase order:', error);
-      toast.error('Failed to create purchase order');
+      console.error('Error updating purchase order:', error);
+      toast.error('Failed to update purchase order');
     } finally {
       setSubmitting(false);
     }
@@ -320,7 +379,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         canvassedBy: '',
         confirmedBy: '',
         approvedBy: '',
-        contactPerson: ''
+        contactPerson: '',
+        docType: 'N/A'
       });
       onClose();
     }
@@ -331,7 +391,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     setSelectedItems(items);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !purchaseOrder) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -348,7 +408,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                 <div className="flex-1"></div>
                 <div className="text-center">
                   <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Create Purchase Order
+                    Edit Purchase Order
                   </h3>
                   {poData.poNumber && (
                     <p className="text-sm mt-1 font-bold text-blue-800">
@@ -580,8 +640,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     </div>
                   </div>
                 </div>
-                
-                 {/* Items Selection */}
+
+                {/* Items Selection */}
                 <div>
                   <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Select Items from Canvassing
@@ -605,7 +665,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      {selectedItems.length > 0 ? `${selectedItems.length} Item${selectedItems.length !== 1 ? 's' : ''} Selected` : 'Select Items'}
+                      {selectedItems.length > 0 ? `Modify Items (${selectedItems.length} selected)` : 'Select Items'}
                     </button>
                     {selectedItems.length > 0 && (
                       <button
@@ -861,11 +921,18 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                           }`}
                       >
-                        {DOC_TYPE_OPTIONS.map((docType) => (
-                          <option key={docType} value={docType}>
-                            {docType}
-                          </option>
-                        ))}
+                        {/* Include current saved docType if not already in options */}
+                        {(() => {
+                          const allOptions = [...new Set([...DOC_TYPE_OPTIONS, ...documentTypes.map(dt => dt.doctype)])];
+                          if (poData.docType && !allOptions.includes(poData.docType)) {
+                            allOptions.unshift(poData.docType);
+                          }
+                          return allOptions.map((docType) => (
+                            <option key={docType} value={docType}>
+                              {docType}
+                            </option>
+                          ));
+                        })()}
                       </select>
                     </div>
 
@@ -1022,8 +1089,25 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    ₱{(item.unitCost || 0).toLocaleString()}
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max={item.remaining || item.qtyOrder}
+                                    value={item.qtyOrder || ''}
+                                    onChange={(e) => {
+                                      const newValue = parseFloat(e.target.value) || 0;
+                                      const maxAllowed = item.remaining || item.qtyOrder;
+                                      if (newValue <= maxAllowed) {
+                                        updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
+                                      }
+                                    }}
+                                    className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                      }`}
+                                    title={`Max quantity: ${item.remaining || item.qtyOrder} ${item.uofm}`}
+                                  />
+                                  <span className={`ml-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {item.uofm}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
@@ -1066,9 +1150,9 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                   <button
                     type="submit"
                     disabled={submitting || selectedItems.length === 0 || !selectedSupplier.trim() || !selectedPaymentTerm.trim()}
-                    className="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 order-1 sm:order-2"
+                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 order-1 sm:order-2"
                   >
-                    {submitting ? 'Creating...' : 'Create Purchase Order'}
+                    {submitting ? 'Updating...' : 'Update Purchase Order'}
                   </button>
                 </div>
               </div>
@@ -1091,4 +1175,4 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   );
 }
 
-export default CreatePurchaseOrderModal;
+export default EditPurchaseOrderModal;
