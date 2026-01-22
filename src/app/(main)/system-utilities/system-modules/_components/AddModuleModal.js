@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../../../utils/authContext';
-import { MODULE_ICONS, getCategories, getIconById } from '../../../../utils/iconConstants';
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../../../../../utils/authContext';
+import { MODULE_ICONS, getCategories, getIconById } from '../../../../../utils/iconConstants';
 
 function IconSelect({ value, onChange, darkMode }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -110,27 +110,16 @@ function IconSelect({ value, onChange, darkMode }) {
     );
 }
 
-export default function EditModuleModal({
+export default function AddModuleModal({
     isOpen,
     onClose,
     formData,
     formErrors,
     formLoading,
     onInputChange,
-    onSubmit,
-    modules = []
+    onSubmit
 }) {
     const { darkMode } = useAuth();
-    const [isSubmodule, setIsSubmodule] = useState(false);
-
-    useEffect(() => {
-        if (isOpen) {
-            // Determine if this is a submodule based on form data
-            setIsSubmodule(!!formData.submodule);
-        }
-    }, [isOpen, formData.submodule]);
-
-    const parentModules = modules.filter(m => !m.SUBMODULE);
 
     if (!isOpen) return null;
 
@@ -139,28 +128,10 @@ export default function EditModuleModal({
             <div className={`w-full max-w-md ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl`}>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
                     <div className="p-6">
-                        <h2 className="text-2xl font-bold mb-4">Edit Module</h2>
+                        <h2 className="text-2xl font-bold mb-4">Add New Main Module</h2>
 
                         <div className="space-y-4">
 
-                            {/* Submodule Name (only for submodules) */}
-                            {isSubmodule && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Submodule Name</label>
-                                    <input
-                                        type="text"
-                                        name="submodulename"
-                                        value={formData.submodulename}
-                                        onChange={onInputChange}
-                                        placeholder="e.g., User Access"
-                                        className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodulename ? 'border-red-500' : ''}`}
-                                    />
-                                    {formErrors.submodulename && <p className="text-red-500 text-xs mt-1">{formErrors.submodulename}</p>}
-                                </div>
-                            )}
-
-
-                            {/* Module Name */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Name</label>
                                 <input
@@ -168,12 +139,12 @@ export default function EditModuleModal({
                                     name="name"
                                     value={formData.name}
                                     onChange={onInputChange}
+                                    placeholder="e.g., User Management"
                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
                                 />
                                 {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
                             </div>
 
-                            {/* Module Identifier */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Identifier</label>
                                 <input
@@ -181,19 +152,15 @@ export default function EditModuleModal({
                                     name="module"
                                     value={formData.module}
                                     onChange={onInputChange}
-                                    placeholder={isSubmodule ? "e.g., user-access" : "e.g., User Setup"}
+                                    placeholder="e.g., User Setup"
                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.module ? 'border-red-500' : ''}`}
                                 />
                                 {formErrors.module && <p className="text-red-500 text-xs mt-1">{formErrors.module}</p>}
                                 <p className="text-xs text-gray-500 mt-1">
-                                    {isSubmodule
-                                        ? "Submodules must use lowercase letters, numbers, hyphens, and underscores"
-                                        : "Main modules can use letters, numbers, spaces, hyphens, and underscores"
-                                    }
+                                    Module identifiers can use letters, numbers, spaces, hyphens, and underscores
                                 </p>
                             </div>
                             
-                            {/* Description */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Description</label>
                                 <textarea
@@ -207,7 +174,6 @@ export default function EditModuleModal({
                                 {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
                             </div>
 
-                            {/* Icon */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Icon</label>
                                 <IconSelect value={formData.icon} onChange={onInputChange} darkMode={darkMode} />
@@ -230,7 +196,7 @@ export default function EditModuleModal({
                                 disabled={formLoading}
                                 className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
                             >
-                                {formLoading ? 'Updating...' : 'Update Module'}
+                                {formLoading ? 'Adding...' : 'Add Module'}
                             </button>
                         </div>
                     </div>

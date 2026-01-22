@@ -2,17 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import HeaderNavBar from '../../_components/headerNavBar';
+import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-import { useAuth } from '../../../utils/authContext';
-import ConfirmModal from '../_components/confirmModal';
+import { useAuth } from '../../../../utils/authContext';
+import ConfirmModal from '../../_components/confirmModal';
 import { getAllModules, addModule, updateModule, deactivateModule, activateModule } from './_actions';
 import AddModuleModal from './_components/AddModuleModal';
 import AddSubmoduleModal from './_components/AddSubmoduleModal';
 import EditModuleModal from './_components/EditModuleModal';
 import ModulesTable from './_components/ModulesTable';
-import { getIconById } from '../../../utils/iconConstants';
 
 function SystemModulesContent() {
     const { user, loading, darkMode } = useAuth();

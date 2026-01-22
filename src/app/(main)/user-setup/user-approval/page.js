@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import HeaderNavBar from '../../_components/headerNavBar';
+import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-import { useAuth } from '../../../utils/authContext';
-import ContentLeftPanel from '../_components/contentLeftPanel';
-import { SkeletonUserApprovalDetail } from '../../_components/skeletonLoader';
-import RejectRequestModal from '../_components/rejectRequestModal';
-import ConfirmModal from '../_components/confirmModal';
+import { useAuth } from '../../../../utils/authContext';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
+import { SkeletonUserApprovalDetail } from '../../../_components/skeletonLoader';
+import RejectRequestModal from '../../_components/rejectRequestModal';
+import ConfirmModal from '../../_components/confirmModal';
 import { getPendingApprovals, approveUserAccount, rejectUserAccount } from './_actions';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 
 function RequestEvaluationContent() {
     const router = useRouter();

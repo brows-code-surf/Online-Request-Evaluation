@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 
 export default function TicketSuccessModal({ isOpen, onClose, message = "Ticket Created Successfully" }) {
   const { darkMode } = useAuth();

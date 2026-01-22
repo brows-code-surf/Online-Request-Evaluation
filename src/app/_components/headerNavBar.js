@@ -245,7 +245,7 @@ export default function HeaderNavBar() {
           </button>
 
           {/* Navigation - Desktop */}
-          <nav className="hidden md:flex gap-6">
+          <nav className="hidden md:flex items-center gap-6">
             {/* Loading Skeleton */}
             {modulesLoading ? (
               <>
@@ -264,7 +264,7 @@ export default function HeaderNavBar() {
                       key={module.module_id}
                       href={module.module_link}
                       className={`flex items-center gap-2 text-sm font-medium transition ${isLinkActive(module.module_link)
-                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1 mt-1'
                         : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                         }`}
                     >
@@ -295,7 +295,7 @@ export default function HeaderNavBar() {
                     }}
                     className={`flex items-center gap-2 text-sm font-medium transition ${
                       dropdown.children.some(child => isLinkActive(child.module_link))
-                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                        ? 'text-blue-600 border-b-2 border-blue-600 pb-1 mt-1'
                         : `${theme ? 'text-gray-300' : 'text-gray-600'} hover:text-blue-600`
                       }`}
                   >

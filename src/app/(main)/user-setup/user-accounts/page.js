@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import HeaderNavBar from '../../_components/headerNavBar';
+import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-import { useAuth } from '../../../utils/authContext';
-import UserProfileHeader from '../_components/userProfileHeader';
-import UserPassword from '../_components/userPassword';
+import { useAuth } from '../../../../utils/authContext';
+import UserProfileHeader from '../../_components/userProfileHeader';
+import UserPassword from '../../_components/userPassword';
 import { updateUserProfile, changePassword, getAllUsers, setUserInactive, setUserActive, changeEmployeeName } from './_actions';
 import { JobTitles, Departments, JobLevel } from '@/utils/jobConstants';
 import { validatePassword } from '@/utils/passwordRequirements';
-import ContentLeftPanel from '../_components/contentLeftPanel';
-import ConfirmModal from '../_components/confirmModal';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
+import ConfirmModal from '../../_components/confirmModal';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
-import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
+import { SkeletonUserAccountsDetail } from '../../../_components/skeletonLoader';
 
 function UserAccountsContent() {
     const { user, loading, darkMode, isAdmin } = useAuth();

@@ -39,32 +39,33 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Purchase Order - ${purchaseOrder.header.poNumber}</title>
           <style>
             @media print {
-              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-              .header { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-              .company-name { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px; }
-              .po-number { font-size: 18px; font-weight: bold; color: #dc2626; }
-              .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+              body { font-family: Arial, sans-serif; margin: 0; padding: 12px; }
+              .header { border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 18px; }
+              .company-name { font-size: 19px; font-weight: bold; color: #2563eb; margin-bottom: 6px; }
+              .po-number { font-size: 13px; color: #dc2626; }
+              .po-number strong { font-size: 16px; }
+              .status { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 7px; font-weight: bold; margin-left: 6px; }
               .status-posted { background: #d1fae5; color: #065f46; }
               .status-not-posted { background: #fef3c7; color: #d97706; }
-              .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
-              .info-item { margin-bottom: 8px; }
-              .info-label { font-size: 12px; color: #666; font-weight: bold; margin-bottom: 2px; }
-              .info-value { font-size: 14px; color: #333; }
-              .remarks { margin-bottom: 30px; padding: 15px; background: #f9f9f9; border-left: 4px solid #2563eb; }
-              .remarks-label { font-weight: bold; margin-bottom: 5px; }
-              .flags { margin-bottom: 30px; }
-              .flag-item { display: inline-block; padding: 4px 8px; margin: 2px; border-radius: 12px; font-size: 10px; font-weight: bold; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+              .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 18px; }
+              .info-item { margin-bottom: 5px; }
+              .info-label { font-size: 8px; color: #666; margin-bottom: 1px; }
+              .info-value { font-size: 11px; font-weight: bold; color: #333; }
+              .info-value-small { font-size: 9px; font-weight: bold; color: #333; }
+              .remarks { margin-bottom: 18px; padding: 9px; background: #f9f9f9; border-left: 4px solid #2563eb; }
+              .remarks-label { font-weight: bold; margin-bottom: 3px; }
+              .flags { margin-bottom: 18px; }
+              .flag-item { display: inline-block; padding: 2px 5px; margin: 1px; border-radius: 7px; font-size: 6px; font-weight: bold; }
+              table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+              th, td { border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px;}
               th { background: #f5f5f5; font-weight: bold; }
               .text-right { text-align: right; }
               .text-center { text-align: center; }
               .total-row { font-weight: bold; background: #f0f0f0; }
-              .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #666; }
-              @page { margin: 0.5in; }
+              .footer { margin-top: 21px; text-align: center; font-size: 10px; color: #666; }
+              @page { margin: 1in 1in 3.5in 1in; }
             }
           </style>
         </head>
@@ -72,91 +73,62 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
           <div class="header">
             <div class="company-name">SANTEH FEEDS CORPORATION</div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div class="po-number">Purchase Order #${purchaseOrder.header.poNumber}</div>
-              <div>
-                <span class="status status-${purchaseOrder.header.postStatus === 1 ? 'posted' : 'not-posted'}">
-                  ${purchaseOrder.header.postStatus === 1 ? 'POSTED' : 'NOT POSTED'}
-                </span>
-              </div>
+              <div class="po-number">Purchase Order # : <strong>${purchaseOrder.header.poNumber}</strong></div>
             </div>
           </div>
 
           <div class="info-grid">
             <div class="info-item">
-              <div class="info-label">VENDOR ID</div>
-              <div class="info-value">${purchaseOrder.header.vendorId || 'N/A'}</div>
-            </div>
-            <div class="info-item">
               <div class="info-label">VENDOR NAME</div>
               <div class="info-value">${purchaseOrder.header.vendName || 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">PAYMENT TERMS</div>
-              <div class="info-value">${purchaseOrder.header.pymtrmid || 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">DELIVERY TO</div>
-              <div class="info-value">${purchaseOrder.header.deliveryTo || 'N/A'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">PO DATE</div>
               <div class="info-value">${purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">DATE NEEDED</div>
-              <div class="info-value">${purchaseOrder.header.dateNeeded ? new Date(purchaseOrder.header.dateNeeded).toLocaleDateString() : 'N/A'}</div>
+              <div class="info-label">PAYMENT TERMS</div>
+              <div class="info-value-small">${purchaseOrder.header.pymtrmid || 'N/A'}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">CREATED BY</div>
-              <div class="info-value">${purchaseOrder.header.createdBy || 'N/A'}</div>
+              <div class="info-label">DELIVERY TO</div>
+              <div class="info-value-small">${purchaseOrder.header.deliveryTo || 'N/A'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">CONTACT PERSON</div>
+              <div class="info-value-small">${purchaseOrder.header.createdBy || 'N/A'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">CANVASSED BY</div>
-              <div class="info-value">${purchaseOrder.header.canvassedBy || 'N/A'}</div>
+              <div class="info-value-small">${purchaseOrder.header.canvassedBy || 'N/A'}</div>
             </div>
           </div>
-
-          ${purchaseOrder.header.remarks ? `
-            <div class="remarks">
-              <div class="remarks-label">REMARKS:</div>
-              <div>${purchaseOrder.header.remarks}</div>
-            </div>
-          ` : ''}
-
-          ${purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 || purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1 ? `
-            <div class="flags">
-              ${purchaseOrder.header.isBudgetNo === 1 ? '<span class="flag-item" style="background: #dbeafe; color: #1e40af;">Budget No.</span>' : ''}
-              ${purchaseOrder.header.isPrNo === 1 ? '<span class="flag-item" style="background: #d1fae5; color: #065f46;">PR No.</span>' : ''}
-              ${purchaseOrder.header.capex === 1 ? '<span class="flag-item" style="background: #e9d5ff; color: #7c2d92;">CAPEX</span>' : ''}
-              ${purchaseOrder.header.isPerAdvise === 1 ? '<span class="flag-item" style="background: #fed7aa; color: #c2410c;">Per Advise</span>' : ''}
-            </div>
-          ` : ''}
 
           <table>
             <thead>
               <tr>
-                <th style="width: 25%;">Item Description</th>
                 <th style="width: 10%;">Item No</th>
+                <th style="width: 25%;">Item Description</th>
                 <th style="width: 8%;">UOFM</th>
                 <th style="width: 10%;" class="text-center">Quantity</th>
                 <th style="width: 12%;" class="text-right">Unit Cost</th>
                 <th style="width: 12%;" class="text-right">Extended Cost</th>
                 <th style="width: 10%;">Budget</th>
-                <th style="width: 13%;">Status</th>
+                
               </tr>
             </thead>
             <tbody>
               ${purchaseOrder.details && purchaseOrder.details.length > 0
                 ? purchaseOrder.details.map(item => `
                     <tr>
-                      <td>${item.itemDesc || '-'}</td>
                       <td>${item.itemNmbr || '-'}</td>
+                      <td>${item.itemDesc || '-'}</td>
                       <td>${item.uofm || '-'}</td>
                       <td class="text-center">${item.qtyOrder || 0}</td>
                       <td class="text-right">₱${item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                       <td class="text-right">₱${item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                       <td>${item.budgetNo || '-'}</td>
-                      <td>${item.itemStatus || 'PENDING'}</td>
+                     
                     </tr>
                   `).join('')
                 : '<tr><td colspan="8" class="text-center">No items found for this order</td></tr>'
@@ -170,6 +142,36 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
               </tr>
             </tfoot>
           </table>
+
+          ${(purchaseOrder.header.remarks || purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 || purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) ? `
+            <div class="remarks" style="margin-top: 20px; margin-bottom: 10px; font-size: 10px;">
+              <div class="remarks-label">REMARKS:</div>
+              <div>${purchaseOrder.header.remarks || ''}</div>
+              ${(purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 || purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) ? `
+                <div style="margin-top: 10px;">
+                  ${purchaseOrder.header.isBudgetNo === 1 && purchaseOrder.header.budgetNoList ?  purchaseOrder.header.budgetNoList  : ''}
+                  <br/>
+                  ${purchaseOrder.header.isPrNo === 1 && purchaseOrder.header.prList ?  purchaseOrder.header.prList  : ''}
+                  <div style="margin-top: 5px;">
+                    ${purchaseOrder.header.capex === 1 ? '<span class="flag-item" style="background: #e9d5ff; color: #7c2d92;">CAPEX</span>' : ''}
+                    ${purchaseOrder.header.isPerAdvise === 1 ? '<span class="flag-item" style="background: #fed7aa; color: #c2410c;">Per Advise</span>' : ''}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 30px; display: flex; justify-content: space-between; width: 100%; font-size: 10px;">
+            <div style="flex: 1; text-align: left; margin-left: 60px;">
+                Created By: <strong>${purchaseOrder.header.createdBy || '____________________'}</strong><br/>
+                </div>  
+            <div style="flex: 1; text-align: center;">
+                Confirmed By: <strong>${purchaseOrder.header.confirmedBy || '____________________'}</strong>
+              </div>
+            <div style="flex: 1; text-align: right; margin-right: 60px;">
+              Approved By: <strong>${purchaseOrder.header.approvedBy || '____________________'}</strong>
+            </div>
+          </div>
 
           <div class="footer">
             <div>Generated on: ${new Date().toLocaleString()}</div>
@@ -263,98 +265,46 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
             style={{ fontFamily: 'Arial, sans-serif' }}
           >
             {/* Header */}
-            <div className="border-b-2 border-gray-800 pb-4 mb-6">
-              <div className="text-2xl font-bold text-blue-600 mb-2">
+            <div style={{ borderBottom: '2px solid #333', paddingBottom: '12px', marginBottom: '18px' }}>
+              <div style={{ fontSize: '19px', fontWeight: 'bold', color: '#2563eb', marginBottom: '6px' }}>
                 SANTEH FEEDS CORPORATION
               </div>
-              <div className="flex items-center justify-between">
-                <div className="text-xl font-bold text-red-600">
-                  Purchase Order #{purchaseOrder.header.poNumber}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(purchaseOrder.header.postStatus)}`}>
-                    {purchaseOrder.header.postStatus === 1 ? 'POSTED' : 'NOT POSTED'}
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '13px', color: '#dc2626' }}>
+                  Purchase Order # : <strong style={{ fontSize: '16px' }}>{purchaseOrder.header.poNumber}</strong>
                 </div>
               </div>
             </div>
 
             {/* Order Information */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '9px', marginBottom: '18px' }}>
               <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">VENDOR ID</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.vendorId || 'N/A'}</div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>VENDOR NAME</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.vendName || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">VENDOR NAME</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.vendName || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">PAYMENT TERMS</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.pymtrmid || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">DELIVERY TO</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.deliveryTo || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">PO DATE</div>
-                <div className="text-sm text-gray-900">
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>PO DATE</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
                   {purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">DATE NEEDED</div>
-                <div className="text-sm text-gray-900">
-                  {purchaseOrder.header.dateNeeded ? new Date(purchaseOrder.header.dateNeeded).toLocaleDateString() : 'N/A'}
-                </div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>PAYMENT TERMS</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.pymtrmid || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">CREATED BY</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.createdBy || 'N/A'}</div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>DELIVERY TO</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.deliveryTo || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-xs font-bold text-gray-600 mb-1">CANVASSED BY</div>
-                <div className="text-sm text-gray-900">{purchaseOrder.header.canvassedBy || 'N/A'}</div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CONTACT PERSON</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.createdBy || 'N/A'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CANVASSED BY</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.canvassedBy || 'N/A'}</div>
               </div>
             </div>
-
-            {/* Remarks */}
-            {purchaseOrder.header.remarks && (
-              <div className="mb-6 p-4 bg-gray-50 border-l-4 border-blue-500">
-                <div className="font-bold text-sm mb-1">REMARKS:</div>
-                <div className="text-sm text-gray-700">{purchaseOrder.header.remarks}</div>
-              </div>
-            )}
-
-            {/* Flags */}
-            {(purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 ||
-              purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) && (
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-2">
-                  {purchaseOrder.header.isBudgetNo === 1 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Budget No.
-                    </span>
-                  )}
-                  {purchaseOrder.header.isPrNo === 1 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      PR No.
-                    </span>
-                  )}
-                  {purchaseOrder.header.capex === 1 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      CAPEX
-                    </span>
-                  )}
-                  {purchaseOrder.header.isPerAdvise === 1 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      Per Advise
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Items Table */}
             <div className="overflow-x-auto">
@@ -368,7 +318,7 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
                     <th className="border border-gray-300 px-3 py-2 text-right text-xs font-bold">Unit Cost</th>
                     <th className="border border-gray-300 px-3 py-2 text-right text-xs font-bold">Extended Cost</th>
                     <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Budget</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Status</th>
+                    {/* <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Status</th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -386,7 +336,7 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
                           ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.budgetNo || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">
+                        {/* <td className="border border-gray-300 px-3 py-2 text-sm">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             item.itemStatus === 'PENDING'
                               ? 'bg-yellow-100 text-yellow-800'
@@ -396,7 +346,7 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
                           }`}>
                             {item.itemStatus || 'PENDING'}
                           </span>
-                        </td>
+                        </td> */}
                       </tr>
                     ))
                   ) : (
@@ -419,8 +369,59 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
               </table>
             </div>
 
+            {/* Remarks */}
+            {(purchaseOrder.header.remarks || purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 ||
+              purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) && (
+              <div className="mt-6 p-4 bg-gray-50 border-l-4 border-blue-500">
+                <div className="font-bold text-sm mb-1">REMARKS:</div>
+                {purchaseOrder.header.remarks && (
+                  <div className="text-sm text-gray-700 mb-2">{purchaseOrder.header.remarks}</div>
+                )}
+                {(purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 ||
+                  purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) && (
+                  <div>
+                    {purchaseOrder.header.isBudgetNo === 1 && purchaseOrder.header.budgetNoList && (
+                      <div className="mb-1">
+                       {purchaseOrder.header.budgetNoList}
+                      </div>
+                    )}
+                    {purchaseOrder.header.isPrNo === 1 && purchaseOrder.header.prList && (
+                      <div className="mb-1">
+                        {purchaseOrder.header.prList}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {purchaseOrder.header.capex === 1 && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          CAPEX
+                        </span>
+                      )}
+                      {purchaseOrder.header.isPerAdvise === 1 && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          Per Advise
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Confirmed By and Approved By */}
+            <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                Created By: <strong>{purchaseOrder.header.createdBy || '____________________'}</strong><br/>
+                </div>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                Confirmed By: <strong>{purchaseOrder.header.confirmedBy || '____________________'}</strong>
+              </div>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                Approved By: <strong>{purchaseOrder.header.approvedBy || '____________________'}</strong>
+              </div>
+            </div>
+
             {/* Footer */}
-            <div className="mt-8 text-center text-xs text-gray-500">
+            <div className="mt-4 text-center text-xs text-gray-500">
               <div>Generated on: {new Date().toLocaleString()}</div>
               <div>SANTEH FEEDS CORPORATION - Purchase Order System</div>
             </div>

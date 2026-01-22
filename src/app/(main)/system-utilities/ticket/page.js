@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../utils/authContext';
+import { useAuth } from '../../../../utils/authContext';
 import ProtectedRoute from '@/utils/protectedRoute';
 import HeaderNavBar from '@/app/_components/headerNavBar';
 import TicketList from './_components/TicketList';

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 import { getDistinctParentModules } from '../_actions';
-import { MODULE_ICONS, getCategories, getIconById } from '../../../../utils/iconConstants';
+import { MODULE_ICONS, getCategories, getIconById } from '../../../../../utils/iconConstants';
 
 function IconSelect({ value, onChange, darkMode }) {
     const [isOpen, setIsOpen] = useState(false);

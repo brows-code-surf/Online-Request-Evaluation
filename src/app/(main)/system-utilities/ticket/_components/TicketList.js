@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAuth } from '../../../../utils/authContext';
+import { useAuth } from '../../../../../utils/authContext';
 
 const STATUS_OPTIONS = [
   { value: 'Open', label: 'Open', color: 'bg-blue-100 text-blue-800' },

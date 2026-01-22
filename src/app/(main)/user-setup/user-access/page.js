@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import HeaderNavBar from '../../_components/headerNavBar';
+import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
-import { useAuth } from '../../../utils/authContext';
-import ContentLeftPanel from '../_components/contentLeftPanel';
-import ConfirmModal from '../_components/confirmModal';
-import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules, updateExistingRecordsToUseEmployeeNames } from './_actions';
+import { useAuth } from '../../../../utils/authContext';
+import ContentLeftPanel from '../../_components/contentLeftPanel';
+import ConfirmModal from '../../_components/confirmModal';
+import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules } from './_actions';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
-import SideNotchOpenLeftPanel from '../_components/sideNotchOpenLeftPanel';
-import { SkeletonUserAccountsDetail } from '../../_components/skeletonLoader';
+import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
+import { SkeletonUserAccountsDetail } from '../../../_components/skeletonLoader';
 
 function UserAccessContent() {
     const router = useRouter();

@@ -156,7 +156,12 @@ class PurchaseOrder {
 
             // Get header
             const headerQuery = `
-                SELECT * FROM [PURCHASE.ORDERHEADER.1]
+                SELECT ROWID, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
+                       PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY, DATECONFIRMED, APPROVEDBY,
+                       DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                       SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
+                FROM [PURCHASE.ORDERHEADER.1]
                 WHERE PONUMBER = @poNumber
             `;
             const headerResult = await connection.request()
@@ -210,6 +215,7 @@ class PurchaseOrder {
                     subtotal: header.SUBTOTAL,
                     budgetNoList: header.BUDGETNOLIST,
                     prList: header.PRLISTS,
+                    contactPerson: header.CONTACTPERSON,
                     poStatus: header.PO_STATUS || 'PENDING'
                 },
                 details: detailsResult.recordset.map(detail => ({

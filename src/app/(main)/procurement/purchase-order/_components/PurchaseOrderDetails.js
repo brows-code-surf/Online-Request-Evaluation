@@ -420,6 +420,10 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.vendName || 'N/A'}</span>
               </div>
               <div>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contact Person:</span>
+                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.contactPerson || 'N/A'}</span>
+              </div>
+              <div>
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Payment Terms:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.pymtrmid || 'N/A'}</span>
               </div>
@@ -552,7 +556,7 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit
         )}
       </div>
 
-      {/* Items Table */}
+      {/* Items Section */}
       <div className={`rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -560,7 +564,8 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit
           </h3>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
               <tr>
@@ -649,6 +654,89 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit
               </tr>
             </tfoot>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden space-y-4 p-4">
+          {details.map((item, index) => (
+            <div key={item.rid} className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="space-y-3">
+                <div>
+                  <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+                    {item.itemDesc}
+                  </div>
+                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} space-y-1`}>
+                    <div>Item No: {item.itemNmbr}</div>
+                    <div>Budget: {item.budgetNo}</div>
+                    {(item.brand || item.origin) && (
+                      <div>
+                        {item.brand && `Brand: ${item.brand}`}
+                        {item.brand && item.origin && ' • '}
+                        {item.origin && `Origin: ${item.origin}`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+                      Quantity
+                    </div>
+                    <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {item.qtyOrder} {item.uofm}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+                      Unit Cost
+                    </div>
+                    <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+                      Extended Cost
+                    </div>
+                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+                      Status
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${!item.itemStatus || item.itemStatus === 'PENDING'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : item.itemStatus === 'DELIVERED'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                        }`}>
+                        {item.itemStatus || 'PENDING'}
+                      </span>
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Served: {item.qtyServed || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Mobile Subtotal */}
+          <div className={`p-4 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+            <div className="flex justify-between items-center">
+              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Subtotal:
+              </span>
+              <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                ₱{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

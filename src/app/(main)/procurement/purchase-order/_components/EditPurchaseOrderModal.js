@@ -10,7 +10,8 @@ import {
   getApprovedBy,
   getDeliveryLocations,
   getSupplierContactPersons,
-  getDocumentTypes
+  getDocumentTypes,
+  getCanvassingDataForPO
 } from '../_actions';
 import ItemSelectionModal from './ItemSelectionModal';
 
@@ -115,26 +116,65 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
       loadContactPersons(header.vendorId);
     }
 
-    // Convert details to selected items format
-    const items = details.map((detail, index) => ({
-      uniqueId: `item-${index}`,
-      rid: detail.rid || '', // Include the RID from the existing purchase order
-      pqCode: detail.pqCode || '',
-      prCode: detail.prCode || '',
-      itemNumber: detail.itemNmbr || '',
-      itemDescription: detail.itemDesc || '',
-      uofm: detail.uofm || '',
-      qtyOrder: detail.qtyOrder || 0,
-      unitCost: detail.unitCost || 0,
-      brand: detail.brand || '',
-      origin: detail.origin || '',
-      budgetCode: detail.budgetNo || '',
-      addressedTo: header.canvassedBy || '',
-      quantity: detail.qtyOrder || 0, // Max available quantity
-      remaining: detail.qtyOrder || 0 // For edit, remaining is current qtyOrder
-    }));
+    // Fetch canvassing data to get remaining quantities
+    try {
+      const canvassingResult = await getCanvassingDataForPO(user, false); // false to get all items, not just assigned to user
+      const canvassingItems = canvassingResult.success ? canvassingResult.items : [];
 
-    setSelectedItems(items);
+      // Convert details to selected items format with proper remaining quantities
+      const items = details.map((detail, index) => {
+        // Find matching canvassing item by RID
+        const canvassingItem = canvassingItems.find(item => item.rid === detail.rid);
+
+        // Calculate remaining: original quantity - total ordered by other POs + current PO quantity
+        let remaining = detail.qtyOrder || 0; // Default to current qtyOrder
+        if (canvassingItem) {
+          // remaining = original_quantity - total_ordered_by_other_pos + current_po_quantity
+          remaining = (canvassingItem.quantity - canvassingItem.totalQtyOrdered) + (detail.qtyOrder || 0);
+        }
+
+        return {
+          uniqueId: `item-${index}`,
+          rid: detail.rid || '', // Include the RID from the existing purchase order
+          pqCode: detail.pqCode || '',
+          prCode: detail.prCode || '',
+          itemNumber: detail.itemNmbr || '',
+          itemDescription: detail.itemDesc || '',
+          uofm: detail.uofm || '',
+          qtyOrder: detail.qtyOrder || 0,
+          unitCost: detail.unitCost || 0,
+          brand: detail.brand || '',
+          origin: detail.origin || '',
+          budgetCode: detail.budgetNo || '',
+          addressedTo: header.canvassedBy || '',
+          quantity: detail.qtyOrder || 0, // Max available quantity
+          remaining: remaining // Properly calculated remaining quantity
+        };
+      });
+
+      setSelectedItems(items);
+    } catch (error) {
+      console.error('Error loading canvassing data for remaining quantities:', error);
+      // Fallback to original logic if canvassing data fetch fails
+      const items = details.map((detail, index) => ({
+        uniqueId: `item-${index}`,
+        rid: detail.rid || '',
+        pqCode: detail.pqCode || '',
+        prCode: detail.prCode || '',
+        itemNumber: detail.itemNmbr || '',
+        itemDescription: detail.itemDesc || '',
+        uofm: detail.uofm || '',
+        qtyOrder: detail.qtyOrder || 0,
+        unitCost: detail.unitCost || 0,
+        brand: detail.brand || '',
+        origin: detail.origin || '',
+        budgetCode: detail.budgetNo || '',
+        addressedTo: header.canvassedBy || '',
+        quantity: detail.qtyOrder || 0,
+        remaining: detail.qtyOrder || 0
+      }));
+      setSelectedItems(items);
+    }
   };
 
   const loadSuppliers = async () => {
@@ -1071,18 +1111,17 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    max={item.remaining || item.qtyOrder}
+                                    max={item.remaining}
                                     value={item.qtyOrder || ''}
                                     onChange={(e) => {
                                       const newValue = parseFloat(e.target.value) || 0;
-                                      const maxAllowed = item.remaining || item.qtyOrder;
-                                      if (newValue <= maxAllowed) {
+                                      if (newValue <= item.remaining) {
                                         updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
                                       }
                                     }}
                                     className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                                       }`}
-                                    title={`Max quantity: ${item.remaining || item.qtyOrder} ${item.uofm}`}
+                                    title={`Max quantity: ${item.remaining} ${item.uofm}`}
                                   />
                                   <span className={`ml-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     {item.uofm}
@@ -1093,22 +1132,15 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    max={item.remaining || item.qtyOrder}
-                                    value={item.qtyOrder || ''}
+                                    value={item.unitCost || ''}
                                     onChange={(e) => {
                                       const newValue = parseFloat(e.target.value) || 0;
-                                      const maxAllowed = item.remaining || item.qtyOrder;
-                                      if (newValue <= maxAllowed) {
-                                        updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
-                                      }
+                                      updateSelectedItem(item.uniqueId, 'unitCost', newValue);
                                     }}
-                                    className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                    className={`w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                                       }`}
-                                    title={`Max quantity: ${item.remaining || item.qtyOrder} ${item.uofm}`}
+                                    title="Unit cost"
                                   />
-                                  <span className={`ml-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    {item.uofm}
-                                  </span>
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>

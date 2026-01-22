@@ -312,9 +312,10 @@ export const MODULE = {
     try {
       connection = await connectToDatabase();
 
-      // First, determine which table the module is currently in
-      const parentCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
-      const childCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
+      // First, determine which table the module is currently in and get current LINK
+      let currentLink = null;
+      const parentCheckQuery = `SELECT ROWID, LINK FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
+      const childCheckQuery = `SELECT ROWID, LINK FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
 
       const [parentCheckResult, childCheckResult] = await Promise.all([
         connection.request().input('moduleId', moduleId).query(parentCheckQuery),
@@ -326,6 +327,12 @@ export const MODULE = {
 
       if (!isCurrentlyParent && !isCurrentlyChild) {
         throw new Error('Module not found');
+      }
+
+      if (isCurrentlyParent) {
+        currentLink = parentCheckResult.recordset[0].LINK;
+      } else {
+        currentLink = childCheckResult.recordset[0].LINK;
       }
 
       // Determine if this should be a child module based on form data
@@ -458,6 +465,21 @@ export const MODULE = {
       }
 
       if (result.rowsAffected[0] > 0) {
+        // Update user access records if LINK changed
+        if (currentLink !== moduleData.module) {
+          const updateAccessQuery = `
+            UPDATE [SYSTEM.USERACCESS.1]
+            SET MODULE = @newLink, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
+            WHERE MODULE = @oldLink
+          `;
+
+          await connection.request()
+            .input('newLink', moduleData.module)
+            .input('oldLink', currentLink)
+            .input('modifiedBy', modifiedBy)
+            .query(updateAccessQuery);
+        }
+
         return { success: true, message: "Module updated successfully" };
       } else {
         return { success: false, message: "No module found to update" };

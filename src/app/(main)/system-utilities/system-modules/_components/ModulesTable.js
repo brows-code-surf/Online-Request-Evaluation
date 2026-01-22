@@ -1,7 +1,7 @@
 'use client';
 
-import { getIconById } from '../../../../utils/iconConstants';
-import Pagination from '../../_components/Pagination';
+import { getIconById } from '../../../../../utils/iconConstants';
+import Pagination from '../../../_components/Pagination';
 
 export default function ModulesTable({
     modules,
