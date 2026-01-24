@@ -84,7 +84,7 @@ export const ITEM_MASTERFILE = {
         INSERT INTO IV00101
         (ITEMNMBR, ITEMDESC, LOCNCODE, CREATDDT, CREATEDBY, DATEMODIFIED, MODIFIEDBY)
         VALUES
-        (@itemNumber, @itemDesc, @locationCode, GETDATE(), @createdBy, GETDATE(), @modifiedBy)
+        (@itemNumber, @itemDesc, 'HEAD OFFICE', GETDATE(), @createdBy, GETDATE(), @modifiedBy)
       `;
 
       const result = await connection.request()
@@ -190,6 +190,7 @@ export const ITEM_MASTERFILE = {
         SELECT
           ITEMNMBR,
           ITEMDESC,
+          UOMSCHDL,
           LOCNCODE,
           ACTIVE,
           DATEMODIFIED,

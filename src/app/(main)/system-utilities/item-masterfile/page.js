@@ -5,6 +5,8 @@ import HeaderNavBar from '../../../_components/headerNavBar';
 import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../../utils/authContext';
+import SkeletonLoader from '../../../_components/skeletonLoader';
+import { toast, ToastContainer } from 'react-toastify';
 
 import Pagination from '../../_components/Pagination';
 import ConfirmModal from '../../_components/confirmModal';
@@ -96,11 +98,10 @@ function ItemMasterfileContent() {
         try {
             const result = await addItem(formData, user.empName);
             if (result.success) {
-                setSuccessMessage('Item added successfully!');
+                toast.success('Item added successfully!');
                 setShowAddModal(false);
                 resetForm();
                 loadItems();
-                setTimeout(() => setSuccessMessage(''), 3000);
             } else {
                 setErrorMessage(result.message);
             }
@@ -121,11 +122,10 @@ function ItemMasterfileContent() {
         try {
             const result = await updateItem(selectedItem.ITEMNMBR, formData, user.empName);
             if (result.success) {
-                setSuccessMessage('Item updated successfully!');
+                toast.success('Item updated successfully!');
                 setShowEditModal(false);
                 resetForm();
                 loadItems();
-                setTimeout(() => setSuccessMessage(''), 3000);
             } else {
                 setErrorMessage(result.message);
             }
@@ -253,11 +253,203 @@ function ItemMasterfileContent() {
         setCurrentPage(1);
     };
 
+    // Show skeleton loader when page is loading (fetching items)
+    if (pageLoading) {
+        return (
+            <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+                <HeaderNavBar />
+                <div className="flex flex-1 pt-16">
+                    <div className="flex-1 flex flex-col">
+                        <div className="flex-1 p-8">
+                            <div className="max-w-7xl mx-auto space-y-8">
+                                {/* Header Section Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-8 shadow-xl`}>
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <SkeletonLoader height="h-12" width="w-12" className="rounded-xl" />
+                                                <div>
+                                                    <SkeletonLoader height="h-8" width="w-48" className="mb-2" />
+                                                    <SkeletonLoader height="h-3" width="w-32" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-12" width="w-32" className="rounded-xl" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Search and Filters Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-6 shadow-lg`}>
+                                    <div className="flex flex-col lg:flex-row gap-6">
+                                        <SkeletonLoader height="h-12" width="w-full" className="rounded-xl" />
+                                        <SkeletonLoader height="h-12" width="w-48" className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                {/* Items Table Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className={`${darkMode ? 'bg-gray-800/60' : 'bg-gray-50/60'} backdrop-blur-sm`}>
+                                                <tr>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm`}>
+                                                {Array(5).fill().map((_, index) => (
+                                                    <tr key={index} className={`group ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')} hover:${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/50'} transition-all duration-200 border-b ${darkMode ? 'border-gray-700/30' : 'border-gray-200/30'} backdrop-blur-sm`}>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                            <div className="flex items-center">
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg mr-3" />
+                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-6 py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
+                                                            <SkeletonLoader height="h-4" width="w-32" />
+                                                        </td>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                            <div className="flex items-center">
+                                                                <SkeletonLoader height="h-4" width="w-4" className="mr-2" />
+                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                            <SkeletonLoader height="h-6" width="w-16" className="rounded-full" />
+                                                        </td>
+                                                        <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                                            <div className="flex justify-end gap-1">
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (loading) {
         return (
-            <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-                <Loader loading={true} />
+            <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <HeaderNavBar />
+                <div className="flex flex-1 pt-16">
+                    <div className="flex-1 flex flex-col">
+                        <div className="flex-1 p-8">
+                            <div className="max-w-7xl mx-auto space-y-8">
+                                {/* Header Section Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-8 shadow-xl`}>
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <SkeletonLoader height="h-12" width="w-12" className="rounded-xl" />
+                                                <div>
+                                                    <SkeletonLoader height="h-8" width="w-48" className="mb-2" />
+                                                    <SkeletonLoader height="h-3" width="w-32" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-12" width="w-32" className="rounded-xl" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Search and Filters Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-6 shadow-lg`}>
+                                    <div className="flex flex-col lg:flex-row gap-6">
+                                        <SkeletonLoader height="h-12" width="w-full" className="rounded-xl" />
+                                        <SkeletonLoader height="h-12" width="w-48" className="rounded-xl" />
+                                    </div>
+                                </div>
+
+                                {/* Items Table Skeleton */}
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className={`${darkMode ? 'bg-gray-800/60' : 'bg-gray-50/60'} backdrop-blur-sm`}>
+                                                <tr>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm`}>
+                                                {Array(5).fill().map((_, index) => (
+                                                    <tr key={index} className={`group ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')} hover:${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/50'} transition-all duration-200 border-b ${darkMode ? 'border-gray-700/30' : 'border-gray-200/30'} backdrop-blur-sm`}>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                            <div className="flex items-center">
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg mr-3" />
+                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-6 py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
+                                                            <SkeletonLoader height="h-4" width="w-32" />
+                                                        </td>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                            <div className="flex items-center">
+                                                                <SkeletonLoader height="h-4" width="w-4" className="mr-2" />
+                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                            <SkeletonLoader height="h-6" width="w-16" className="rounded-full" />
+                                                        </td>
+                                                        <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                                            <div className="flex justify-end gap-1">
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
+                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -448,11 +640,10 @@ function ItemMasterfileContent() {
                                                             </div>
                                                         </td>
                                                         <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                            <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${
-                                                                item.ACTIVE
+                                                            <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${item.ACTIVE
                                                                     ? (darkMode ? 'bg-green-900/60 text-green-300 border border-green-700/50' : 'bg-green-100 text-green-800 border border-green-200')
                                                                     : (darkMode ? 'bg-red-900/60 text-red-300 border border-red-700/50' : 'bg-red-100 text-red-800 border border-red-200')
-                                                            }`}>
+                                                                }`}>
                                                                 <span className={`w-1.5 h-1.5 rounded-full mr-2 ${item.ACTIVE ? 'bg-green-500' : 'bg-red-500'}`}></span>
                                                                 {item.ACTIVE ? 'Active' : 'Inactive'}
                                                             </span>
@@ -588,7 +779,22 @@ function ItemMasterfileContent() {
                 isLoading={formLoading}
             />
 
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-center"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme={darkMode ? "dark" : "light"}
+            />
+
         </div>
+
     );
 }
 

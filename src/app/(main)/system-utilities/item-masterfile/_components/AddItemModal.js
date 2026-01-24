@@ -64,10 +64,11 @@ export default function AddItemModal({
                         <input
                             type="text"
                             name="locationCode"
-                            value={formData.locationCode}
+                            value="HEAD OFFICE"
                             onChange={onInputChange}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'}`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'} opacity-50 cursor-not-allowed`}
                             placeholder="Enter location code"
+                            disabled
                         />
                     </div>
                 </div>
