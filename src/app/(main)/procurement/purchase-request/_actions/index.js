@@ -288,6 +288,31 @@ export async function getAllBudgetAccounts() {
   }
 }
 
+export async function searchItems(searchTerm) {
+  try {
+    const { ITEM_MASTERFILE } = await import('@/models/ItemMasterfile.js');
+
+    // If no search term is provided, return all items
+    const items = await ITEM_MASTERFILE.searchItems(searchTerm || '');
+
+    // Format the results to only include the required fields
+    const formattedItems = items.map(item => ({
+      ITEMNMBR: item.ITEMNMBR,
+      ITEMDESC: item.ITEMDESC,
+      UOFM: item.UOMSCHDL || 'EACH'
+    }));
+
+    return {
+      success: true,
+      items: formattedItems,
+      count: formattedItems.length
+    };
+  } catch (error) {
+    console.error('Error searching items:', error);
+    return { success: false, message: 'Failed to search items', error: error.message };
+  }
+}
+
 // Notification helper functions
 async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, creatorName) {
   try {

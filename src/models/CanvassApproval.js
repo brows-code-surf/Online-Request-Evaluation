@@ -5,19 +5,22 @@ import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 
 class CanvassApproval {
-    // Get all canvassing items for approval (flattened from all POSTED requests)
-    static async getAllCanvassingItemsForApproval(user = null, isAdmin = false) {
+
+    // Get all canvassing items (approved, rejected, and pending)
+    static async getAllCanvassingItems(user = null, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Get all POSTED canvassing requests (status = 1) with their details that haven't been approved/rejected yet
+            // Get all POSTED canvassing requests (status = 1) with their approval status
             let query = `
                 SELECT DISTINCT
                     PQD.ROWID as itemId,
                     PQH.PQCODE,
                     PQH.CREATEDBY,
                     PQH.DATEREQUESTED,
+                    PQD.PRCODE,
+                    PQD.RID,
                     PQD.ITEMNMBR,
                     PQD.ITEMDESC,
                     PQD.UOFM,
@@ -33,13 +36,16 @@ class CanvassApproval {
                     PQD.IS_IMPORTED,
                     PQD.DELIVERYSCHEDULE,
                     PQD.REMARKS,
-                    PQD.DATECREATED
+                    PQD.DATECREATED,
+                    PQAS.IS_APPROVED,
+                    PQAS.APPROVEDBY as approvedBy,
+                    PQAS.REMARKS as approvalRemarks,
+                    PQAS.DATECREATED as approvalDate
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
                 INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
                 LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
                 LEFT JOIN [PURCHASE.QUOTATIONAPPROVALSTATUS.1] PQAS ON PQD.ROWID = PQAS.PQROWID
                 WHERE PQH.POSTSTATUS = 1
-                AND (PQAS.IS_APPROVED IS NULL OR PQAS.ROWID IS NULL)
             `;
 
             const params = [];
@@ -51,31 +57,46 @@ class CanvassApproval {
 
             const result = await request.query(query);
 
-            return result.recordset.map(record => ({
-                id: record.itemId,
-                pqCode: record.PQCODE,
-                itemNumber: record.ITEMNMBR,
-                itemDescription: record.ITEMDESC,
-                unitOfMeasure: record.UOFM,
-                quantity: record.QUANTITY,
-                budgetCode: record.BUDGETCODE,
-                vendorId: record.VENDORID,
-                vendorName: record.vendorName,
-                offeredPrice: record.OFFEREDPRICE,
-                bidPrice: record.BIDPRICE,
-                finalPrice: record.FINALPRICE,
-                brand: record.BRAND,
-                origin: record.ORIGIN,
-                isImported: record.IS_IMPORTED,
-                deliverySchedule: record.DELIVERYSCHEDULE,
-                remarks: record.REMARKS,
-                createdBy: record.CREATEDBY,
-                dateRequested: record.DATEREQUESTED,
-                dateCreated: record.DATECREATED
-            }));
+            return result.recordset.map(record => {
+                let status = 'PENDING';
+                if (record.IS_APPROVED === 1) {
+                    status = 'APPROVED';
+                } else if (record.IS_APPROVED === 0) {
+                    status = 'REJECTED';
+                }
+
+                return {
+                    id: record.itemId,
+                    pqCode: record.PQCODE,
+                    prCode: record.PRCODE,
+                    rid: record.RID,
+                    itemNumber: record.ITEMNMBR,
+                    itemDescription: record.ITEMDESC,
+                    unitOfMeasure: record.UOFM,
+                    quantity: record.QUANTITY,
+                    budgetCode: record.BUDGETCODE,
+                    vendorId: record.VENDORID,
+                    vendorName: record.vendorName,
+                    offeredPrice: record.OFFEREDPRICE,
+                    bidPrice: record.BIDPRICE,
+                    finalPrice: record.FINALPRICE,
+                    brand: record.BRAND,
+                    origin: record.ORIGIN,
+                    isImported: record.IS_IMPORTED,
+                    deliverySchedule: record.DELIVERYSCHEDULE,
+                    remarks: record.REMARKS,
+                    createdBy: record.CREATEDBY,
+                    dateRequested: record.DATEREQUESTED,
+                    dateCreated: record.DATECREATED,
+                    status: status,
+                    approvedBy: record.approvedBy,
+                    approvalRemarks: record.approvalRemarks,
+                    approvalDate: record.approvalDate
+                };
+            });
         } catch (error) {
-            console.error('Error fetching canvassing items for approval:', error);
-            throw new Error('Failed to fetch canvassing items for approval: ' + error.message);
+            console.error('Error fetching all canvassing items:', error);
+            throw new Error('Failed to fetch all canvassing items: ' + error.message);
         }
     }
 
@@ -129,6 +150,22 @@ class CanvassApproval {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            // First, get the PRCODE and RID for this canvassing item
+            const getItemQuery = `
+                SELECT PRCODE, RID FROM [PURCHASE.QUOTATIONDETAILS.1]
+                WHERE ROWID = @itemId
+            `;
+
+            const itemResult = await connection.request()
+                .input('itemId', itemId)
+                .query(getItemQuery);
+
+            if (itemResult.recordset.length === 0) {
+                throw new Error('Canvassing item not found');
+            }
+
+            const { PRCODE: prCode, RID: rid } = itemResult.recordset[0];
+
             // First try to update existing record
             const updateQuery = `
                 UPDATE [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
@@ -160,6 +197,47 @@ class CanvassApproval {
 
                 if (result.rowsAffected[0] === 0) {
                     throw new Error('Failed to create approval record');
+                }
+            }
+
+            // Update the corresponding purchase request item status to 'QUOTATION APPROVED'
+            if (prCode && rid) {
+                const updatePRQuery = `
+                    UPDATE [PURCHASE.REQUESTDETAILS.1]
+                    SET ITEMSTATUS = 'FOR P.O.'
+                    WHERE REFERENCENO = @prCode AND RID = @rid
+                `;
+
+                await connection.request()
+                    .input('prCode', prCode)
+                    .input('rid', rid)
+                    .query(updatePRQuery);
+
+                // Check if all items for this purchase request are now 'FOR P.O.'
+                const checkAllItemsQuery = `
+                    SELECT COUNT(*) as totalItems, COUNT(CASE WHEN ITEMSTATUS = 'FOR P.O.' THEN 1 END) as poItems
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    WHERE REFERENCENO = @prCode
+                `;
+
+                const checkResult = await connection.request()
+                    .input('prCode', prCode)
+                    .query(checkAllItemsQuery);
+
+                const { totalItems, poItems } = checkResult.recordset[0];
+                const allItemsArePO = totalItems > 0 && totalItems === poItems;
+
+                // Only update header to 'PROCESSING' if all items are 'FOR P.O.'
+                if (allItemsArePO) {
+                    const updatePRHQuery = `
+                        UPDATE [PURCHASE.REQUESTHEADER.1]
+                        SET REQUESTSTATUS = 'PROCESSING'
+                        WHERE REFERENCENO = @prCode
+                    `;
+
+                    await connection.request()
+                        .input('prCode', prCode)
+                        .query(updatePRHQuery);
                 }
             }
 

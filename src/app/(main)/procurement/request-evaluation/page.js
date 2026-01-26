@@ -144,6 +144,15 @@ function RequestEvaluationContent() {
             // Prevent concurrent loads
             if (loadingRef.current || !selectedApproval) return;
 
+            // Do not fetch details for requests not in For Confirmation, For Request Approval, or For Purchasing Lead Time
+            const allowedStatuses = ['FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME'];
+            if (!allowedStatuses.includes(selectedApproval.status)) {
+                setApprovalDetails([]);
+                setDetailsLoading(false);
+                loadingRef.current = false;
+                return;
+            }
+
         loadingRef.current = true;
         // Show loader on initial load when entering the page
         if (isInitialLoad) {
@@ -175,9 +184,13 @@ function RequestEvaluationContent() {
         // Details will be loaded by useEffect
     };
 
-    // Filter and sort approvals
+    // Filter and sort approvals - only show requests that need evaluation
     const filteredApprovals = approvals
         .filter(approval => {
+            // Only show requests in evaluation statuses
+            const allowedStatuses = ['FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME'];
+            const isEvaluationStatus = allowedStatuses.includes(approval.status);
+
             const matchesSearch = searchQuery === '' ||
                 [approval.requester, approval.title, approval.id, approval.status, approval.department, approval.location, approval.employeeID, approval.description, approval.isRush , approval.requestDate?.toString()].some(field =>
                     field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
@@ -186,7 +199,7 @@ function RequestEvaluationContent() {
             const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
                 (filterStatus === 'RUSH' ? approval.isRush : approval.status === filterStatus);
 
-            return matchesSearch && matchesStatus;
+            return isEvaluationStatus && matchesSearch && matchesStatus;
         })
         .sort((a, b) => {
             if (sortBy === 'date') {
@@ -265,9 +278,11 @@ function RequestEvaluationContent() {
             case 'REJECTED':
                 return 'bg-red-100 text-red-800 border-red-300';
             case 'FOR REQUEST APPROVAL':
-            case 'FOR CONFIRMATION':
-            case 'FOR PURCHASING LEAD TIME':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'FOR CONFIRMATION':
+                return 'bg-blue-100 text-blue-800 border-blue-300';
+            case 'FOR PURCHASING LEAD TIME':
+                return 'bg-orange-100 text-orange-800 border-orange-300';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-300';
         }
@@ -548,10 +563,12 @@ function RequestEvaluationContent() {
                                             </div>
                                         )}
 
-                                        {/* Items Table */}
+                                        {/* Items Table / Cards */}
                                         <div className="mb-6">
                                             <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Items</h3>
-                                            <div className={`overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
+
+                                            {/* Desktop Table View */}
+                                            <div className={`hidden sm:block overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
                                                 <table className="w-full">
                                                     <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                                                         <tr>
@@ -592,6 +609,80 @@ function RequestEvaluationContent() {
                                                         )}
                                                     </tbody>
                                                 </table>
+                                            </div>
+
+                                            {/* Mobile Card View */}
+                                            <div className="sm:hidden space-y-4">
+                                                {approvalDetails && approvalDetails.length > 0 ? (
+                                                    approvalDetails.map((item, index) => (
+                                                        <div key={index} className={`p-4 border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'} rounded-lg shadow-sm`}>
+                                                            <div className="space-y-3">
+                                                                {/* Item Code */}
+                                                                <div>
+                                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                        {item.ITEMNMBR || '-'}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Item Description */}
+                                                                <div>
+                                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Description</p>
+                                                                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-white' : 'text-gray-900'} break-words`}>
+                                                                        {item.ITEMDESC || '-'}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Quantity and UOFM */}
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div>
+                                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Quantity</p>
+                                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.QUANTITY || 0}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>UOFM</p>
+                                                                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Budget Code and Date Needed */}
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Budget Code</p>
+                                                                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.BUDGETCODE || '-'}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Date Needed</p>
+                                                                        <p className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                                            {item.DATENEEDED ? new Date(item.DATENEEDED).toLocaleDateString('en-US', {
+                                                                                year: 'numeric',
+                                                                                month: 'short',
+                                                                                day: 'numeric'
+                                                                            }) : '-'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Remarks */}
+                                                                {item.remarks && (
+                                                                    <div>
+                                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Remarks</p>
+                                                                        <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'} break-words`}>
+                                                                            {item.remarks}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className={`p-8 text-center border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'} rounded-lg`}>
+                                                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                            No items found for this request
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

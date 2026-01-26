@@ -5,6 +5,7 @@ import { useAuth } from '../../../../../utils/authContext';
 import { getNextReferenceNumber, generateItemNumber, getFilteredUsersForPurchaseRequest } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import BudgetModal from './BudgetModal';
+import ItemSelectionModal from './ItemSelectionModal';
 
 
 
@@ -65,6 +66,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [currentBudgetItemIndex, setCurrentBudgetItemIndex] = useState(null);
+  const [showItemSelectionModal, setShowItemSelectionModal] = useState(false);
+  const [currentItemSelectionIndex, setCurrentItemSelectionIndex] = useState(null);
 
   // Get users for dropdowns
   const [users, setUsers] = useState([]);
@@ -158,8 +161,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     newItems[index][field] = value;
     setFormData(prev => ({ ...prev, items: newItems }));
 
-    // Auto-generate or clear item number when description changes
-    if (field === 'itemDescription') {
+    // Auto-generate item number only for TEXT type when description changes
+    if (field === 'itemDescription' && newItems[index].lineType === 'TEXT') {
       if (!value.trim()) {
         // Clear item number when description is empty
         newItems[index].itemNumber = '';
@@ -582,23 +585,92 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {/* Line Type Selection */}
+                <div>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Line Type
+                  </label>
+                  <select
+                    value={item.lineType || ''}
+                    onChange={(e) => handleItemChange(index, 'lineType', e.target.value)}
+                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white'
+                      }`}
+                    disabled={loading}
+                  >
+                    <option value="">Select type</option>
+                    <option value="ITEM">ITEM</option>
+                    <option value="TEXT">TEXT</option>
+                  </select>
+                </div>
+
                 {/* Item Number */}
                 <div>
                   <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Item Number <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={item.itemNumber}
-                    readOnly
-                    onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
-                    data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
-                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                      }`}
-                    placeholder="Automated Item Number"
-                    disabled={loading}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={item.itemNumber}
+                      readOnly={item.lineType === 'ITEM'}
+                      onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
+                      data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                        }`}
+                      placeholder={item.lineType === 'ITEM' ? "Select item from masterfile" : "Automated Item Number"}
+                      disabled={loading}
+                    />
+                    {item.lineType === 'ITEM' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentItemSelectionIndex(index);
+                          setShowItemSelectionModal(true);
+                        }}
+                        disabled={loading}
+                        className={`absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                   {errors[`items.${index}.itemNumber`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemNumber`]}</p>}
+                </div>
+
+                {/* Unit of Measure */}
+                <div>
+                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                    Unit of Measure <span className="text-red-500">*</span>
+                  </label>
+                  {item.lineType === 'ITEM' ? (
+                    // For ITEM type, show the UOM as read-only text
+                    <input
+                      type="text"
+                      value={item.unitOfMeasure}
+                      readOnly
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100')
+                        }`}
+                      disabled={loading}
+                    />
+                  ) : (
+                    // For TEXT type, show the dropdown with standard options
+                    <select
+                      value={item.unitOfMeasure}
+                      onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
+                      data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                        }`}
+                      disabled={loading}
+                    >
+                      <option value="">Select UOM</option>
+                      {UNIT_OF_MEASURE_OPTIONS.map(uom => (
+                        <option key={uom} value={uom} className={darkMode ? 'bg-gray-700' : ''}>{uom}</option>
+                      ))}
+                    </select>
+                  )}
+                  {errors[`items.${index}.unitOfMeasure`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.unitOfMeasure`]}</p>}
                 </div>
 
                 {/* Item Description */}
@@ -613,31 +685,10 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
                     className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                       }`}
-                    placeholder="Enter item description"
-                    disabled={loading}
+                    placeholder={item.lineType === 'ITEM' ? "Auto-filled from masterfile" : "Enter item description"}
+                    disabled={loading || item.lineType === 'ITEM'}
                   />
                   {errors[`items.${index}.itemDescription`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemDescription`]}</p>}
-                </div>
-
-                {/* Unit of Measure */}
-                <div>
-                  <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    Unit of Measure <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={item.unitOfMeasure}
-                    onChange={(e) => handleItemChange(index, 'unitOfMeasure', e.target.value)}
-                    data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
-                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                      }`}
-                    disabled={loading}
-                  >
-                    <option value="">Select UOM</option>
-                    {UNIT_OF_MEASURE_OPTIONS.map(uom => (
-                      <option key={uom} value={uom} className={darkMode ? 'bg-gray-700' : ''}>{uom}</option>
-                    ))}
-                  </select>
-                  {errors[`items.${index}.unitOfMeasure`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.unitOfMeasure`]}</p>}
                 </div>
 
                 {/* Quantity */}
@@ -747,7 +798,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
             {loading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                {editData ? 'Updating...' : 'Creating...'}
+                {editData ? 'Updating...' : 'Creating Purchase Request ...'}
               </div>
             ) : (
               editData ? 'Update Purchase Request' : 'Create Purchase Request'
@@ -777,6 +828,26 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         onSelect={handleBudgetSelect}
         darkMode={darkMode}
       />
+
+        {/* Item Selection Modal */}
+        <ItemSelectionModal
+          isOpen={showItemSelectionModal}
+          onClose={() => setShowItemSelectionModal(false)}
+          onSelectItem={(selectedItem) => {
+            if (currentItemSelectionIndex !== null) {
+              // Update the item with the selected item data
+              const newItems = [...formData.items];
+              newItems[currentItemSelectionIndex].itemNumber = selectedItem.ITEMNMBR;
+              newItems[currentItemSelectionIndex].itemDescription = selectedItem.ITEMDESC;
+              // Set UOM from the selected item (use UOFM if available, otherwise UOMSCHDL)
+              newItems[currentItemSelectionIndex].unitOfMeasure = selectedItem.UOFM || selectedItem.UOMSCHDL || '';
+              setFormData(prev => ({ ...prev, items: newItems }));
+            }
+            setShowItemSelectionModal(false);
+            setCurrentItemSelectionIndex(null);
+          }}
+          darkMode={darkMode}
+        />
     </div>
   );
 });

@@ -248,6 +248,32 @@ export default function ContentLeftPanel({
                             </select>
                         </>
                     )}
+
+                    {filterType === 'purchase-order' && (
+                        <>
+                            <select
+                                value={filterStatus || ''}
+                                onChange={(e) => onFilterStatusChange(e.target.value)}
+                                className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                            >
+                                <option value="all">Select Status</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="FOR P.O. CONFIRMATION">For P.O. Confirmation</option>
+                                <option value="FOR P.O. APPROVAL">For P.O. Approval</option>
+                                <option value="P.O. APPROVED">P.O. Approved</option>
+                            </select>
+
+                            <select
+                                value={sortBy}
+                                onChange={(e) => onSortByChange(e.target.value)}
+                                className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                            >
+                                <option value="date">Sort by Date</option>
+                                <option value="requester">Sort by Name</option>
+                                <option value="status">Sort by Status</option>
+                            </select>
+                        </>
+                    )}
                 </div>
 
                 {/* Approvals List */}
