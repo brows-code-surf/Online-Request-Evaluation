@@ -59,7 +59,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       quantity: '',
       budgetCode: '',
       dateNeeded: '',
-      remarks: ''
+      remarks: '',
+      itemStatus: ''
     }]
   });
   const [errors, setErrors] = useState({});
@@ -108,7 +109,9 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               quantity: detail.quantity || '',
               budgetCode: detail.budgetCode || '',
               dateNeeded: detail.dateNeeded ? new Date(detail.dateNeeded).toISOString().split('T')[0] : '',
-              remarks: detail.remarks || ''
+              remarks: detail.remarks || '',
+              itemStatus: detail.itemStatus || '',
+              lineType: detail.lineType || ''
             }))
             : [{
               itemNumber: '',
@@ -117,7 +120,9 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               quantity: '',
               budgetCode: '',
               dateNeeded: '',
-              remarks: ''
+              remarks: '',
+              itemStatus: '',
+              lineType: ''
             }]
         });
       } else {
@@ -160,6 +165,14 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
     const newItems = [...formData.items];
     newItems[index][field] = value;
     setFormData(prev => ({ ...prev, items: newItems }));
+
+    // Clear item number, UOM, and description when switching line types
+    if (field === 'lineType') {
+      newItems[index].itemNumber = '';
+      newItems[index].unitOfMeasure = '';
+      newItems[index].itemDescription = '';
+      setFormData(prev => ({ ...prev, items: newItems }));
+    }
 
     // Auto-generate item number only for TEXT type when description changes
     if (field === 'itemDescription' && newItems[index].lineType === 'TEXT') {
@@ -249,7 +262,8 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         quantity: '',
         budgetCode: '',
         dateNeeded: '',
-        remarks: ''
+        remarks: '',
+        itemStatus: ''
       }]
     }));
   };
@@ -365,7 +379,9 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       quantity: parseFloat(item.quantity),
       budgetCode: item.budgetCode,
       dateNeeded: item.dateNeeded,
-      remarks: item.remarks
+      remarks: item.remarks,
+      itemStatus: item.itemStatus || '',
+      lineType: item.lineType
     }));
 
     await onSubmit(headerData, detailsData);
@@ -612,13 +628,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                     <input
                       type="text"
                       value={item.itemNumber}
-                      readOnly={item.lineType === 'ITEM'}
+                      readOnly
                       onChange={(e) => handleItemChange(index, 'itemNumber', e.target.value)}
                       data-error={errors[`items.${index}.itemNumber`] ? 'true' : 'false'}
                       className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemNumber`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                         }`}
-                      placeholder={item.lineType === 'ITEM' ? "Select item from masterfile" : "Automated Item Number"}
-                      disabled={loading}
+                      placeholder={item.lineType === 'ITEM' ? "Select item from masterfile" : item.lineType === 'TEXT' ? "Automated Item Number" : "Select line type first"}
+                      disabled={loading || !item.lineType}
                     />
                     {item.lineType === 'ITEM' && (
                       <button
@@ -627,7 +643,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                           setCurrentItemSelectionIndex(index);
                           setShowItemSelectionModal(true);
                         }}
-                        disabled={loading}
+                        disabled={loading || !item.lineType}
                         className={`absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
                       >
                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -652,9 +668,9 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                       readOnly
                       className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100')
                         }`}
-                      disabled={loading}
+                      disabled={loading || !item.lineType}
                     />
-                  ) : (
+                  ) : item.lineType === 'TEXT' ? (
                     // For TEXT type, show the dropdown with standard options
                     <select
                       value={item.unitOfMeasure}
@@ -662,13 +678,24 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                       data-error={errors[`items.${index}.unitOfMeasure`] ? 'true' : 'false'}
                       className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.unitOfMeasure`] ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
                         }`}
-                      disabled={loading}
+                      disabled={loading || !item.lineType}
                     >
                       <option value="">Select UOM</option>
                       {UNIT_OF_MEASURE_OPTIONS.map(uom => (
                         <option key={uom} value={uom} className={darkMode ? 'bg-gray-700' : ''}>{uom}</option>
                       ))}
                     </select>
+                  ) : (
+                    // When no line type is selected, show disabled input
+                    <input
+                      type="text"
+                      value=""
+                      readOnly
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${darkMode ? 'border-gray-500 bg-gray-700 text-gray-400' : 'border-gray-300 bg-gray-100 text-gray-400'}
+                        }`}
+                      disabled={true}
+                      placeholder="Select line type first"
+                    />
                   )}
                   {errors[`items.${index}.unitOfMeasure`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.unitOfMeasure`]}</p>}
                 </div>
@@ -678,16 +705,41 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                   <label className={`block text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Item Description <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={item.itemDescription}
-                    onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
-                    data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
-                    className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
-                      }`}
-                    placeholder={item.lineType === 'ITEM' ? "Auto-filled from masterfile" : "Enter item description"}
-                    disabled={loading || item.lineType === 'ITEM'}
-                  />
+                  {item.lineType === 'ITEM' ? (
+                    // For ITEM type, show disabled input
+                    <input
+                      type="text"
+                      value={item.itemDescription}
+                      readOnly
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100')
+                        }`}
+                      placeholder="Auto-filled from masterfile"
+                      disabled={true}
+                    />
+                  ) : item.lineType === 'TEXT' ? (
+                    // For TEXT type, show editable input
+                    <input
+                      type="text"
+                      value={item.itemDescription}
+                      onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
+                      data-error={errors[`items.${index}.itemDescription`] ? 'true' : 'false'}
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${errors[`items.${index}.itemDescription`] ? 'border-red-300 bg-red-50 placeholder-gray-900' : (darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                        }`}
+                      placeholder="Enter item description"
+                      disabled={loading}
+                    />
+                  ) : (
+                    // When no line type is selected, show disabled input
+                    <input
+                      type="text"
+                      value=""
+                      readOnly
+                      className={`w-full px-2 sm:px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${darkMode ? 'border-gray-500 bg-gray-700 text-gray-400' : 'border-gray-300 bg-gray-100 text-gray-400'}
+                        }`}
+                      disabled={true}
+                      placeholder="Select line type first"
+                    />
+                  )}
                   {errors[`items.${index}.itemDescription`] && <p className="mt-1 text-xs text-red-600">{errors[`items.${index}.itemDescription`]}</p>}
                 </div>
 

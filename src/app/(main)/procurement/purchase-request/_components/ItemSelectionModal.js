@@ -136,25 +136,19 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Unit of Measure
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Location
-                          </th>
                         </tr>
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                         {Array(5).fill().map((_, index) => (
                           <tr key={index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                             <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-24" />
+                              <SkeletonLoader height="h-4" width="w-48" />
                             </td>
                             <td className="px-4 py-3">
                               <SkeletonLoader height="h-4" width="w-48" />
                             </td>
                             <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-16" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-12" />
+                              <SkeletonLoader height="h-4" width="w-48" />
                             </td>
                           </tr>
                         ))}
@@ -186,9 +180,6 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Unit of Measure
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Location
-                          </th>
                         </tr>
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
@@ -212,11 +203,6 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                             <td className="px-4 py-3">
                               <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {item.UOFM}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.LOCNCODE}
                               </span>
                             </td>
                           </tr>
