@@ -47,7 +47,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     isPerAdvise: false,
     budgetNoList: '',
     canvassedBy: '',
-    confirmedBy: '',
+    confirmedBy: [],
     approvedBy: '',
     contactPerson: '',
     docType: 'N/A'
@@ -210,6 +210,11 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       return;
     }
 
+    if (poData.confirmedBy.length === 0) {
+      toast.error('At least one confirmer is required');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Prepare header data
@@ -225,7 +230,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         promisedDate: poData.promisedDate ? new Date(poData.promisedDate) : null,
         promisedShipDate: poData.promisedShipDate ? new Date(poData.promisedShipDate) : null,
         canvassedBy: selectedItems.length > 0 ? [...new Set(selectedItems.map(item => item.addressedTo).filter(Boolean))].join(', ') : (poData.canvassedBy || user?.empName || ''),
-        confirmedBy: poData.confirmedBy,
+        confirmedBy: poData.confirmedBy.join(', '),
         approvedBy: poData.approvedBy,
         isBudgetNo: poData.isBudgetNo,
         isPrNo: poData.isPrNo,
@@ -263,7 +268,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedItems([]);
         setSelectedSupplier('');
         setSelectedVendorId('');
-        setSelectedPaymentTerm('');        
+        setSelectedPaymentTerm('');
         setContactPersons([]);
         setPoData({
           poNumber: '',
@@ -278,7 +283,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
           isPerAdvise: false,
           budgetNoList: '',
           canvassedBy: '',
-          confirmedBy: '',
+          confirmedBy: [],
           approvedBy: '',
           contactPerson: ''
         });
@@ -318,7 +323,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         isPerAdvise: false,
         budgetNoList: '',
         canvassedBy: '',
-        confirmedBy: '',
+        confirmedBy: [],
         approvedBy: '',
         contactPerson: ''
       });
@@ -655,19 +660,39 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         For Confirmation By <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <input
-                          type="text"
-                          value={poData.confirmedBy}
-                          onChange={(e) => {
-                            setPoData(prev => ({ ...prev, confirmedBy: e.target.value }));
-                          }}
-                          onFocus={() => setShowConfirmedByDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="Select for confirmation by"
-                          required
-                        />
+                        <div className={`w-full min-h-[42px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+                          <div className="flex flex-wrap gap-1">
+                            {poData.confirmedBy.map((confirmer, index) => (
+                              <span
+                                key={index}
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'}`}
+                              >
+                                {confirmer}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPoData(prev => ({
+                                      ...prev,
+                                      confirmedBy: prev.confirmedBy.filter((_, i) => i !== index)
+                                    }));
+                                  }}
+                                  className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 focus:outline-none"
+                                >
+                                  <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                              </span>
+                            ))}
+                            <input
+                              type="text"
+                              onFocus={() => setShowConfirmedByDropdown(true)}
+                              onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
+                              className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                              placeholder={poData.confirmedBy.length === 0 ? "Select for confirmation by" : ""}
+                            />
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setShowConfirmedByDropdown(!showConfirmedByDropdown)}
@@ -679,23 +704,27 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         </button>
                       </div>
                       {showConfirmedByDropdown && (
-                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                          }`}>
-                          {confirmedByOptions.map((option) => (
-                            <div
-                              key={option.id}
-                              onClick={() => {
-                                setPoData(prev => ({ ...prev, confirmedBy: option.name }));
-                                setShowConfirmedByDropdown(false);
-                              }}
-                              className={`px-3 py-2 cursor-pointer ${darkMode
-                                ? 'text-white hover:bg-gray-600'
-                                : 'text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                              {option.name}
-                            </div>
-                          ))}
+                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
+                          {confirmedByOptions
+                            .filter(option => !poData.confirmedBy.includes(option.name))
+                            .map((option) => (
+                              <div
+                                key={option.id}
+                                onClick={() => {
+                                  setPoData(prev => ({
+                                    ...prev,
+                                    confirmedBy: [...prev.confirmedBy, option.name]
+                                  }));
+                                  setShowConfirmedByDropdown(false);
+                                }}
+                                className={`px-3 py-2 cursor-pointer ${darkMode
+                                  ? 'text-white hover:bg-gray-600'
+                                  : 'text-gray-900 hover:bg-gray-100'
+                                  }`}
+                              >
+                                {option.name}
+                              </div>
+                            ))}
                         </div>
                       )}
                     </div>

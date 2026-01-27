@@ -5,10 +5,9 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../utils/authContext';
 import { PurchaseOrderPrintModal } from './PurchaseOrderPrintModal';
 import ConfirmModal from '../../../_components/confirmModal';
-import RejectRequestModal from '../../../_components/rejectRequestModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 
-function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit, onDataRefresh, loading = false }) {
+function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataRefresh, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
   const [posting, setPosting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -504,9 +503,11 @@ function PurchaseOrderDetails({ purchaseOrder, onClose, onPost, onDelete, onEdit
 
         {/* Flags */}
         <div className="mt-6">
-          <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Order Flags
-          </h3>
+          {(header.isBudgetNo === 1 || header.isPrNo === 1 || header.capex === 1 || header.isPerAdvise === 1) && (
+            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Order Flags
+            </h3>
+          )}
           <div className="flex flex-wrap gap-2">
             {header.isBudgetNo === 1 && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800`}>

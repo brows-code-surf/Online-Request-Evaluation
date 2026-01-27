@@ -7,6 +7,7 @@ import { ActivityLogs } from '@/models/ActivityLogs';
 import { sendEmailWithTemplate } from '@/utils/emailService';
 import { broadcastRequestEvaluationUpdate, broadcastDashboardUpdate } from '@/lib/socketBroadcast';
 
+//#region PURCHASE REQUEST ACTIONS
 export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}, isAdmin = false) {
     try {
         const requests = await RequestEvaluation.getEvaluationsLeftPanel(requesterName, requestStatus, filters, isAdmin);
@@ -520,3 +521,57 @@ export async function markAsRead(referenceNo, userName) {
         throw error;
     }
 }
+//#endregion
+
+//#region PURCHASE ORDER APPROVAL ACTIONS
+
+export async function fetchPurchaseOrderEvaluationsLeftPanel(userName, statusFilter, isAdmin = false) {
+    try {
+        const evaluations = await RequestEvaluation.getPurchaseOrderEvaluationsLeftPanel(userName, statusFilter, isAdmin);
+        return evaluations;
+    } catch (error) {
+        console.error('Error fetching purchase order evaluations:', error);
+        throw error;
+    }
+}
+
+export async function fetchPurchaseOrderDetails(poNumber) {
+    try {
+        const details = await RequestEvaluation.getPurchaseOrderDetails(poNumber);
+        return details;
+    } catch (error) {
+        console.error('Error fetching purchase order details:', error);
+        throw error;
+    }
+}
+
+export async function confirmPurchaseOrder(poNumber, confirmBy) {
+    try {
+        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, confirmBy);
+        return result;
+    } catch (error) {
+        console.error('Error confirming purchase order:', error);
+        throw error;
+    }
+}
+
+export async function approvePurchaseOrder(poNumber, approvedBy) {
+    try {
+        const result = await RequestEvaluation.approvePurchaseOrder(poNumber, approvedBy);
+        return result;
+    } catch (error) {
+        console.error('Error approving purchase order:', error);
+        throw error;
+    }
+}
+
+export async function rejectPurchaseOrder(poNumber, rejectedBy, reason) {
+    try {
+        const result = await RequestEvaluation.rejectPurchaseOrder(poNumber, rejectedBy, reason);
+        return result;
+    } catch (error) {
+        console.error('Error rejecting purchase order:', error);
+        throw error;
+    }
+}
+//#endregion

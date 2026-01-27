@@ -3,6 +3,9 @@
 import 'server-only';
 import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
+import { Notification } from './Notification.js';
+import { sendEmailWithTemplate } from '@/utils/emailService.js';
+import UserProfile from './UserProfile.js';
 
 class PurchaseOrder {
     // Get all purchase orders with filtering and role-based access
@@ -866,6 +869,18 @@ class PurchaseOrder {
                 throw new Error('Failed to update purchase order status');
             }
 
+            // Get confirmedBy for notifications
+            const getConfirmedByQuery = `
+                SELECT CONFIRMEDBY
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const confirmedByResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(getConfirmedByQuery);
+
+            const confirmedBy = confirmedByResult.recordset[0]?.CONFIRMEDBY || '';
+
             // Log activity
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
@@ -876,6 +891,54 @@ class PurchaseOrder {
                 .input('submitterName', submitterName)
                 .query(activityQuery);
 
+            // Send notifications and emails to confirmers
+            if (confirmedBy && confirmedBy.trim()) {
+                const confirmerNames = confirmedBy.split(', ').filter(name => name.trim());
+
+                for (const confirmerName of confirmerNames) {
+                    try {
+                        // Get email for confirmer
+                        const confirmerEmail = await UserProfile.getEmailByEmployeeName(confirmerName.trim());
+                        if (confirmerEmail) {
+                            // Send email notification
+                            const emailData = {
+                                email: confirmerEmail,
+                                name: confirmerName.trim(),
+                                subject: 'Purchase Order Submitted for Confirmation',
+                                companyName: 'SANTEH',
+                                greeting: 'Dear',
+                                body: `A purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been submitted and is waiting for your confirmation. Please review and confirm the purchase order at your earliest convenience.`,
+                                buttonText: 'View Purchase Order',
+                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/purchase-order?id=${poNumber}`,
+                                companyEmail: 'j.valencia@santehfeeds.com',
+                                companyPhone: '+63 2 8584 4572',
+                                unsubscribeUrl: '#',
+                                preferencesUrl: '#'
+                            };
+
+                            await sendEmailWithTemplate(emailData);
+                            console.log('Email sent to confirmer:', confirmerName.trim());
+
+                            // Create notification
+                            const notification = new Notification(
+                                'Purchase Order Submitted for Confirmation',
+                                `Purchase order ${poNumber} has been submitted and is waiting for your confirmation.`,
+                                confirmerName.trim(),
+                                `/procurement/purchase-order?id=${poNumber}`
+                            );
+
+                            await notification.save(submitterName);
+                            console.log('Notification created for confirmer:', confirmerName.trim());
+                        } else {
+                            console.log('No email found for confirmer:', confirmerName.trim());
+                        }
+                    } catch (error) {
+                        console.error('Error sending notification to confirmer:', confirmerName.trim(), error);
+                        // Don't throw error to avoid failing the submission process
+                    }
+                }
+            }
+
             return {
                 success: true,
                 message: 'Purchase order submitted for processing successfully'
@@ -885,7 +948,6 @@ class PurchaseOrder {
             throw new Error('Failed to submit purchase order for processing: ' + error.message);
         }
     }
-
     // Get approved purchase request items for creating PO
     static async getApprovedItemsForPO(user, filterByAssignedTo = true) {
         let connection;

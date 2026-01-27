@@ -293,8 +293,8 @@ export default function ContentLeftPanel({
                                         : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
                                     }`}
                             >
-                                <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                             {enableReadStatus && approval.isRead === 'NOT READ' && (
                                                 <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
@@ -303,59 +303,57 @@ export default function ContentLeftPanel({
                                                 {approval.title}
                                             </h3>
                                         </div>
-                                    </div>
-                                    <div className="ml-2 flex items-center gap-1">
-                                        {approval.isRush && (
-                                            <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
-                                                RUSH
+                                        <div className="flex items-center gap-1 mt-2">
+                                            <span className={`text-xs px-1 py-1 rounded whitespace-nowrap ${getStatusColor(approval.status)}`}>
+                                                {approval.status}
                                             </span>
+                                            {approval.isRush && (
+                                                <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
+                                                    RUSH
+                                                </span>
+                                            )}
+                                        </div>
+                                        {!userAccount && (
+                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
+                                                {approval.requester}
+                                            </p>
                                         )}
-                                        <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${getStatusColor(approval.status)}`}>
-                                            {approval.status}
-                                        </span>
+                                        {userAccount && approval.email && (
+                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                                {approval.jobTitle}
+                                            </p>
+                                        )}
                                     </div>
-                                </div>
-
-                                <div className="flex item-start justify-between mb-2">
-                                    {!userAccount && (
-                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
-                                            {approval.requester}
-                                        </p>
-                                    )}
-                                    {userAccount && approval.email && (
-                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
-                                            {approval.jobTitle}
-                                        </p>
-                                    )}
-                                    {(requestEvalApprovalPage || filterType === 'purchase-request' || filterType === 'request-evaluation') && approval.id && (
-                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
-                                            {approval.id}
-                                        </p>
-                                    )}
-                                    {approval.employeeID && (
-                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
-                                            {approval.employeeID}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    {userAccount && (
-                                        <>
-                                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                {formatDate(approval.dateRequested)}
-                                            </span>
-                                            {console.log(approval.dateRequested)}
-                                        </>
-                                    )}
-                                    {!userAccount && filterType !== 'accounts' && (
-                                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {formatDate(approval.requestDate)}
+                                    <div className="ml-2 text-right">
+                                        {(requestEvalApprovalPage || filterType === 'purchase-request' || filterType === 'request-evaluation') && approval.id && (
+                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                                {approval.id}
+                                            </p>
+                                        )}
+                                        {approval.employeeID && (
+                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
+                                                {approval.employeeID}
+                                            </p>
+                                        )}
+                                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-700'} py-1 font-semibold rounded block mt-2`}>
+                                            {approval.department}
                                         </span>
-                                    )}
-                                    <span className={`text-xs ${darkMode ? 'bg-blue-600 text-blue-100' : 'bg-blue-300 text-gray-700'} px-2 py-1 font-semibold rounded`}>
-                                        {approval.department}
-                                    </span>
+                                        <div className="mt-2">
+                                            {userAccount && (
+                                                <>
+                                                    <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                        {formatDate(approval.dateRequested)}
+                                                    </span>
+                                                    {console.log(approval.dateRequested)}
+                                                </>
+                                            )}
+                                            {!userAccount && filterType !== 'accounts' && (
+                                                <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                    {formatDate(approval.requestDate)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))

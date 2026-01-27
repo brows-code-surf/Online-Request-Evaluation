@@ -54,11 +54,11 @@ function PurchaseOrderContent() {
         const approvalsData = data.purchaseOrders.map(po => ({
           ...po,
           id: po.poNumber,
-          title: po.vendName || 'Unknown Vendor',
+          title: po.vendorId || 'Unknown Vendor',
           requester: po.createdBy,
           status: po.poStatus || 'PENDING',
           requestDate: po.dateCreated,
-          department: po.vendName || 'Unknown Vendor',
+          department: po.vendorId || 'Unknown Vendor',
           isRead: true, // Assuming all are read for now
           isRush: false, // PO doesn't have rush flag
           itemCount: po.itemCount
@@ -200,7 +200,7 @@ function PurchaseOrderContent() {
       requester: po.createdBy,
       status: po.poStatus || 'PENDING',
       requestDate: po.dateCreated,
-      department: po.vendName || 'Unknown Vendor',
+      department: po.vendorId || 'Unknown Vendor',
       isRead: true,
       isRush: false,
       itemCount: po.itemCount
