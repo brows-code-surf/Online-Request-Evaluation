@@ -827,7 +827,7 @@ class RequestEvaluation {
             }
 
             let query = `
-                SELECT DISTINCT
+                SELECT
                     h.ROWID,
                     h.PONUMBER as id,
                     'PURCHASE ORDER' as title,
@@ -840,14 +840,18 @@ class RequestEvaluation {
                     h.DELIVERY_TO as deliveryTo,
                     h.DATENEEDED as dateNeeded,
                     h.CANVASSEDBY as canvassedBy,
-                    h.CONFIRMEDBY as confirmedBy,
-                    h.DATECONFIRMED as dateConfirmed,
+                    h.CONFIRMEDBY_1,
+                    h.DATECONFIRMED_1,
+                    h.CONFIRMEDBY_2,
+                    h.DATECONFIRMED_2,
                     h.APPROVEDBY as approvedBy,
                     h.DATEAPPROVED as dateApproved,
                     h.REMARKS as remarks,
                     h.POSTSTATUS as postStatus,
                     COUNT(d.RID) as itemCount,
-                    1 as header
+                    1 as header,
+                    h.CONFIRMEDBY_1 + CASE WHEN h.CONFIRMEDBY_2 IS NOT NULL AND h.CONFIRMEDBY_2 != '' THEN ' / ' + h.CONFIRMEDBY_2 ELSE '' END as confirmedBy,
+                    CASE WHEN h.DATECONFIRMED_1 IS NOT NULL THEN h.DATECONFIRMED_1 ELSE h.DATECONFIRMED_2 END as dateConfirmed
                 FROM [PURCHASE.ORDERHEADER.1] h
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
                 WHERE 1=1
@@ -868,9 +872,9 @@ class RequestEvaluation {
                               OR h.PO_STATUS = 'FOR P.O. APPROVAL')`;
             }
 
-            query += ` GROUP BY h.ROWID, h.PONUMBER, h.PO_STATUS, h.DATECREATED, h.CREATEDBY, 
+            query += ` GROUP BY h.ROWID, h.PONUMBER, h.PO_STATUS, h.DATECREATED, h.CREATEDBY,
                       h.VENDORID, h.VENDNAME, h.PYMTRMID, h.DELIVERY_TO, h.DATENEEDED,
-                      h.CANVASSEDBY, h.CONFIRMEDBY, h.DATECONFIRMED, h.APPROVEDBY, h.DATEAPPROVED,
+                      h.CANVASSEDBY, h.CONFIRMEDBY_1, h.DATECONFIRMED_1, h.CONFIRMEDBY_2, h.DATECONFIRMED_2, h.APPROVEDBY, h.DATEAPPROVED,
                       h.REMARKS, h.POSTSTATUS
                       ORDER BY h.DATECREATED DESC`;
 
@@ -920,7 +924,7 @@ class RequestEvaluation {
             const headerQuery = `
                 SELECT ROWID, PO_STATUS, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
                        PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
-                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY, DATECONFIRMED, APPROVEDBY,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, APPROVEDBY,
                        DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
                        SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
                 FROM [PURCHASE.ORDERHEADER.1]
@@ -966,8 +970,10 @@ class RequestEvaluation {
                     promisedDate: header.PROMISEDDATE,
                     promisedShipDate: header.PROMISEDSHIPDATE,
                     canvassedBy: header.CANVASSEDBY,
-                    confirmedBy: header.CONFIRMEDBY,
-                    dateConfirmed: header.DATECONFIRMED,
+                    confirmedBy_1: header.CONFIRMEDBY_1,
+                    dateConfirmed_1: header.DATECONFIRMED_1,
+                    confirmedBy_2: header.CONFIRMEDBY_2,
+                    dateConfirmed_2: header.DATECONFIRMED_2,
                     approvedBy: header.APPROVEDBY,
                     dateApproved: header.DATEAPPROVED,
                     isBudgetNo: header.IS_BUDGETNO,
@@ -979,7 +985,9 @@ class RequestEvaluation {
                     budgetNoList: header.BUDGETNOLIST,
                     prList: header.PRLISTS,
                     contactPerson: header.CONTACTPERSON,
-                    poStatus: header.PO_STATUS || 'PENDING'
+                    poStatus: header.PO_STATUS || 'PENDING',
+                    confirmedBy: [header.CONFIRMEDBY_1, header.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' / '),
+                    dateConfirmed: header.DATECONFIRMED_1 || header.DATECONFIRMED_2
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,

@@ -121,7 +121,7 @@ function PurchaseOrderDetails({
             {detailsLoading ? (
                 <SkeletonRequestEvaluationDetail />
             ) : (
-                <div className="p-4 overflow-y-auto flex-1">
+                <div className="p-6 overflow-y-auto flex-1">
                     <div className="space-y-6">
                         {/* Header */}
                         <div className={`p-4 rounded-lg`}>
@@ -151,7 +151,7 @@ function PurchaseOrderDetails({
                         <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg border`}>
                             <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Purchase Order Header</h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ml-4">
                                 <div>
                                     <div className="space-y-2">
                                         <div>
@@ -179,22 +179,7 @@ function PurchaseOrderDetails({
                                 </div>
 
                                 <div>
-                                    <div className="space-y-2">
-                                        <div>
-                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
-                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.deliveryTo || 'N/A'}</span>
-                                        </div>
-                                        <div>
-                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
-                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                {header?.dateCreated ? new Date(header.dateCreated).toLocaleDateString() : 'N/A'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 lg:ml-8">
                                         {header?.confirmedBy && (
                                             <div>
                                                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -211,6 +196,21 @@ function PurchaseOrderDetails({
                                                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.approvedBy}</span>
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
+                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.deliveryTo || 'N/A'}</span>
+                                        </div>
+                                        <div>
+                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
+                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                {header?.dateCreated ? new Date(header.dateCreated).toLocaleDateString() : 'N/A'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -254,11 +254,15 @@ function PurchaseOrderDetails({
 
                         {/* Items Table */}
                         <div>
-                            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Order Items</h3>
+                            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Purchase Order Details</h3>
 
-                            {/* Desktop Table View */}
-                            <div className={`hidden sm:block overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
-                                <table className="w-full">
+                            {(() => {
+                                const totalQuantity = details && details.length > 0 ? details.reduce((sum, item) => sum + parseFloat(item.QUANTITY || 0), 0) : 0;
+                                return (
+                                    <>
+                                        {/* Desktop Table View */}
+                                        <div className={`hidden sm:block overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
+                                            <table className="w-full">
                                     <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                                         <tr>
                                             <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Code</th>
@@ -293,6 +297,33 @@ function PurchaseOrderDetails({
                                             </tr>
                                         )}
                                     </tbody>
+                                    <tfoot className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                                        <tr>
+                                            <td></td>
+                                            <td></td>
+                                            <td className={`px-4 py-3 text-left text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Quantity</td>
+                                            <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-bold`}>{totalQuantity}</td>
+                                            <td className={`px-4 py-3 text-right text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Amount</td>
+                                            <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-black`}>
+                                                {(() => {
+                                                    if (!details || !Array.isArray(details) || details.length === 0) {
+                                                        return '₱0.00';
+                                                    }
+                                                    const subtotal = details.reduce((sum, item) => {
+                                                        const price = parseFloat(item.unitPrice || 0);
+                                                        const qty = parseFloat(item.QUANTITY || 0);
+                                                        return sum + (isNaN(price) ? 0 : price) * (isNaN(qty) ? 0 : qty);
+                                                    }, 0);
+                                                    const tax = parseFloat(header?.taxAmount || 0);
+                                                    const freight = parseFloat(header?.freight || 0);
+                                                    const total = subtotal + (isNaN(tax) ? 0 : tax) + (isNaN(freight) ? 0 : freight);
+                                                    const formatted = isNaN(total) ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                                    return `₱${formatted}`;
+                                                })()}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
 
@@ -357,9 +388,12 @@ function PurchaseOrderDetails({
                                     </div>
                                 )}
                             </div>
+                            </>
+                        );
+                    })()}
 
                             {/* Totals */}
-                            {details && details.length > 0 && (
+                            {/* {details && details.length > 0 && (
                                 <div className={`mt-4 p-4 ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'} rounded-lg border`}>
                                     <div className="flex justify-end">
                                         <div className="w-full md:w-1/2 space-y-2">
@@ -372,7 +406,7 @@ function PurchaseOrderDetails({
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
                         </div>
 
                         {/* Remarks */}
@@ -483,3 +517,4 @@ function PurchaseOrderDetails({
 }
 
 export default PurchaseOrderDetails;
+

@@ -111,22 +111,40 @@ export async function postPurchaseOrder(poNumber, posterName) {
 }
 
 export async function submitPurchaseOrderForProcessing(poNumber, submitterName) {
-  try {
-    const result = await PurchaseOrder.submitPurchaseOrderForProcessing(poNumber, submitterName);
+   try {
+     const result = await PurchaseOrder.submitPurchaseOrderForProcessing(poNumber, submitterName);
 
-    if (result.success) {
-      return {
-        success: true,
-        message: result.message
-      };
-    } else {
-      return { success: false, message: result.message };
-    }
-  } catch (error) {
-    console.error('Error submitting purchase order for processing:', error);
-    return { success: false, message: 'Failed to submit purchase order for processing' };
-  }
-}
+     if (result.success) {
+       return {
+         success: true,
+         message: result.message
+       };
+     } else {
+       return { success: false, message: result.message };
+     }
+   } catch (error) {
+     console.error('Error submitting purchase order for processing:', error);
+     return { success: false, message: 'Failed to submit purchase order for processing' };
+   }
+ }
+
+ export async function confirmPurchaseOrder(poNumber, confirmerName, step = 1) {
+   try {
+     const result = await PurchaseOrder.confirmPurchaseOrder(poNumber, confirmerName, step);
+
+     if (result.success) {
+       return {
+         success: true,
+         message: result.message
+       };
+     } else {
+       return { success: false, message: result.message };
+     }
+   } catch (error) {
+     console.error('Error confirming purchase order:', error);
+     return { success: false, message: 'Failed to confirm purchase order' };
+   }
+ }
 
 export async function deletePurchaseOrder(poNumber, deleterName) {
   try {

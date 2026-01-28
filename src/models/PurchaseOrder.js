@@ -32,7 +32,8 @@ class PurchaseOrder {
                     h.PROMISEDDATE,
                     h.PROMISEDSHIPDATE,
                     h.CANVASSEDBY,
-                    h.CONFIRMEDBY,
+                    h.CONFIRMEDBY_1,
+                    h.CONFIRMEDBY_2,
                     h.APPROVEDBY,
                     h.IS_BUDGETNO,
                     h.IS_PRNO,
@@ -90,7 +91,7 @@ class PurchaseOrder {
             query += `
                 GROUP BY h.ROWID, h.POSTSTATUS, h.PO_STATUS, h.PONUMBER, h.DATECREATED, h.CREATEDBY, h.VENDORID, h.VENDNAME,
                          h.PYMTRMID, h.REFDOCTYPE, h.DELIVERY_TO, h.PODATE, h.DATENEEDED, h.PROMISEDDATE,
-                         h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY, h.APPROVEDBY, h.IS_BUDGETNO,
+                         h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY_1, h.CONFIRMEDBY_2, h.APPROVEDBY, h.IS_BUDGETNO,
                          h.IS_PRNO, h.CAPEX, h.IS_PERADVISE, h.REMARKS, h.SUBTOTAL, h.BUDGETNOLIST, h.PRLISTS
                 ORDER BY h.DATECREATED DESC, h.PONUMBER DESC
             `;
@@ -116,7 +117,8 @@ class PurchaseOrder {
                 promisedDate: record.PROMISEDDATE,
                 promisedShipDate: record.PROMISEDSHIPDATE,
                 canvassedBy: record.CANVASSEDBY,
-                confirmedBy: record.CONFIRMEDBY,
+                confirmedBy_1: record.CONFIRMEDBY_1,
+                confirmedBy_2: record.CONFIRMEDBY_2,
                 approvedBy: record.APPROVEDBY,
                 isBudgetNo: record.IS_BUDGETNO,
                 isPrNo: record.IS_PRNO,
@@ -126,7 +128,9 @@ class PurchaseOrder {
                 subtotal: record.SUBTOTAL,
                 budgetNoList: record.BUDGETNOLIST,
                 prList: record.PRLISTS,
-                itemCount: record.itemCount
+                itemCount: record.itemCount,
+                confirmedBy: [record.CONFIRMEDBY_1, record.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' , '),
+                dateConfirmed: record.DATECONFIRMED_1 || record.DATECONFIRMED_2
             }));
         } catch (error) {
             console.error('Error fetching purchase orders:', error);
@@ -161,7 +165,7 @@ class PurchaseOrder {
             const headerQuery = `
                 SELECT ROWID, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
                        PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
-                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY, DATECONFIRMED, APPROVEDBY,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, APPROVEDBY,
                        DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
                        SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
                 FROM [PURCHASE.ORDERHEADER.1]
@@ -206,8 +210,10 @@ class PurchaseOrder {
                     promisedDate: header.PROMISEDDATE,
                     promisedShipDate: header.PROMISEDSHIPDATE,
                     canvassedBy: header.CANVASSEDBY,
-                    confirmedBy: header.CONFIRMEDBY,
-                    dateConfirmed: header.DATECONFIRMED,
+                    confirmedBy_1: header.CONFIRMEDBY_1,
+                    dateConfirmed_1: header.DATECONFIRMED_1,
+                    confirmedBy_2: header.CONFIRMEDBY_2,
+                    dateConfirmed_2: header.DATECONFIRMED_2,
                     approvedBy: header.APPROVEDBY,
                     dateApproved: header.DATEAPPROVED,
                     isBudgetNo: header.IS_BUDGETNO,
@@ -219,7 +225,9 @@ class PurchaseOrder {
                     budgetNoList: header.BUDGETNOLIST,
                     prList: header.PRLISTS,
                     contactPerson: header.CONTACTPERSON,
-                    poStatus: header.PO_STATUS || 'PENDING'
+                    poStatus: header.PO_STATUS || 'PENDING',
+                    confirmedBy: [header.CONFIRMEDBY_1, header.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' , '),
+                    dateConfirmed: header.DATECONFIRMED_1 || header.DATECONFIRMED_2
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,
@@ -290,12 +298,12 @@ class PurchaseOrder {
                 INSERT INTO [PURCHASE.ORDERHEADER.1] (
                     PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME, PYMTRMID,
                     REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE, PROMISEDSHIPDATE,
-                    CANVASSEDBY, CONFIRMEDBY, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                    CANVASSEDBY, CONFIRMEDBY_1, CONFIRMEDBY_2, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
                     SUBTOTAL, BUDGETNOLIST, PRLISTS, POSTSTATUS, PO_STATUS
                 ) VALUES (
                     @poNumber, GETDATE(), @createdBy, @vendorId, @vendName, @pymtrmid,
                     @refDocType, @deliveryTo, GETDATE(), @dateNeeded, @promisedDate, @promisedShipDate,
-                    @canvassedBy, @confirmedBy, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
+                    @canvassedBy, @confirmedBy_1, @confirmedBy_2, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
                     @subtotal, @budgetNoList, @prList, @postStatus, @poStatus
                 )
             `;
@@ -312,7 +320,8 @@ class PurchaseOrder {
                 .input('promisedDate', headerData.promisedDate || null)
                 .input('promisedShipDate', headerData.promisedShipDate || null)
                 .input('canvassedBy', headerData.canvassedBy || creatorName)
-                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('confirmedBy_1', headerData.confirmedBy_1 || '')
+                .input('confirmedBy_2', headerData.confirmedBy_2 || '')
                 .input('approvedBy', headerData.approvedBy || '')
                 .input('isBudgetNo', headerData.isBudgetNo || 0)
                 .input('isPrNo', headerData.isPrNo || 0)
@@ -454,7 +463,8 @@ class PurchaseOrder {
                     PROMISEDDATE = @promisedDate,
                     PROMISEDSHIPDATE = @promisedShipDate,
                     CANVASSEDBY = @canvassedBy,
-                    CONFIRMEDBY = @confirmedBy,
+                    CONFIRMEDBY_1 = @confirmedBy_1,
+                    CONFIRMEDBY_2 = @confirmedBy_2,
                     APPROVEDBY = @approvedBy,
                     IS_BUDGETNO = @isBudgetNo,
                     IS_PRNO = @isPrNo,
@@ -481,7 +491,8 @@ class PurchaseOrder {
                 .input('promisedDate', headerData.promisedDate || null)
                 .input('promisedShipDate', headerData.promisedShipDate || null)
                 .input('canvassedBy', headerData.canvassedBy || updaterName)
-                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('confirmedBy_1', headerData.confirmedBy_1 || '')
+                .input('confirmedBy_2', headerData.confirmedBy_2 || '')
                 .input('approvedBy', headerData.approvedBy || '')
                 .input('isBudgetNo', headerData.isBudgetNo || 0)
                 .input('isPrNo', headerData.isPrNo || 0)
@@ -871,7 +882,7 @@ class PurchaseOrder {
 
             // Get confirmedBy for notifications
             const getConfirmedByQuery = `
-                SELECT CONFIRMEDBY
+                SELECT CONFIRMEDBY_1, CONFIRMEDBY_2
                 FROM [PURCHASE.ORDERHEADER.1]
                 WHERE PONUMBER = @poNumber
             `;
@@ -879,7 +890,9 @@ class PurchaseOrder {
                 .input('poNumber', poNumber)
                 .query(getConfirmedByQuery);
 
-            const confirmedBy = confirmedByResult.recordset[0]?.CONFIRMEDBY || '';
+            const confirmedBy_1 = confirmedByResult.recordset[0]?.CONFIRMEDBY_1 || '';
+            const confirmedBy_2 = confirmedByResult.recordset[0]?.CONFIRMEDBY_2 || '';
+            const confirmedBy = [confirmedBy_1, confirmedBy_2].filter(Boolean).join(', ');
 
             // Log activity
             const activityQuery = `
@@ -909,7 +922,7 @@ class PurchaseOrder {
                                 greeting: 'Dear',
                                 body: `A purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been submitted and is waiting for your confirmation. Please review and confirm the purchase order at your earliest convenience.`,
                                 buttonText: 'View Purchase Order',
-                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/purchase-order?id=${poNumber}`,
+                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${poNumber}`,
                                 companyEmail: 'j.valencia@santehfeeds.com',
                                 companyPhone: '+63 2 8584 4572',
                                 unsubscribeUrl: '#',
@@ -924,7 +937,7 @@ class PurchaseOrder {
                                 'Purchase Order Submitted for Confirmation',
                                 `Purchase order ${poNumber} has been submitted and is waiting for your confirmation.`,
                                 confirmerName.trim(),
-                                `/procurement/purchase-order?id=${poNumber}`
+                                `/procurement/request-evaluation?id=${poNumber}`
                             );
 
                             await notification.save(submitterName);
@@ -948,6 +961,180 @@ class PurchaseOrder {
             throw new Error('Failed to submit purchase order for processing: ' + error.message);
         }
     }
+
+    // Confirm purchase order (set CONFIRMEDBY_1/DATECONFIRMED_1 or CONFIRMEDBY_2/DATECONFIRMED_2)
+    static async confirmPurchaseOrder(poNumber, confirmerName, step = 1) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if PO exists and is in FOR P.O. CONFIRMATION status
+            const checkQuery = `
+                SELECT PO_STATUS, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, CREATEDBY
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const checkResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(checkQuery);
+
+            if (checkResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            const po = checkResult.recordset[0];
+
+            if (po.PO_STATUS !== 'FOR P.O. CONFIRMATION') {
+                throw new Error('Purchase order is not in confirmation status');
+            }
+
+            // Determine which confirmation step to update
+            let updateField, dateField;
+            if (step === 1) {
+                if (po.CONFIRMEDBY_1 && po.DATECONFIRMED_1) {
+                    throw new Error('First confirmation already completed');
+                }
+                updateField = 'CONFIRMEDBY_1';
+                dateField = 'DATECONFIRMED_1';
+            } else if (step === 2) {
+                if (!po.CONFIRMEDBY_1 || !po.DATECONFIRMED_1) {
+                    throw new Error('First confirmation must be completed before second confirmation');
+                }
+                if (po.CONFIRMEDBY_2 && po.DATECONFIRMED_2) {
+                    throw new Error('Second confirmation already completed');
+                }
+                updateField = 'CONFIRMEDBY_2';
+                dateField = 'DATECONFIRMED_2';
+            } else {
+                throw new Error('Invalid confirmation step');
+            }
+
+            // Update the confirmation
+            const updateQuery = `
+                UPDATE [PURCHASE.ORDERHEADER.1]
+                SET ${updateField} = @confirmerName,
+                    ${dateField} = GETDATE(),
+                    DATEMODIFIED = GETDATE(),
+                    MODIFIEDBY = @confirmerName
+                WHERE PONUMBER = @poNumber
+            `;
+
+            await connection.request()
+                .input('poNumber', poNumber)
+                .input('confirmerName', confirmerName)
+                .query(updateQuery);
+
+            // Check if both confirmations are done, and update status to P.O. APPROVED
+            const checkBothQuery = `
+                SELECT CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const bothResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(checkBothQuery);
+
+            const both = bothResult.recordset[0];
+            if (both.CONFIRMEDBY_1 && both.DATECONFIRMED_1 && both.CONFIRMEDBY_2 && both.DATECONFIRMED_2) {
+                // Both confirmations done, update status to P.O. APPROVED
+                const approveQuery = `
+                    UPDATE [PURCHASE.ORDERHEADER.1]
+                    SET PO_STATUS = 'P.O. APPROVED',
+                        APPROVEDBY = @confirmerName,
+                        DATEAPPROVED = GETDATE(),
+                        DATEMODIFIED = GETDATE(),
+                        MODIFIEDBY = @confirmerName
+                    WHERE PONUMBER = @poNumber
+                `;
+                await connection.request()
+                    .input('poNumber', poNumber)
+                    .input('confirmerName', confirmerName)
+                    .query(approveQuery);
+            }
+
+            // Log activity
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @confirmerName, GETDATE())
+            `;
+            await connection.request()
+                .input('activity', `Purchase Order ${poNumber} confirmed (step ${step}) by ${confirmerName}`)
+                .input('confirmerName', confirmerName)
+                .query(activityQuery);
+
+            // Send notification/email to next confirmer or creator
+            if (step === 1 && po.CONFIRMEDBY_2 && !both.DATECONFIRMED_2) {
+                // Send notification for second confirmation
+                const confirmerEmail = await UserProfile.getEmailByEmployeeName(po.CONFIRMEDBY_2);
+                if (confirmerEmail) {
+                    const emailData = {
+                        email: confirmerEmail,
+                        name: po.CONFIRMEDBY_2,
+                        subject: 'Purchase Order Ready for Second Confirmation',
+                        companyName: 'SANTEH',
+                        greeting: 'Dear',
+                        body: `A purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been confirmed by the first confirmer (${po.CONFIRMEDBY_1}) on ${new Date(both.DATECONFIRMED_1).toLocaleString()} and is now ready for your second confirmation. Please review and confirm the purchase order at your earliest convenience.`,
+                        buttonText: 'View Purchase Order',
+                        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${poNumber}`,
+                        companyEmail: 'j.valencia@santehfeeds.com',
+                        companyPhone: '+63 2 8584 4572',
+                        unsubscribeUrl: '#',
+                        preferencesUrl: '#'
+                    };
+
+                    await sendEmailWithTemplate(emailData);
+
+                    const notification = new Notification(
+                        'Purchase Order Ready for Second Confirmation',
+                        `Purchase order ${poNumber} has been confirmed by the first confirmer and is ready for your second confirmation.`,
+                        po.CONFIRMEDBY_2,
+                        `/procurement/request-evaluation?id=${poNumber}`
+                    );
+
+                    await notification.save(confirmerName);
+                }
+            } else if (step === 2) {
+                // Both confirmations done, send approval notification
+                const creatorEmail = await UserProfile.getEmailByEmployeeName(po.CREATEDBY);
+                if (creatorEmail) {
+                    const emailData = {
+                        email: creatorEmail,
+                        name: po.CREATEDBY,
+                        subject: 'Purchase Order Approved',
+                        companyName: 'SANTEH',
+                        greeting: 'Dear',
+                        body: `Your purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been fully confirmed and approved.<br><br><strong>Confirmation Details:</strong><br>First Confirmation: ${both.CONFIRMEDBY_1} on ${new Date(both.DATECONFIRMED_1).toLocaleString()}<br>Second Confirmation: ${both.CONFIRMEDBY_2} on ${new Date(both.DATECONFIRMED_2).toLocaleString()}<br><br>It is now ready for posting.`,
+                        buttonText: 'View Purchase Order',
+                        buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${poNumber}`,
+                        companyEmail: 'j.valencia@santehfeeds.com',
+                        companyPhone: '+63 2 8584 4572',
+                        unsubscribeUrl: '#',
+                        preferencesUrl: '#'
+                    };
+
+                    await sendEmailWithTemplate(emailData);
+
+                    const notification = new Notification(
+                        'Purchase Order Approved',
+                        `Your purchase order ${poNumber} has been fully confirmed and approved.`,
+                        po.CREATEDBY,
+                        `/procurement/request-evaluation?id=${poNumber}`
+                    );
+
+                    await notification.save(confirmerName);
+                }
+            }
+
+            return {
+                success: true,
+                message: `Purchase order confirmed (step ${step}) successfully`
+            };
+        } catch (error) {
+            console.error('Error confirming purchase order:', error);
+            throw new Error('Failed to confirm purchase order: ' + error.message);
+        }
+    }
+
     // Get approved purchase request items for creating PO
     static async getApprovedItemsForPO(user, filterByAssignedTo = true) {
         let connection;

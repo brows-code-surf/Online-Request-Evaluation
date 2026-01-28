@@ -245,7 +245,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
-                      {header.poStatus === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
+                      {header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
                     </button>
                   )}
                   <button
@@ -368,7 +368,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
-                          <span className="truncate">{header.poStatus === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}</span>
+                          <span className="truncate">{header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}</span>
                         </button>
                       )}
                       <button

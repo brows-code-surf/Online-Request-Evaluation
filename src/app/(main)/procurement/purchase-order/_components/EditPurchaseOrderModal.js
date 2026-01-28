@@ -100,7 +100,7 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
       isPerAdvise: header.isPerAdvise === 1,
       budgetNoList: header.budgetNoList || '',
       canvassedBy: header.canvassedBy || '',
-      confirmedBy: header.confirmedBy ? header.confirmedBy.split(', ').filter(Boolean) : [],
+      confirmedBy: [header.confirmedBy_1, header.confirmedBy_2].filter(Boolean),
       approvedBy: header.approvedBy || '',
       contactPerson: header.contactPerson || '',
       docType: header.refDocType || ''
@@ -312,6 +312,11 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
       return;
     }
 
+    if (poData.confirmedBy.length > 2) {
+      toast.error('Maximum of 2 confirmers allowed');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Prepare header data
@@ -327,7 +332,8 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
         promisedDate: poData.promisedDate ? new Date(poData.promisedDate) : null,
         promisedShipDate: poData.promisedShipDate ? new Date(poData.promisedShipDate) : null,
         canvassedBy: selectedItems.length > 0 ? [...new Set(selectedItems.map(item => item.addressedTo).filter(Boolean))].join(', ') : (poData.canvassedBy || user?.empName || ''),
-        confirmedBy: poData.confirmedBy.join(', '),
+        confirmedBy_1: poData.confirmedBy[0] || '',
+        confirmedBy_2: poData.confirmedBy[1] || '',
         approvedBy: poData.approvedBy,
         isBudgetNo: poData.isBudgetNo,
         isPrNo: poData.isPrNo,
@@ -789,7 +795,7 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                               onFocus={() => setShowConfirmedByDropdown(true)}
                               onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
                               className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                              placeholder={poData.confirmedBy.length === 0 ? "Select for confirmation by" : ""}
+                              placeholder={poData.confirmedBy.length === 0 ? "Select for confirmation by (max 2)" : poData.confirmedBy.length < 2 ? "Select second confirmer" : ""}
                             />
                           </div>
                         </div>
@@ -806,7 +812,7 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                       {showConfirmedByDropdown && (
                         <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
                           {confirmedByOptions
-                            .filter(option => !poData.confirmedBy.includes(option.name))
+                            .filter(option => !poData.confirmedBy.includes(option.name) && poData.confirmedBy.length < 2)
                             .map((option) => (
                               <div
                                 key={option.id}
