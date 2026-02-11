@@ -458,21 +458,25 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
 
 
             {/* Rush Request */}
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Rush Request
-              </label>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isRush}
-                  onChange={(e) => handleHeaderChange('isRush', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  disabled={loading}
-                />
-                <span className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Mark as rush request
-                </span>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                  Rush Request
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.isRush}
+                    onChange={(e) => handleHeaderChange('isRush', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    disabled={loading}
+                  />
+                  <span className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Mark as <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
+                      RUSH
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -529,7 +533,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
             {/* Addressed To */}
             <div>
               <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Addressed To <span className="text-red-500">*</span>
+                Addressed To (Purchaser)<span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.addressedTo}
@@ -881,25 +885,25 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
         darkMode={darkMode}
       />
 
-        {/* Item Selection Modal */}
-        <ItemSelectionModal
-          isOpen={showItemSelectionModal}
-          onClose={() => setShowItemSelectionModal(false)}
-          onSelectItem={(selectedItem) => {
-            if (currentItemSelectionIndex !== null) {
-              // Update the item with the selected item data
-              const newItems = [...formData.items];
-              newItems[currentItemSelectionIndex].itemNumber = selectedItem.ITEMNMBR;
-              newItems[currentItemSelectionIndex].itemDescription = selectedItem.ITEMDESC;
-              // Set UOM from the selected item (use UOFM if available, otherwise UOMSCHDL)
-              newItems[currentItemSelectionIndex].unitOfMeasure = selectedItem.UOFM || selectedItem.UOMSCHDL || '';
-              setFormData(prev => ({ ...prev, items: newItems }));
-            }
-            setShowItemSelectionModal(false);
-            setCurrentItemSelectionIndex(null);
-          }}
-          darkMode={darkMode}
-        />
+      {/* Item Selection Modal */}
+      <ItemSelectionModal
+        isOpen={showItemSelectionModal}
+        onClose={() => setShowItemSelectionModal(false)}
+        onSelectItem={(selectedItem) => {
+          if (currentItemSelectionIndex !== null) {
+            // Update the item with the selected item data
+            const newItems = [...formData.items];
+            newItems[currentItemSelectionIndex].itemNumber = selectedItem.ITEMNMBR;
+            newItems[currentItemSelectionIndex].itemDescription = selectedItem.ITEMDESC;
+            // Set UOM from the selected item (use UOFM if available, otherwise UOMSCHDL)
+            newItems[currentItemSelectionIndex].unitOfMeasure = selectedItem.UOFM || selectedItem.UOMSCHDL || '';
+            setFormData(prev => ({ ...prev, items: newItems }));
+          }
+          setShowItemSelectionModal(false);
+          setCurrentItemSelectionIndex(null);
+        }}
+        darkMode={darkMode}
+      />
     </div>
   );
 });

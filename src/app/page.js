@@ -35,7 +35,7 @@ export default function Home() {
             alt="SANTEH Logo"
             className="w-full h-32 mx-auto mb-6"
           />
-          <p className="text-gray-800 text-lg">Online Requests Evaluation System</p>
+          {/* <p className="text-gray-800 text-lg">Online Requests Evaluation System</p> */}
           <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mt-4"></div>
         </div>
       </div>

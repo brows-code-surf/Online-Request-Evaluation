@@ -446,7 +446,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
               </div>
               {header.promisedDate && (
                 <div>
-                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Date:</span>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Expected Date:</span>
                   <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {new Date(header.promisedDate).toLocaleDateString()}
                   </span>
@@ -454,7 +454,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
               )}
               {header.promisedShipDate && (
                 <div>
-                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Promised Ship Date:</span>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Expected Ship Date:</span>
                   <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {new Date(header.promisedShipDate).toLocaleDateString()}
                   </span>

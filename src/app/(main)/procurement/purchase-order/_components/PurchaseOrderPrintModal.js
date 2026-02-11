@@ -96,7 +96,7 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
             </div>
             <div class="info-item">
               <div class="info-label">CONTACT PERSON</div>
-              <div class="info-value-small">${purchaseOrder.header.createdBy || 'N/A'}</div>
+              <div class="info-value-small">${purchaseOrder.header.contactPerson || 'N/A'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">CANVASSED BY</div>
@@ -298,7 +298,7 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
               </div>
               <div>
                 <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CONTACT PERSON</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.createdBy || 'N/A'}</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.contactPerson || 'N/A'}</div>
               </div>
               <div>
                 <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CANVASSED BY</div>

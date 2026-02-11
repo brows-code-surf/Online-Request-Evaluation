@@ -50,7 +50,7 @@ class CanvassApproval {
 
             const params = [];
 
-            query += ` ORDER BY PQD.ITEMDESC ASC, PQH.DATEREQUESTED, PQD.ROWID`;
+            query += ` ORDER BY PQD.ITEMNMBR ASC, PQD.VENDORID`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
