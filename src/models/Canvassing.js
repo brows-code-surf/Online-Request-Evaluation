@@ -6,7 +6,7 @@ import connectToDatabase from '@/lib/db.js';
 
 class Canvassing {
     // Get all canvassing requests with filtering and role-based access
-    static async getAllCanvassingRequests(filters = {}, user = null, isAdmin = false) {
+    static async getAllCanvassingRequests(filters = {}, user = null, isAdmin = true) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -45,6 +45,13 @@ class Canvassing {
                 paramIndex++;
             }
 
+            // Filter by status only if explicitly provided (for admins)
+            if (user && isAdmin && filters.status !== undefined && filters.status !== null) {
+                query += ` AND PQH.POSTSTATUS = @status${paramIndex}`;
+                params.push({ name: `status${paramIndex}`, value: filters.status });
+                paramIndex++;
+            }
+
             // Company filter removed since company is now per-item in details
 
             if (filters.pqCode) {
@@ -52,6 +59,9 @@ class Canvassing {
                 params.push({ name: `pqCode${paramIndex}`, value: `%${filters.pqCode}%` });
                 paramIndex++;
             }
+
+            // Add ORDER BY at the end after all filters
+            query += ` ORDER BY PQH.DATEREQUESTED DESC`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -761,7 +771,7 @@ class Canvassing {
                   rh.REFERENCENO as requestId
                 FROM [PURCHASE.REQUESTDETAILS.1] rd
                 INNER JOIN [PURCHASE.REQUESTHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
-                WHERE rh.REQUESTSTATUS = 'FOR CANVASSING'
+                WHERE rd.ITEMSTATUS = 'FOR CANVASSING' 
             `;
 
             const params = [];
@@ -774,7 +784,7 @@ class Canvassing {
                 paramIndex++;
             }
 
-            query += ` ORDER BY rh.DATECREATED DESC, rd.ROWID`;
+            query += ` ORDER BY rh.DATECREATED, rd.RID`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -926,3 +936,4 @@ class Canvassing {
 }
 
 export default Canvassing;
+

@@ -456,18 +456,17 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
             {/* Header */}
             <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex items-center justify-between">
-                <div className="flex-1"></div>
-                <div className="text-center">
-                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
+                <div className="text-left">
+                  <h3 className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
                     Edit Purchase Order
                   </h3>
+                </div>
+                <div className="flex-1 flex justify-end items-center">
                   {poData.poNumber && (
-                    <p className="text-sm mt-1 font-bold text-blue-800">
+                    <p className={`text-2xl font-bold text-blue-800 mr-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                       {poData.poNumber}
                     </p>
                   )}
-                </div>
-                <div className="flex-1 flex justify-end">
                   <button
                     type="button"
                     onClick={handleClose}
@@ -481,19 +480,18 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                 </div>
               </div>
             </div>
-
             {/* Scrollable Content */}
-            <div className="px-6 py-4 overflow-y-auto flex-1">
-              <div className="space-y-8 pb-6">
+            <div className="px-10 overflow-y-auto flex-1">
+              <div className="space-y-6">
+              <h4 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Purchase Order Header
+              </h4>
 
                 {/* Supplier Information */}
                 <div>
-                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Supplier Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Supplier <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
@@ -690,204 +688,60 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                       )}
                     </div>
                   </div>
-                </div>
 
-                {/* Items Selection */}
-                <div>
-                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Select Items from Canvassing
-                  </h4>
-                  <div className="flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedSupplier.trim()) {
-                          toast.error('Please select a supplier first before selecting items');
-                          return;
-                        }
-                        setShowItemSelectionModal(true);
-                      }}
-                      disabled={!selectedSupplier.trim()}
-                      className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${
-                        !selectedSupplier.trim()
-                          ? 'opacity-50 cursor-not-allowed'
-                          : darkMode
-                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {selectedItems.length > 0 ? `Modify Items (${selectedItems.length} selected)` : 'Select Items'}
-                    </button>
-                    {selectedItems.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedItems([])}
-                        className="px-3 py-2 text-red-600 hover:text-red-700 text-sm font-medium transition-colors duration-200"
-                      >
-                        Clear All
-                      </button>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Date Needed
+                      </label>
+                      <input
+                        type="date"
+                        value={poData.dateNeeded}
+                        onChange={(e) => {
+                          const selectedDate = e.target.value;
+                          setPoData(prev => ({ 
+                            ...prev, 
+                            dateNeeded: selectedDate,
+                            promisedShipDate: selectedDate,
+                            promisedDate: selectedDate
+                          }));
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                          }`}
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Expected Ship Date
+                      </label>
+                      <input
+                        type="date"
+                        value={poData.promisedShipDate}
+                        onChange={(e) => setPoData(prev => ({ ...prev, promisedShipDate: e.target.value }))}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                          }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Promised Date
+                      </label>
+                      <input
+                        type="date"
+                        value={poData.promisedDate}
+                        onChange={(e) => setPoData(prev => ({ ...prev, promisedDate: e.target.value }))}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                          }`}
+                      />
+                    </div>
                   </div>
-                  {selectedItems.length === 0 && (
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {!selectedSupplier.trim()
-                        ? 'Please select a supplier first, then click "Select Items" to choose items from approved canvassing requests'
-                        : 'Click "Select Items" to choose items from approved canvassing requests'
-                      }
-                    </p>
-                  )}
-                </div>
 
-                {/* Approval Information */}
-                <div>
-                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Approval Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
                     <div className="relative">
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Canvassed By
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={poData.canvassedBy || (selectedItems.length > 0 ? [...new Set(selectedItems.map(item => item.addressedTo).filter(Boolean))].join(', ') : '')}
-                          onChange={(e) => setPoData(prev => ({ ...prev, canvassedBy: e.target.value }))}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="Auto-filled from selected items"
-                          readOnly
-                        />
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        For Confirmation By <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className={`w-full min-h-[42px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
-                          <div className="flex flex-wrap gap-1">
-                            {poData.confirmedBy.map((confirmer, index) => (
-                              <span
-                                key={index}
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'}`}
-                              >
-                                {confirmer}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPoData(prev => ({
-                                      ...prev,
-                                      confirmedBy: prev.confirmedBy.filter((_, i) => i !== index)
-                                    }));
-                                  }}
-                                  className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 focus:outline-none"
-                                >
-                                  <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                  </svg>
-                                </button>
-                              </span>
-                            ))}
-                            <input
-                              type="text"
-                              onFocus={() => setShowConfirmedByDropdown(true)}
-                              onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
-                              className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                              placeholder={poData.confirmedBy.length === 0 ? "Select for confirmation by (max 2)" : poData.confirmedBy.length < 2 ? "Select second confirmer" : ""}
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmedByDropdown(!showConfirmedByDropdown)}
-                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                      {showConfirmedByDropdown && (
-                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
-                          {confirmedByOptions
-                            .filter(option => !poData.confirmedBy.includes(option.name) && poData.confirmedBy.length < 2)
-                            .map((option) => (
-                              <div
-                                key={option.id}
-                                onClick={() => {
-                                  setPoData(prev => ({
-                                    ...prev,
-                                    confirmedBy: [...prev.confirmedBy, option.name]
-                                  }));
-                                  setShowConfirmedByDropdown(false);
-                                }}
-                                className={`px-3 py-2 cursor-pointer ${darkMode
-                                  ? 'text-white hover:bg-gray-600'
-                                  : 'text-gray-900 hover:bg-gray-100'
-                                  }`}
-                              >
-                                {option.name}
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        For Approval By <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={poData.approvedBy}
-                          onChange={(e) => {
-                            setPoData(prev => ({ ...prev, approvedBy: e.target.value }));
-                          }}
-                          onFocus={() => setShowApprovedByDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowApprovedByDropdown(false), 200)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                            }`}
-                          placeholder="Select for approval by"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowApprovedByDropdown(!showApprovedByDropdown)}
-                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                      {showApprovedByDropdown && (
-                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                          }`}>
-                          {approvedByOptions.map((option) => (
-                            <div
-                              key={option.id}
-                              onClick={() => {
-                                setPoData(prev => ({ ...prev, approvedBy: option.name }));
-                                setShowApprovedByDropdown(false);
-                              }}
-                              className={`px-3 py-2 cursor-pointer ${darkMode
-                                ? 'text-white hover:bg-gray-600'
-                                : 'text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                              {option.name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Delivery To <span className="text-red-500">*</span>
+                        Delivery/Pick-up Location <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -934,59 +788,9 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
 
-                {/* Purchase Order Details */}
-                <div>
-                  <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Purchase Order Details
-                  </h4>
-
-                  {/* PO Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Date Needed
-                      </label>
-                      <input
-                        type="date"
-                        value={poData.dateNeeded}
-                        onChange={(e) => setPoData(prev => ({ ...prev, dateNeeded: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Promised Date
-                      </label>
-                      <input
-                        type="date"
-                        value={poData.promisedDate}
-                        onChange={(e) => setPoData(prev => ({ ...prev, promisedDate: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Promised Ship Date
-                      </label>
-                      <input
-                        type="date"
-                        value={poData.promisedShipDate}
-                        onChange={(e) => setPoData(prev => ({ ...prev, promisedShipDate: e.target.value }))}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Doc Type and Flags in 2 columns */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     {/* Doc Type */}
-                    <div>
+                    <div className="relative">
                       <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Doc Type
                       </label>
@@ -1011,137 +815,296 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                       </select>
                     </div>
 
-                    {/* Flags */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Options
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="isBudgetNo"
-                            checked={poData.isBudgetNo}
-                            onChange={(e) => setPoData(prev => ({ ...prev, isBudgetNo: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <label htmlFor="isBudgetNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            W/Budget No.
-                          </label>
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="capex"
-                            checked={poData.capex}
-                            onChange={(e) => setPoData(prev => ({ ...prev, capex: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <label htmlFor="capex" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            CAPEX
-                          </label>
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="isPrNo"
-                            checked={poData.isPrNo}
-                            onChange={(e) => setPoData(prev => ({ ...prev, isPrNo: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <label htmlFor="isPrNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            W/PR No.
-                          </label>
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="isPerAdvise"
-                            checked={poData.isPerAdvise}
-                            onChange={(e) => setPoData(prev => ({ ...prev, isPerAdvise: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <label htmlFor="isPerAdvise" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            As Per Advise
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Remarks */}
-                  <div className="mb-6">
-                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Remarks
-                    </label>
-                    <textarea
-                      value={poData.remarks}
-                      onChange={(e) => setPoData(prev => ({ ...prev, remarks: e.target.value }))}
-                      rows={3}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
-                      placeholder="Enter remarks"
-                    />
                   </div>
                 </div>
 
-                {/* Selected Items Summary */}
-                {selectedItems.length > 0 && (
-                  <div>
-                    <h4 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Selected Items Summary
-                    </h4>
-                    <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-                      <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Purchase Order Summary
-                      </h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Items Selected:</span>
-                          <span className={`ml-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedItems.length}</span>
-                        </div>
-                        <div>
-                          <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Total Amount:</span>
-                          <span className={`ml-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            ₱{selectedItems.reduce((sum, item) => sum + (item.unitCost * item.qtyOrder), 0).toLocaleString()}
-                          </span>
+                {/* Approval Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      For Review By <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className={`w-full min-h-[42px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+                        <div className="flex flex-wrap gap-1">
+                          {poData.confirmedBy.map((confirmer, index) => (
+                            <span
+                              key={index}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'}`}
+                            >
+                              {confirmer}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPoData(prev => ({
+                                    ...prev,
+                                    confirmedBy: prev.confirmedBy.filter((_, i) => i !== index)
+                                  }));
+                                }}
+                                className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 focus:outline-none"
+                              >
+                                <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            type="text"
+                            onFocus={() => setShowConfirmedByDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
+                            className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                            placeholder={poData.confirmedBy.length === 0 ? "Select for review by (max 2)" : poData.confirmedBy.length < 2 ? "Select second reviewer" : ""}
+                          />
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmedByDropdown(!showConfirmedByDropdown)}
+                        className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
                     </div>
+                    {showConfirmedByDropdown && (
+                      <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
+                        {confirmedByOptions
+                          .filter(option => !poData.confirmedBy.includes(option.name) && poData.confirmedBy.length < 2)
+                          .map((option) => (
+                            <div
+                              key={option.id}
+                              onClick={() => {
+                                setPoData(prev => ({
+                                  ...prev,
+                                  confirmedBy: [...prev.confirmedBy, option.name]
+                                }));
+                                setShowConfirmedByDropdown(false);
+                              }}
+                              className={`px-3 py-2 cursor-pointer ${darkMode
+                                ? 'text-white hover:bg-gray-600'
+                                : 'text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                              {option.name}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="border rounded-md overflow-hidden">
-                      <div className="max-h-96 overflow-y-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                            <tr>
-                              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                Item Details
-                              </th>
-                              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                Quantity
-                              </th>
-                              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                Unit Cost
-                              </th>
-                              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                            {selectedItems.map((item, index) => (
-                              <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.itemDescription}
-                                    </div>
-                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                      {item.itemNumber}
-                                    </div>
+                  <div className="relative">
+                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      For Approval By <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={poData.approvedBy}
+                        onChange={(e) => {
+                          setPoData(prev => ({ ...prev, approvedBy: e.target.value }));
+                        }}
+                        onFocus={() => setShowApprovedByDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowApprovedByDropdown(false), 200)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                          }`}
+                        placeholder="Select for approval by"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApprovedByDropdown(!showApprovedByDropdown)}
+                        className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                    {showApprovedByDropdown && (
+                      <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                        }`}>
+                        {approvedByOptions.map((option) => (
+                          <div
+                            key={option.id}
+                            onClick={() => {
+                              setPoData(prev => ({ ...prev, approvedBy: option.name }));
+                              setShowApprovedByDropdown(false);
+                            }}
+                            className={`px-3 py-2 cursor-pointer ${darkMode
+                              ? 'text-white hover:bg-gray-600'
+                              : 'text-gray-900 hover:bg-gray-100'
+                              }`}
+                          >
+                            {option.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Remarks */}
+                <div className="mb-6">
+                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Header Remarks
+                  </label>
+                  <textarea
+                    value={poData.remarks}
+                    onChange={(e) => setPoData(prev => ({ ...prev, remarks: e.target.value }))}
+                    rows={3}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                      }`}
+                    placeholder="Enter remarks"
+                  />
+                </div>
+              </div>
+
+              {/* Purchase Order Details */}
+              <div>
+                <h4 className={`text-lg font-medium mb-3 border-t flex-shrink-0 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Purchase Order Details
+                </h4>
+                {/* Items Selection */}
+                <div>
+                  <div className="flex items-center gap-4 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedSupplier.trim()) {
+                          toast.error('Please select a supplier first before selecting items');
+                          return;
+                        }
+                        setShowItemSelectionModal(true);
+                      }}
+                      disabled={!selectedSupplier.trim()}
+                      className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${!selectedSupplier.trim()
+                        ? 'opacity-50 cursor-not-allowed'
+                        : darkMode
+                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      {selectedItems.length > 0 ? `${selectedItems.length} Item${selectedItems.length !== 1 ? 's' : ''} Selected` : 'Select Items from Canvassing'}
+                    </button>
+                    {selectedItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedItems([])}
+                        className="px-3 py-2 text-red-600 hover:text-red-700 text-sm font-medium transition-colors duration-200"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                  {selectedItems.length === 0 && (
+                    <p className={`text-sm mt-2 mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {!selectedSupplier.trim()
+                        ? 'Please select a supplier first, then click "Select Items" to choose items from approved canvassing requests'
+                        : 'Click "Select Items" to choose items from approved canvassing requests'
+                      }
+                    </p>
+                  )}
+                </div>
+                {/* Doc Type and Flags in 2 columns */}
+                {/* Flags */}
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Options
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isBudgetNo"
+                          checked={poData.isBudgetNo}
+                          onChange={(e) => setPoData(prev => ({ ...prev, isBudgetNo: e.target.checked }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="isBudgetNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          W/Budget No.
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="capex"
+                          checked={poData.capex}
+                          onChange={(e) => setPoData(prev => ({ ...prev, capex: e.target.checked }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="capex" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          CAPEX
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isPrNo"
+                          checked={poData.isPrNo}
+                          onChange={(e) => setPoData(prev => ({ ...prev, isPrNo: e.target.checked }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="isPrNo" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          W/PR No.
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isPerAdvise"
+                          checked={poData.isPerAdvise}
+                          onChange={(e) => setPoData(prev => ({ ...prev, isPerAdvise: e.target.checked }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="isPerAdvise" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          As Per Advise
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div> */}
+              </div>
+
+              {/* Selected Items Summary */}
+              {selectedItems.length > 0 && (
+                <div>
+                  <div className="border rounded-md overflow-hidden mb-6">
+                    <div className="max-h-96 overflow-y-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                          <tr>
+                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              Item Details
+                            </th>
+                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              Quantity
+                            </th>
+                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              Unit Cost
+                            </th>
+                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                          {selectedItems.map((item, index) => (
+                            <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors duration-150`}>
+                              <td className="px-4 py-3">
+                                <div>
+                                  <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {item.itemDescription}
                                   </div>
-                                </td>
-                                <td className="px-4 py-3">
+                                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {item.itemNumber}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center">
                                   <input
                                     type="number"
                                     step="0.01"
@@ -1154,43 +1117,70 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                                         updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
                                       }
                                     }}
-                                    className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                    className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                                       }`}
                                     title={`Max quantity: ${item.remaining} ${item.uofm}`}
                                   />
-                                  <span className={`ml-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <span className={`ml-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     {item.uofm}
                                   </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={item.unitCost || ''}
-                                    onChange={(e) => {
-                                      const newValue = parseFloat(e.target.value) || 0;
-                                      updateSelectedItem(item.uniqueId, 'unitCost', newValue);
-                                    }}
-                                    className={`w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                      }`}
-                                    title="Unit cost"
-                                  />
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    ₱{((item.unitCost || 0) * (item.qtyOrder || 0)).toLocaleString()}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={item.unitCost || ''}
+                                  onChange={(e) => {
+                                    const newValue = parseFloat(e.target.value) || 0;
+                                    updateSelectedItem(item.uniqueId, 'unitCost', newValue);
+                                  }}
+                                  className={`w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                    }`}
+                                  title="Unit cost"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  ₱{((item.unitCost || 0) * (item.qtyOrder || 0)).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        {selectedItems.length > 0 && (
+                          <tfoot className={`${darkMode ? 'bg-gray-750' : 'bg-gray-100'} border-t-2 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                            <tr>
+                              <td className={`px-4 py-3 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <span className="flex items-center gap-2">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                  </svg>
+                                  Grand Total
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                                  {selectedItems.reduce((sum, item) => sum + (item.qtyOrder || 0), 0).toLocaleString()}
+                                </span>
+                              </td>
+                              <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <span className="italic">Subtotal</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                  ₱{selectedItems.reduce((sum, item) => sum + ((item.unitCost || 0) * (item.qtyOrder || 0)), 0).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

@@ -13,6 +13,16 @@ export async function getAllCanvassingItems(user = null, isAdmin = false) {
   }
 }
 
+export async function getCanvassApprovalStats(user = null, isAdmin = false) {
+  try {
+    const stats = await CanvassApproval.getCanvassApprovalStats(user, isAdmin);
+    return { success: true, stats };
+  } catch (error) {
+    console.error('Error getting canvass approval stats:', error);
+    return { success: false, message: 'Failed to fetch canvass approval stats' };
+  }
+}
+
 export async function approveCanvassingItem(itemId, approverName) {
   try {
     const result = await CanvassApproval.approveCanvassingItem(itemId, approverName);

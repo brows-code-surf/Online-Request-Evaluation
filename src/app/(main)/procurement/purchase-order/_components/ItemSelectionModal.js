@@ -230,25 +230,39 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                             PQ Code
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Canvass Date
+                          </th>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Canvassed By
+                          </th>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Item Details
                           </th>
-
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Quantity
+                            Unit Cost / U of M
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Final Price
+                            Agreed Price
                           </th>
                         </tr>
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                        {Array(5).fill().map((_, index) => (
+                        {Array(7).fill().map((_, index) => (
                           <tr key={index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                             <td className="px-4 py-3">
                               <SkeletonLoader height="h-4" width="w-4" />
                             </td>
                             <td className="px-4 py-3">
                               <SkeletonLoader height="h-4" width="w-12" />
+                            </td>
+                            <td className="px-4 py-3">
+                              <SkeletonLoader height="h-4" width="w-20" />
+                            </td>
+                            <td className="px-4 py-3">
+                              <SkeletonLoader height="h-4" width="w-20" />
+                            </td>
+                            <td className="px-4 py-3">
+                              <SkeletonLoader height="h-4" width="w-24" />
                             </td>
                             <td className="px-4 py-3">
                               <div className="space-y-1">
@@ -293,26 +307,35 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PQ Code
                           </th>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Canvass Date
+                          </th>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Canvassed By
+                          </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Item Details
                           </th>
-
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Quantity
+                            Unit Cost / U of M
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Final Price
+                            Agreed Price
                           </th>
                         </tr>
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                         {filteredAvailableItems.map((item, index) => (
-                          <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                          <tr 
+                            key={item.uniqueId} 
+                            onClick={() => handleItemSelect(item, !currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId))}
+                            className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                             <td className="px-2 sm:px-4 py-3">
                               <input
                                 type="checkbox"
                                 checked={currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId)}
                                 onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                onClick={(e) => e.stopPropagation()}
                                 className="rounded"
                               />
                             </td>
@@ -326,13 +349,23 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                                 {item.pqCode}
                               </div>
                             </td>
+                            <td className="px-4 py-3">
+                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.canvassDate ? new Date(item.canvassDate).toISOString().split('T')[0] : '-'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.canvassedBy || '-'}
+                              </div>
+                            </td>
                             <td className="px-2 sm:px-4 py-3">
                               <div>
                                 <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {item.itemDescription}
+                                  {item.itemNumber}
                                 </div>
-                                <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
-                                  {item.itemNumber} • {item.budgetCode}
+                                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                                  {item.itemDescription}
                                 </div>
                               </div>
                             </td>

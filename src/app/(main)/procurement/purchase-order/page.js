@@ -41,7 +41,7 @@ function PurchaseOrderContent() {
   const [editPurchaseOrder, setEditPurchaseOrder] = useState(null);
 
   // Function to reload purchase orders data without page refresh
-  const reloadPurchaseOrdersData = async () => {
+  const reloadPurchaseOrdersData = useCallback(async () => {
     try {
       const filters = {};
       if (filterStatus && filterStatus !== 'all') {
@@ -70,7 +70,7 @@ function PurchaseOrderContent() {
       console.error('Failed to reload purchase orders:', error);
       return { success: false };
     }
-  };
+  }, [filterStatus, user]);
 
   useEffect(() => {
     const loadPurchaseOrders = async () => {
@@ -104,7 +104,7 @@ function PurchaseOrderContent() {
     };
 
     loadPurchaseOrders();
-  }, [user?.empName]); // Removed selectedPurchaseOrder from dependencies
+  }, [user?.empName, reloadPurchaseOrdersData]); // Removed selectedPurchaseOrder from dependencies
 
   // Handle sidebar open event
   useEffect(() => {
@@ -295,6 +295,12 @@ function PurchaseOrderContent() {
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'POSTED':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'NOT POSTED':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -307,14 +313,14 @@ function PurchaseOrderContent() {
         console.log("Purchase order created event received:", data);
         reloadPurchaseOrdersData();
       },
-      []
+      [reloadPurchaseOrdersData]
     ),
     "purchase-order-updated": useCallback(
       (data) => {
         console.log("Purchase order updated event received:", data);
         reloadPurchaseOrdersData();
       },
-      []
+      [reloadPurchaseOrdersData]
     ),
   });
 

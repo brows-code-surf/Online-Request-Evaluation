@@ -290,31 +290,6 @@ class RequestEvaluation {
                     const approverResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(approverQuery);
-                } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
-                    // Get the addressed to person from the request
-                    const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const addressedToResult = await transaction.request()
-                        .input('referenceNo', referenceNo)
-                        .query(addressedToQuery);
-
-                    if (addressedToResult.recordset.length > 0 && addressedToResult.recordset[0].ADDRESSEDTO) {
-                        notificationRecipient = addressedToResult.recordset[0].ADDRESSEDTO;
-                        notificationTitle = 'Request Approved - Ready for Purchasing';
-                        notificationDescription = `Request ${referenceNo} has been approved and is now ready for purchasing lead time review.`;
-
-                        // Validate recipient exists
-                        if (!notificationRecipient || notificationRecipient.trim() === '') {
-                            console.warn(`No valid addressed-to person found for request ${referenceNo}`);
-                        } else {
-                            console.log(`Creating notification for addressed-to: ${notificationRecipient}`);
-                            const notification = new Notification(notificationTitle, notificationDescription, notificationRecipient.trim());
-                            const result = await notification.save(approverName);
-                            notificationResults.push({ type: 'addressed-to', recipient: notificationRecipient, result });
-                            console.log(`Addressed-to notification created successfully:`, result);
-                        }
-                    } else {
-                        console.warn(`No addressed-to person found in database for request ${referenceNo}`);
-                    }
                 } else if (newStatus === 'FOR CANVASSING') {
                     // For final approval, notify all participants
                     const participantsQuery = `SELECT REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;

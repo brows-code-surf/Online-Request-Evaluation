@@ -246,6 +246,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
         onSuccess?.();
 
         // Reset form
+        setCurrentStep(1);
         setSelectedItems([]);
         setSelectedSupplier('');
         setSelectedVendorId('');
@@ -689,10 +690,10 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                     <div
                                       key={supplier.id}
                                       onClick={() => {
-                                        if (isAlreadyAssigned) {
-                                          toast.error(`Supplier ${supplier.vendorName} is already assigned to selected item(s). Please choose a different supplier.`);
-                                          return;
-                                        }
+                                        // if (isAlreadyAssigned) {
+                                        //   toast.error(`Supplier ${supplier.vendorName} is already assigned to selected item(s). Please choose a different supplier.`);
+                                        //   return;
+                                        // }
 
                                         setSelectedSupplier(supplier.vendorName);
                                         setSelectedVendorId(supplier.vendorId);
@@ -703,19 +704,18 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                         setSupplierSearch('');
                                         setShowSupplierDropdown(false);
                                       }}
-                                      className={`px-3 py-2 cursor-pointer ${
-                                        isAlreadyAssigned
-                                          ? 'opacity-50 cursor-not-allowed'
-                                          : darkMode
-                                            ? 'text-white hover:bg-gray-600'
-                                            : 'text-gray-900 hover:bg-gray-100'
-                                      }`}
+                                      className={`px-3 py-2 cursor-pointer 
+                                        ${
+                                        // isAlreadyAssigned ? 'opacity-50 cursor-not-allowed' : 
+                                        darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'
+                                        }
+                                      `}
                                     >
                                       <div className="flex justify-between items-center">
                                         <span>{supplier.vendorName}</span>
-                                        {isAlreadyAssigned && (
+                                        {/* {isAlreadyAssigned && (
                                           <span className="text-xs text-red-500 ml-2">Already assigned</span>
-                                        )}
+                                        )} */}
                                       </div>
                                     </div>
                                   );

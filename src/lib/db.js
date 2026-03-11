@@ -15,8 +15,9 @@ export async function connectToDatabase(dbName) {
     password: process.env.DB_PASSWORD,
     database,
     options: {
-      encrypt: true,
-      trustServerCertificate: true
+      encrypt: false,
+      trustServerCertificate: true,
+      enableArithAbort: true
     }
   };
 

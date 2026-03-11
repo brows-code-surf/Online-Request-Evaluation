@@ -18,7 +18,7 @@ import {
 } from './_actions';
 
 function CanvassingContent() {
-  const { darkMode, user } = useAuth();
+  const { darkMode, user, isAdmin } = useAuth();
   const loadingRef = useRef(false);
 
   const [canvassingRequests, setCanvassingRequests] = useState([]);
@@ -30,6 +30,8 @@ function CanvassingContent() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedPQCode, setSelectedPQCode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Confirmation modal states
   const [showPostConfirmModal, setShowPostConfirmModal] = useState(false);
@@ -51,11 +53,23 @@ function CanvassingContent() {
     );
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCanvassingRequests.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRequests = filteredCanvassingRequests.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   // Function to reload canvassing requests data without page refresh
   const reloadCanvassingRequestsData = async () => {
     try {
       const filters = {};
-      const data = await getAllCanvassingRequests(filters, user);
+      const adminStatus = isAdmin ? isAdmin() : false;
+      const data = await getAllCanvassingRequests(filters, user, adminStatus);
       if (data.success) {
         setCanvassingRequests(data.canvassingRequests);
         return { success: true };
@@ -73,7 +87,7 @@ function CanvassingContent() {
 
       setLoading(true);
       try {
-        const result = await getAllCanvassingRequests({}, user);
+        const result = await getAllCanvassingRequests({}, user, isAdmin ? isAdmin() : false);
         if (result.success) {
           setCanvassingRequests(result.canvassingRequests);
         }
@@ -86,25 +100,6 @@ function CanvassingContent() {
 
     loadCanvassingRequests();
   }, [user?.empName]);
-
-  const handleApproveCanvassingRequest = async (pqCode) => {
-    try {
-      const result = await approveCanvassingRequest(pqCode, user?.empName);
-      if (result.success) {
-        setSuccessMessage({
-          title: 'Canvassing Request Approved',
-          message: 'The canvassing request has been approved successfully.'
-        });
-        setShowSuccessModal(true);
-        await reloadCanvassingRequestsData();
-      } else {
-        toast.error('Failed to approve canvassing request: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error approving canvassing request:', error);
-      toast.error('Failed to approve canvassing request');
-    }
-  };
 
   // Confirmation modal handlers
   const handlePostClick = (pqCode) => {
@@ -387,7 +382,7 @@ function CanvassingContent() {
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                      {filteredCanvassingRequests.slice(0, 10).map((request, index) => (
+                      {paginatedRequests.map((request, index) => (
                         <tr key={request.id || index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -494,6 +489,58 @@ function CanvassingContent() {
                   </div>
                 )}
               </div>
+
+              {/* Pagination Controls */}
+              {filteredCanvassingRequests.length > 0 && (
+                <div className={`flex items-center justify-between px-6 py-4 ${darkMode ? 'bg-gray-800 border-t border-gray-700' : 'bg-white border-t border-gray-200'}`}>
+                  <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, filteredCanvassingRequests.length)}</span> of <span className="font-medium">{filteredCanvassingRequests.length}</span> results
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : darkMode
+                            ? 'bg-gray-700 text-white hover:bg-gray-600'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : darkMode
+                              ? 'bg-gray-700 text-white hover:bg-gray-600'
+                              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                        currentPage === totalPages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : darkMode
+                            ? 'bg-gray-700 text-white hover:bg-gray-600'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

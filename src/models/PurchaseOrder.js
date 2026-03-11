@@ -316,9 +316,9 @@ class PurchaseOrder {
                 .input('pymtrmid', headerData.pymtrmid || '')
                 .input('refDocType', headerData.refDocType || '')
                 .input('deliveryTo', headerData.deliveryTo || '')
-                .input('dateNeeded', headerData.dateNeeded || null)
-                .input('promisedDate', headerData.promisedDate || null)
-                .input('promisedShipDate', headerData.promisedShipDate || null)
+                .input('dateNeeded', headerData.dateNeeded ? new Date(headerData.dateNeeded) : new Date())
+                .input('promisedDate', headerData.promisedDate ? new Date(headerData.promisedDate) : null)
+                .input('promisedShipDate', headerData.promisedShipDate ? new Date(headerData.promisedShipDate) : null)
                 .input('canvassedBy', headerData.canvassedBy || creatorName)
                 .input('confirmedBy_1', headerData.confirmedBy_1 || '')
                 .input('confirmedBy_2', headerData.confirmedBy_2 || '')
@@ -332,7 +332,7 @@ class PurchaseOrder {
                 .input('budgetNoList', headerData.budgetNoList || '')
                 .input('prList', headerData.prList || '')
                 .input('postStatus', 0) // NOT POSTED
-                .input('poStatus', 'PENDING')
+                .input('poStatus', headerData.poStatus || 'PENDING')
                 .query(headerQuery);
 
             console.log('Purchase order header inserted');
@@ -475,6 +475,7 @@ class PurchaseOrder {
                     BUDGETNOLIST = @budgetNoList,
                     PRLISTS = @prList,
                     CONTACTPERSON = @contactPerson,
+                    PO_STATUS = @poStatus,
                     DATEMODIFIED = GETDATE(),
                     MODIFIEDBY = @modifiedBy
                 WHERE PONUMBER = @poNumber
@@ -487,9 +488,9 @@ class PurchaseOrder {
                 .input('pymtrmid', headerData.pymtrmid || '')
                 .input('refDocType', headerData.refDocType || '')
                 .input('deliveryTo', headerData.deliveryTo || '')
-                .input('dateNeeded', headerData.dateNeeded || null)
-                .input('promisedDate', headerData.promisedDate || null)
-                .input('promisedShipDate', headerData.promisedShipDate || null)
+                .input('dateNeeded', headerData.dateNeeded ? new Date(headerData.dateNeeded) : new Date())
+                .input('promisedDate', headerData.promisedDate ? new Date(headerData.promisedDate) : null)
+                .input('promisedShipDate', headerData.promisedShipDate ? new Date(headerData.promisedShipDate) : null)
                 .input('canvassedBy', headerData.canvassedBy || updaterName)
                 .input('confirmedBy_1', headerData.confirmedBy_1 || '')
                 .input('confirmedBy_2', headerData.confirmedBy_2 || '')
@@ -503,6 +504,7 @@ class PurchaseOrder {
                 .input('budgetNoList', headerData.budgetNoList || '')
                 .input('prList', headerData.prList || '')
                 .input('contactPerson', headerData.contactPerson || '')
+                .input('poStatus', headerData.poStatus || 'PENDING')
                 .input('modifiedBy', updaterName)
                 .query(headerUpdateQuery);
 
@@ -1149,6 +1151,8 @@ class PurchaseOrder {
                     pqd.VENDORID,
                     s.VENDNAME as SUPPLIER_NAME,
                     pqd.PYMTRMID as PAYMENT_TERMS,
+                    pqh.DATEREQUESTED,
+                    pqh.CREATEDBY,
                     pqd.DELIVERYSCHEDULE,
                     pqd.BRAND,
                     pqd.ORIGIN,
@@ -1190,11 +1194,11 @@ class PurchaseOrder {
             }
 
             query += `
-                GROUP BY pqas.PQROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqd.VENDORID, s.VENDNAME,
-                         pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
-                         pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
-                         pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,
-                         pr.COMPANY, pr.ADDRESSEDTO
+                GROUP BY pqas.PQROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqh.CREATEDBY, pqd.VENDORID, s.VENDNAME,
+                    pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
+                    pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
+                    pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,
+                    pr.COMPANY, pr.ADDRESSEDTO
                 HAVING pqd.QUANTITY - ISNULL(SUM(pod.QTYORDER), 0) != 0
                 ORDER BY pqh.DATEREQUESTED DESC, pqd.RID
             `;
@@ -1210,6 +1214,8 @@ class PurchaseOrder {
                 supplierName: record.SUPPLIER_NAME,
                 vendorId: record.VENDORID,
                 paymentTerms: record.PAYMENT_TERMS,
+                canvassDate: record.DATEREQUESTED,
+                canvassedBy: record.CREATEDBY,
                 deliverySchedule: record.DELIVERYSCHEDULE,
                 brand: record.BRAND,
                 origin: record.ORIGIN,

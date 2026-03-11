@@ -78,26 +78,6 @@ export async function updateCanvassingRequest(pqCode, headerData, detailsData, u
   }
 }
 
-export async function approveCanvassingRequest(pqCode, approverName) {
-  try {
-    const result = await Canvassing.approveCanvassingRequest(pqCode, approverName);
-
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-approved", {
-        pqCode: pqCode,
-        approverName: approverName,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return result;
-  } catch (error) {
-    console.error('Error approving canvassing request:', error);
-    return { success: false, message: 'Failed to approve canvassing request' };
-  }
-}
-
 export async function postCanvassingRequest(pqCode, posterName) {
   try {
     const result = await Canvassing.postCanvassingRequest(pqCode, posterName);

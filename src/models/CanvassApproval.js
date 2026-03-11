@@ -13,6 +13,7 @@ class CanvassApproval {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             // Get all POSTED canvassing requests (status = 1) with their approval status
+            // Exclude items where PR Code is already approved
             let query = `
                 SELECT DISTINCT
                     PQD.ROWID as itemId,
@@ -20,6 +21,7 @@ class CanvassApproval {
                     PQH.CREATEDBY,
                     PQH.DATEREQUESTED,
                     PQD.PRCODE,
+                    PRH.REQUESTEDBY,
                     PQD.RID,
                     PQD.ITEMNMBR,
                     PQD.ITEMDESC,
@@ -45,12 +47,14 @@ class CanvassApproval {
                 INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
                 LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
                 LEFT JOIN [PURCHASE.QUOTATIONAPPROVALSTATUS.1] PQAS ON PQD.ROWID = PQAS.PQROWID
+                LEFT JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PQD.PRCODE = PRH.REFERENCENO
                 WHERE PQH.POSTSTATUS = 1
+
             `;
 
             const params = [];
 
-            query += ` ORDER BY PQD.ITEMNMBR ASC, PQD.VENDORID`;
+            query += ` ORDER BY PQH.DATEREQUESTED, PQD.RID ASC`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -86,6 +90,7 @@ class CanvassApproval {
                     deliverySchedule: record.DELIVERYSCHEDULE,
                     remarks: record.REMARKS,
                     createdBy: record.CREATEDBY,
+                    requestedBy: record.REQUESTEDBY,
                     dateRequested: record.DATEREQUESTED,
                     dateCreated: record.DATECREATED,
                     status: status,
@@ -106,12 +111,17 @@ class CanvassApproval {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            // Get stats for items that have NOT been approved yet (same filter as getAllCanvassingItems)
             let query = `
                 SELECT
-                    COUNT(DISTINCT PQH.PQCODE) as totalRequests,
-                    COUNT(PQD.ROWID) as totalItems
+                    COUNT(DISTINCT PQD.PRCODE) as totalRequests,
+                    COUNT(PQD.ROWID) as totalItems,
+                    COUNT(CASE WHEN PQAS.IS_APPROVED = 1 THEN 1 END) as approvedItems,
+                    COUNT(CASE WHEN PQAS.IS_APPROVED = 0 THEN 1 END) as rejectedItems,
+                    COUNT(CASE WHEN PQAS.IS_APPROVED IS NULL THEN 1 END) as pendingItems
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
-                LEFT JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
+                INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
+                LEFT JOIN [PURCHASE.QUOTATIONAPPROVALSTATUS.1] PQAS ON PQD.ROWID = PQAS.PQROWID
                 WHERE PQH.POSTSTATUS = 1
             `;
 
@@ -135,6 +145,9 @@ class CanvassApproval {
             return {
                 totalRequests: result.recordset[0].totalRequests || 0,
                 totalItems: result.recordset[0].totalItems || 0,
+                pending: result.recordset[0].pendingItems || 0,
+                approved: result.recordset[0].approvedItems || 0,
+                rejected: result.recordset[0].rejectedItems || 0,
                 approvedToday: 0, // TODO: Implement daily stats
                 rejectedToday: 0  // TODO: Implement daily stats
             };
