@@ -39,14 +39,13 @@ class CanvassApproval {
                     PQD.DELIVERYSCHEDULE,
                     PQD.REMARKS,
                     PQD.DATECREATED,
-                    PQAS.IS_APPROVED,
-                    PQAS.APPROVEDBY as approvedBy,
-                    PQAS.REMARKS as approvalRemarks,
-                    PQAS.DATECREATED as approvalDate
+                    PQD.APPROVALSTATUS,
+                    PQD.APPROVEDBY as approvedBy,
+                    PQD.REJECTREMARKS as approvalRemarks,
+                    PQD.DATECREATED as approvalDate
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
                 INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
                 LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
-                LEFT JOIN [PURCHASE.QUOTATIONAPPROVALSTATUS.1] PQAS ON PQD.ROWID = PQAS.PQROWID
                 LEFT JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PQD.PRCODE = PRH.REFERENCENO
                 WHERE PQH.POSTSTATUS = 1
 
@@ -63,9 +62,9 @@ class CanvassApproval {
 
             return result.recordset.map(record => {
                 let status = 'PENDING';
-                if (record.IS_APPROVED === 1) {
+                if (record.APPROVALSTATUS === 'APPROVED') {
                     status = 'APPROVED';
-                } else if (record.IS_APPROVED === 0) {
+                } else if (record.APPROVALSTATUS === 'REJECTED') {
                     status = 'REJECTED';
                 }
 
@@ -116,12 +115,11 @@ class CanvassApproval {
                 SELECT
                     COUNT(DISTINCT PQD.PRCODE) as totalRequests,
                     COUNT(PQD.ROWID) as totalItems,
-                    COUNT(CASE WHEN PQAS.IS_APPROVED = 1 THEN 1 END) as approvedItems,
-                    COUNT(CASE WHEN PQAS.IS_APPROVED = 0 THEN 1 END) as rejectedItems,
-                    COUNT(CASE WHEN PQAS.IS_APPROVED IS NULL THEN 1 END) as pendingItems
+                    COUNT(CASE WHEN PQD.APPROVALSTATUS = 'APPROVED' THEN 1 END) as approvedItems,
+                    COUNT(CASE WHEN PQD.APPROVALSTATUS = 'REJECTED' THEN 1 END) as rejectedItems,
+                    COUNT(CASE WHEN PQD.APPROVALSTATUS IS NULL OR PQD.APPROVALSTATUS = 'PENDING' THEN 1 END) as pendingItems
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
                 INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
-                LEFT JOIN [PURCHASE.QUOTATIONAPPROVALSTATUS.1] PQAS ON PQD.ROWID = PQAS.PQROWID
                 WHERE PQH.POSTSTATUS = 1
             `;
 
@@ -179,38 +177,22 @@ class CanvassApproval {
 
             const { PRCODE: prCode, RID: rid } = itemResult.recordset[0];
 
-            // First try to update existing record
-            const updateQuery = `
-                UPDATE [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
-                SET IS_APPROVED = 1,
+            // Update the QUOTATIONDETAILS table directly
+            const approveQuery = `
+                UPDATE [PURCHASE.QUOTATIONDETAILS.1]
+                SET APPROVALSTATUS = 'APPROVED',
                     APPROVEDBY = @approverName,
                     DATECREATED = GETDATE()
-                WHERE PQROWID = @itemId
+                WHERE ROWID = @itemId
             `;
 
             let result = await connection.request()
                 .input('itemId', itemId)
                 .input('approverName', approverName)
-                .query(updateQuery);
+                .query(approveQuery);
 
-            // If no record was updated, insert a new one
             if (result.rowsAffected[0] === 0) {
-                const insertQuery = `
-                    INSERT INTO [PURCHASE.QUOTATIONAPPROVALSTATUS.1] (
-                        PQROWID, IS_APPROVED, APPROVEDBY, REMARKS, DATECREATED
-                    ) VALUES (
-                        @itemId, 1, @approverName, NULL, GETDATE()
-                    )
-                `;
-
-                result = await connection.request()
-                    .input('itemId', itemId)
-                    .input('approverName', approverName)
-                    .query(insertQuery);
-
-                if (result.rowsAffected[0] === 0) {
-                    throw new Error('Failed to create approval record');
-                }
+                throw new Error('Failed to approve canvassing item');
             }
 
             // Update the corresponding purchase request item status to 'QUOTATION APPROVED'
@@ -280,41 +262,24 @@ class CanvassApproval {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // First try to update existing record
-            const updateQuery = `
-                UPDATE [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
-                SET IS_APPROVED = 0,
+            // Update the QUOTATIONDETAILS table directly
+            const rejectQuery = `
+                UPDATE [PURCHASE.QUOTATIONDETAILS.1]
+                SET APPROVALSTATUS = 'REJECTED',
                     APPROVEDBY = @rejectorName,
-                    REMARKS = @rejectReason,
+                    REJECTREMARKS = @rejectReason,
                     DATECREATED = GETDATE()
-                WHERE PQROWID = @itemId
+                WHERE ROWID = @itemId
             `;
 
             let result = await connection.request()
                 .input('itemId', itemId)
                 .input('rejectorName', rejectorName)
                 .input('rejectReason', rejectReason || `Rejected by ${rejectorName}`)
-                .query(updateQuery);
+                .query(rejectQuery);
 
-            // If no record was updated, insert a new one
             if (result.rowsAffected[0] === 0) {
-                const insertQuery = `
-                    INSERT INTO [PURCHASE.QUOTATIONAPPROVALSTATUS.1] (
-                        PQROWID, IS_APPROVED, APPROVEDBY, REMARKS, DATECREATED
-                    ) VALUES (
-                        @itemId, 0, @rejectorName, @rejectReason, GETDATE()
-                    )
-                `;
-
-                result = await connection.request()
-                    .input('itemId', itemId)
-                    .input('rejectorName', rejectorName)
-                    .input('rejectReason', rejectReason || `Rejected by ${rejectorName}`)
-                    .query(insertQuery);
-
-                if (result.rowsAffected[0] === 0) {
-                    throw new Error('Failed to create approval record');
-                }
+                throw new Error('Failed to reject canvassing item');
             }
 
             // Log activity

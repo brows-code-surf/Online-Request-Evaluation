@@ -380,6 +380,7 @@ function PurchaseOrderContent() {
                     onDelete={handleDeletePurchaseOrder}
                     onEdit={handleEditPurchaseOrder}
                     onDataRefresh={() => setDetailsReloadKey(prev => prev + 1)}
+                    onRefreshList={reloadPurchaseOrdersData}
                     darkMode={darkMode}
                   />
                 )}

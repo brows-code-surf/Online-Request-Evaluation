@@ -134,10 +134,11 @@ class Canvassing {
                 .input('pqCode', pqCode)
                 .query(detailsQuery);
 
-            // Get approval status
+            // Get approval status from QUOTATIONDETAILS
             const approvalQuery = `
-                SELECT * FROM [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
-                WHERE PQROWID = @pqRowId
+                SELECT ROWID, APPROVALSTATUS, APPROVEDBY, REJECTREMARKS, DATECREATED 
+                FROM [PURCHASE.QUOTATIONDETAILS.1]
+                WHERE ROWID = @pqRowId
             `;
             const approvalResult = await connection.request()
                 .input('pqRowId', header.ROWID)
@@ -161,8 +162,10 @@ class Canvassing {
                     prCode: detail.PRCODE,
                     rid: detail.RID,
                     pqdPostStatus: detail.PQDPOSTSTATUS,
+                    approvalStatus: detail.APPROVALSTATUS,
                     approvedBy: detail.APPROVEDBY,
-                    dateApproved: detail.DATEAPPROVED,
+                    rejectRemarks: detail.REJECTREMARKS,
+                    dateApproved: detail.DATECREATED,
                     itemNumber: detail.ITEMNMBR,
                     itemDescription: detail.ITEMDESC,
                     unitOfMeasure: detail.UOFM,
@@ -191,10 +194,11 @@ class Canvassing {
                 })),
                 approvals: approvalResult.recordset.map(approval => ({
                     id: approval.ROWID,
-                    pqRowId: approval.PQROWID,
-                    isApproved: approval.IS_APPROVED,
+                    pqRowId: approval.ROWID,
+                    approvalStatus: approval.APPROVALSTATUS,
                     approvedBy: approval.APPROVEDBY,
-                    dateApproved: approval.DATEAPPROVED
+                    rejectRemarks: approval.REJECTREMARKS,
+                    dateApproved: approval.DATECREATED
                 }))
             };
         } catch (error) {

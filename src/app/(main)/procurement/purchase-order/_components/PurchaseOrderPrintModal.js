@@ -41,141 +41,224 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
         <head>
           <style>
             @media print {
-              body { font-family: Arial, sans-serif; margin: 0; padding: 12px; }
-              .header { border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 18px; }
-              .company-name { font-size: 19px; font-weight: bold; color: #2563eb; margin-bottom: 6px; }
-              .po-number { font-size: 13px; color: #dc2626; }
-              .po-number strong { font-size: 16px; }
-              .status { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 7px; font-weight: bold; margin-left: 6px; }
-              .status-posted { background: #d1fae5; color: #065f46; }
-              .status-not-posted { background: #fef3c7; color: #d97706; }
-              .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 18px; }
-              .info-item { margin-bottom: 5px; }
-              .info-label { font-size: 8px; color: #666; margin-bottom: 1px; }
-              .info-value { font-size: 11px; font-weight: bold; color: #333; }
-              .info-value-small { font-size: 9px; font-weight: bold; color: #333; }
-              .remarks { margin-bottom: 18px; padding: 9px; background: #f9f9f9; border-left: 4px solid #2563eb; }
-              .remarks-label { font-weight: bold; margin-bottom: 3px; }
-              .flags { margin-bottom: 18px; }
-              .flag-item { display: inline-block; padding: 2px 5px; margin: 1px; border-radius: 7px; font-size: 6px; font-weight: bold; }
-              table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-              th, td { border: 1px solid #ddd; padding: 5px; text-align: left; font-size: 10px;}
-              th { background: #f5f5f5; font-weight: bold; }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              .total-row { font-weight: bold; background: #f0f0f0; }
-              .footer { margin-top: 21px; text-align: center; font-size: 10px; color: #666; }
-              @page { margin: 1in 1in 3.5in 1in; }
+              body { font-family: Arial, sans-serif; margin: 0; padding: 2px; font-size: 10px; }
+              .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 5px; }
+              .header-left { flex: 0.5; }
+              .header-right { flex: 0.5; text-align: left; }
+              .header-upper-right { flex: 0.5; text-align: right; margin: 5px 0 0 0; }
+              .company-logo { max-width: 120px; height: auto; }
+              .company-name { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 2px; }
+              .company-info { font-size: 10px; color: #333; line-height: 1.3; }
+              .form-details { font-size: 8px; color: #333; margin-bottom: 3px; }
+              .form-details-inline { display: inline-block; }
+              .po-title { font-size: 16px; font-weight: bold; text-align: right; margin: 5px 0 0 0; }
+              .header-bottom { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 5px; }
+              .po-info-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 5px; margin-bottom: 10px; font-size: 9px; }
+              .po-info-cell { padding: 3px 5px; border: none; border-bottom: 1px solid #ccc; }
+              .po-info-col { flex: 1; }
+              .po-info-label { font-size: 8px; color: #666; font-weight: normal; }
+              .po-info-value {  color: #333; }
+              .supplier-section { display: flex; justify-content: space-between; margin: 15px 0; }
+              .supplier-box { flex: 1; }
+              .supplier-box:last-child { margin-left: 30px; }
+              .supplier-label { font-size: 9px; color: #666; font-weight: normal; margin-bottom: 6px; }
+              .supplier-name { font-size: 11px; font-weight: bold; margin-bottom: 5px; }
+              .supplier-info { font-size: 9px; color: #333; line-height: 1.4; }
+              table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9px; table-layout: fixed; }
+              th { background: #666; color: white; font-weight: bold; padding: 4px 3px; text-align: left; }
+              td { padding: 4px 3px; }
+              td.text-center { text-align: center; }
+              td.text-right { text-align: right; }
+              .item-desc-sub { font-size: 8px; color: #666; margin-top: 1px; }
+              .nothing-else { text-align: center; font-weight: bold; margin: 8px 0; padding: 5px 0; }
+              .total-row { display: flex; justify-content: flex-end; margin: 10px 0; font-weight: bold; font-size: 11px; }
+              .total-amount { border-bottom: 2px solid #333; padding-bottom: 3px; min-width: 150px; text-align: right; }
+              .line-items-count { font-size: 9px; margin: 5px 0; }
+              .remarks-label { font-style: italic; margin: 10px 0 5px 0; font-size: 9px; }
+              .condition-text { font-size: 8px; line-height: 1.5; color: #333; margin: 15px 0; }
+              .signature-section { border-top: 1px solid #333; padding-top: 8px; }
+              .sig-header { display: flex; justify-content: space-between; font-size: 8px; font-weight: bold; }
+              .sig-col { flex: 1; text-align: center; }
+              .sig-line { border-top: 1px solid #333; padding-top: 3px; font-size: 7px; width: 100%; }
+              .sig-name { margin-top: 5px; font-size: 8px; }
+              .footer-section { font-size: 7px; margin-top: 20px; border-top: 1px solid #333; padding-top: 8px; }
+              .footer-row { display: flex; justify-content: space-between; margin: 3px 0; }
+              .footer-col { flex: 1; }
+              .tax-warning { font-weight: bold; text-decoration: underline; text-align: right; margin-top: 5px; }
+              @page { margin: 0.3in; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-name">SANTEH FEEDS CORPORATION</div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div class="po-number">Purchase Order # : <strong>${purchaseOrder.header.poNumber}</strong></div>
+          <!-- Header Top -->
+          <div class="header-top">
+            <div class="header-left">
+              <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH" class="company-logo" />
+              <div class="company-info">
+                701 RICHWELL CENTER, 102 TIMOG AVE,<br>
+                QUEZON CITY, METRO MANILA, PHILIPPINES<br>
+                NON-VAT Reg. TIN: 000-240-016-00000
+              </div>
+            </div>
+            <div class="header-upper-right">
+              <div class="form-details">
+                <span class="form-details-inline">Form No.:PUR-F-03</span>
+                <span class="form-details-inline">Rev. No.: 2</span>
+                <span class="form-details-inline">Eff. Date: 15 October 2008</span>
+              </div>
+              <div class="po-title">LOCAL PURCHASE ORDER</div>
+              <!-- PO Info Table -->
+              <table class="po-info-table">
+                <tr>
+                  <td class="po-info-cell" style="width: 33%; border-top: 1px solid #ccc;">
+                    <div class="po-info-label">Document No.</div>
+                    <div class="po-info-value" style="font-size: 14px; font-weight: bold;">${purchaseOrder.header.poNumber || 'N/A'}</div>
+                  </td>
+                  <td class="po-info-cell" style="width: 33%; border-top: 1px solid #ccc;">
+                    <div class="po-info-label">Document Date</div>
+                    <div class="po-info-value">${purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}</div>
+                  </td>
+                  <td class="po-info-cell" style="width: 34%; border-top: 1px solid #ccc;">
+                    <div class="po-info-label">Page</div>
+                    <div class="po-info-value">1/1</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="po-info-cell">
+                    <div class="po-info-label">Terms</div>
+                    <div class="po-info-value">${purchaseOrder.header.pymtrmid || '30 DAYS'}</div>
+                  </td>
+                  <td class="po-info-cell">
+                    <div class="po-info-label">Delivery Date</div>
+                    <div class="po-info-value">${purchaseOrder.header.promisedDate ? new Date(purchaseOrder.header.promisedDate).toLocaleDateString() : 'N/A'}</div>
+                  </td>
+                  <td class="po-info-cell">
+                    <div class="po-info-label">Currency</div>
+                    <div class="po-info-value">Philippine Peso</div>
+                  </td>
+                </tr>
+              </table>
             </div>
           </div>
 
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="info-label">VENDOR NAME</div>
-              <div class="info-value">${purchaseOrder.header.vendName || 'N/A'}</div>
+          <!-- Supplier Section -->
+          <div class="supplier-section">
+            <div class="supplier-box">
+              <div class="supplier-label">Supplier</div>
+              <div class="supplier-name">${purchaseOrder.header.vendName || 'N/A'}</div>
+              <div class="supplier-info">
+                ${purchaseOrder.header.vendAddress || 'N/A'}<br>
+                TIN: ${purchaseOrder.header.vendTIN || 'N/A'}
+              </div>
             </div>
-            <div class="info-item">
-              <div class="info-label">PO DATE</div>
-              <div class="info-value">${purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">PAYMENT TERMS</div>
-              <div class="info-value-small">${purchaseOrder.header.pymtrmid || 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">DELIVERY TO</div>
-              <div class="info-value-small">${purchaseOrder.header.deliveryTo || 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">CONTACT PERSON</div>
-              <div class="info-value-small">${purchaseOrder.header.contactPerson || 'N/A'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">CANVASSED BY</div>
-              <div class="info-value-small">${purchaseOrder.header.canvassedBy || 'N/A'}</div>
+            <div class="supplier-box">
+              <div class="supplier-label">Ship To</div>
+              <div class="supplier-name">${purchaseOrder.header.deliveryTo || 'N/A'}</div>
+              <div class="supplier-info">
+                ${purchaseOrder.header.deliveryAddress || 'N/A'}
+              </div>
             </div>
           </div>
 
+          <!-- Items Table -->
           <table>
             <thead>
               <tr>
-                <th style="width: 10%;">Item No</th>
-                <th style="width: 25%;">Item Description</th>
-                <th style="width: 8%;">UOFM</th>
-                <th style="width: 10%;" class="text-center">Quantity</th>
-                <th style="width: 12%;" class="text-right">Unit Cost</th>
-                <th style="width: 12%;" class="text-right">Extended Cost</th>
-                <th style="width: 10%;">Budget</th>
-                
+                <th style="width: 10%; padding: 4px 3px;">Item Number</th>
+                <th style="width: 40%; padding: 4px 3px;">Item Description</th>
+                <th style="width: 12%; padding: 4px 3px; text-align: center;">Quantity</th>
+                <th style="width: 8%; padding: 4px 3px; text-align: center;">U/M</th>
+                <th style="width: 15%; padding: 4px 3px; text-align: right;">Unit Price</th>
+                <th style="width: 15%; padding: 4px 3px; text-align: right;">Amount</th>
               </tr>
             </thead>
             <tbody>
               ${purchaseOrder.details && purchaseOrder.details.length > 0
-                ? purchaseOrder.details.map(item => `
+          ? purchaseOrder.details.map((item, idx) => `
                     <tr>
-                      <td>${item.itemNmbr || '-'}</td>
-                      <td>${item.itemDesc || '-'}</td>
-                      <td>${item.uofm || '-'}</td>
-                      <td class="text-center">${item.qtyOrder || 0}</td>
-                      <td class="text-right">₱${item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
-                      <td class="text-right">₱${item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
-                      <td>${item.budgetNo || '-'}</td>
-                     
+                      <td style="width: 10%; padding: 4px 3px; text-align: left;">${item.itemNmbr || '-'}</td>
+                      <td style="width: 40%; padding: 4px 3px;">${item.itemDesc || '-'}</td>
+                      <td style="width: 12%; padding: 4px 3px; text-align: center;">${item.qtyOrder || 0}</td>
+                      <td style="width: 8%; padding: 4px 3px; text-align: center;">${item.uofm || '-'}</td>
+                      <td style="width: 15%; padding: 4px 3px; text-align: right;">${item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 5, maximumFractionDigits: 5 }) || '0.00000'}</td>
+                      <td style="width: 15%; padding: 4px 3px; text-align: right;">₱${item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                     </tr>
                   `).join('')
-                : '<tr><td colspan="8" class="text-center">No items found for this order</td></tr>'
-              }
+          : '<tr><td colspan="6" style="padding: 4px 3px; text-align: center; color: #666;">No items found for this order</td></tr>'
+        }
             </tbody>
-            <tfoot>
-              <tr class="total-row">
-                <td colspan="5" class="text-right">Subtotal:</td>
-                <td class="text-right">₱${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
-                <td colspan="2"></td>
-              </tr>
-            </tfoot>
           </table>
 
-          ${(purchaseOrder.header.remarks || purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 || purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) ? `
-            <div class="remarks" style="margin-top: 20px; margin-bottom: 10px; font-size: 10px;">
-              <div class="remarks-label">REMARKS:</div>
-              <div>${purchaseOrder.header.remarks || ''}</div>
-              ${(purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 || purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) ? `
-                <div style="margin-top: 10px;">
-                  ${purchaseOrder.header.isBudgetNo === 1 && purchaseOrder.header.budgetNoList ?  purchaseOrder.header.budgetNoList  : ''}
-                  <br/>
-                  ${purchaseOrder.header.isPrNo === 1 && purchaseOrder.header.prList ?  purchaseOrder.header.prList  : ''}
-                  <div style="margin-top: 5px;">
-                    ${purchaseOrder.header.capex === 1 ? '<span class="flag-item" style="background: #e9d5ff; color: #7c2d92;">CAPEX</span>' : ''}
-                    ${purchaseOrder.header.isPerAdvise === 1 ? '<span class="flag-item" style="background: #fed7aa; color: #c2410c;">Per Advise</span>' : ''}
-                  </div>
-                </div>
-              ` : ''}
-            </div>
+          <!-- Nothing Else Follows -->
+          <div class="nothing-else">----------------------------------------------------------------------------------------- Nothing Else Follows --------------------------------------------------------------------------------------</div>
+
+          <!-- Total Row -->
+          <div class="total-row">
+            <div style="text-align: right; margin-right: 20px;">Total Php</div>
+            <div class="total-amount">₱${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
+          </div>
+
+          <!-- Line Items Count -->
+          <div class="line-items-count">
+            Number of Line Items: ${purchaseOrder.details?.length || 0}
+          </div>
+
+          <!-- Remarks -->
+          ${purchaseOrder.header.remarks ? `
+            <div class="remarks-label">Remarks:</div>
+            <div style="font-size: 9px; margin-bottom: 10px;">${purchaseOrder.header.remarks}</div>
           ` : ''}
 
-          <div style="margin-top: 30px; display: flex; justify-content: space-between; width: 100%; font-size: 10px;">
-            <div style="flex: 1; text-align: left; margin-left: 60px;">
-                Created By: <strong>${purchaseOrder.header.createdBy || '____________________'}</strong><br/>
-                </div>  
-            <div style="flex: 1; text-align: center;">
-                Confirmed By: <strong>${purchaseOrder.header.confirmedBy || '____________________'}</strong>
+          <!-- Condition of Purchase -->
+          <div class="condition-text">
+            <strong>Condition of Purchase:</strong><br>
+            1. Acceptance of Purchase Order. By accepting this Purchase Order (PO), the Seller agrees to the stated terms. Any additional terms from the Seller are rejected unless agreed to in writing by the Buyer.<br>
+            2. Delivery: Delivery must be made on or before the specified date. The Buyer reserves the right to cancel the PO without liability if the Seller fails to deliver on time.<br>
+            3. Quality: The Buyer reserves the right to reject materials that do not meet the agreed-upon specifications. Rejected materials will be returned to the Seller at the Seller's expense.
+          </div>
+
+          <!-- Signature Section -->
+          <div class="signature-section">
+            <div class="sig-header" style="margin-bottom: 60px;">
+              <div class="sig-col" style="text-align: left;">Prepared and Canvassed By:</div>
+              <div class="sig-col" style="text-align: left;">Reviewed By:</div>
+              <div class="sig-col" style="text-align: left;">Approved By:</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 40px;">
+              <div class="sig-col">
+                <div class="sig-name" style="margin-bottom: 1px;">${purchaseOrder.header.canvassedBy || ''}</div>
+                <div class="sig-line"></div>
+                <div style="font-size: 7px;">Signature Over Printed Name</div>
               </div>
-            <div style="flex: 1; text-align: right; margin-right: 60px;">
-              Approved By: <strong>${purchaseOrder.header.approvedBy || '____________________'}</strong>
+              <div class="sig-col">
+                <div class="sig-name" style="margin-bottom: 1px;">${purchaseOrder.header.confirmedBy_1 && purchaseOrder.header.confirmedBy_2 ? purchaseOrder.header.confirmedBy_1 + ' / ' + purchaseOrder.header.confirmedBy_2 : purchaseOrder.header.confirmedBy_1 || purchaseOrder.header.confirmedBy_2 || ''}</div>
+                <div class="sig-line"></div>
+                <div style="font-size: 7px;">Signature Over Printed Name</div>
+              </div>
+              <div class="sig-col">
+                <div class="sig-name" style="margin-bottom: 1px;">${purchaseOrder.header.approvedBy || ''}</div>
+                <div class="sig-line"></div>
+                <div style="font-size: 7px;">Signature Over Printed Name</div>
+              </div>
             </div>
           </div>
 
-          <div class="footer">
-            <div>Generated on: ${new Date().toLocaleString()}</div>
-            <div>SANTEH FEEDS CORPORATION - Purchase Order System</div>
+          <!-- Footer Section -->
+          <div class="footer-section">
+            <div class="footer-row">
+              <div class="footer-col">
+                <strong>Acknowledgement Certificate Control No.:</strong> AC-116, 102024_000442<br>
+                <strong>Date Issued:</strong> October 22, 2024<br>
+                <strong>Document Series:</strong> POHO00000001-POHO99999999
+              </div>
+              <div class="footer-col">
+                <strong>Software Provider:</strong> Jupiter Systems Inc.<br>
+                <strong>Contact No.:</strong> +632 8812 5149 / +632 5328 3342 / +632 8812 3229<br>
+                <strong>Email:</strong> sales@jupitersystems.com<br>
+                <strong>Website:</strong> https://www.jupitersystems.com
+              </div>
+            </div>
+            <div class="tax-warning">"THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX."</div>
           </div>
         </body>
         </html>
@@ -238,20 +321,18 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handlePrint}
                 disabled={isPrinting}
-                className={`flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isPrinting ? 'cursor-wait' : 'cursor-pointer'
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isPrinting ? 'cursor-wait' : 'cursor-pointer'
+                  }`}
               >
                 <Printer className="h-4 w-4" />
                 {isPrinting ? 'Preparing...' : 'Print'}
               </motion.button>
               <button
                 onClick={onClose}
-                className={`p-2 rounded-lg transition-colors ${
-                  darkMode
+                className={`p-2 rounded-lg transition-colors ${darkMode
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -262,168 +343,198 @@ export const PurchaseOrderPrintModal = ({ isOpen, onClose, purchaseOrder }) => {
           <div
             ref={printRef}
             className="overflow-y-auto max-h-[calc(90vh-120px)] p-6 bg-white text-black"
-            style={{ fontFamily: 'Arial, sans-serif' }}
+            style={{ fontFamily: 'Arial, sans-serif', fontSize: '10px' }}
           >
-            {/* Header */}
-            <div style={{ borderBottom: '2px solid #333', paddingBottom: '12px', marginBottom: '18px' }}>
-              <div style={{ fontSize: '19px', fontWeight: 'bold', color: '#2563eb', marginBottom: '6px' }}>
-                SANTEH FEEDS CORPORATION
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '13px', color: '#dc2626' }}>
-                  Purchase Order # : <strong style={{ fontSize: '16px' }}>{purchaseOrder.header.poNumber}</strong>
+            {/* Header Top */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', paddingBottom: '5px' }}>
+              <div style={{ flex: 0.5 }}>
+                <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH" style={{ maxWidth: '80px', height: 'auto', marginBottom: '5px' }} />
+                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#333', marginBottom: '2px' }}>FEEDS CORPORATION</div>
+                <div style={{ fontSize: '8px', color: '#333', lineHeight: '1.3' }}>
+                  701 RICHWELL CENTER, 102 TIMOG AVE,<br />
+                  QUEZON CITY, METRO MANILA, PHILIPPINES<br />
+                  NON-VAT Reg. TIN: 000-240-016-00000
                 </div>
+              </div>
+              <div style={{ flex: 0.5, textAlign: 'right' }}>
+                <div style={{ fontSize: '8px', color: '#333', marginBottom: '3px' }}>
+                  <span style={{ display: 'inline-block', marginRight: '15px' }}><strong>Form No.:</strong> PUR-F-03</span>
+                  <span style={{ display: 'inline-block', marginRight: '15px' }}><strong>Rev. No.:</strong> 2</span>
+                  <span style={{ display: 'inline-block' }}><strong>Eff. Date:</strong> 15 October 2008</span>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', textAlign: 'right', marginTop: '5px' }}>LOCAL PURCHASE ORDER</div>
+                {/* PO Info Table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '5px', marginBottom: '0px', fontSize: '9px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc', borderTop: '1px solid #ccc', width: '33%' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Document No.</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.poNumber || 'N/A'}</div>
+                      </td>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc', borderTop: '1px solid #ccc', width: '33%' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Document Date</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}</div>
+                      </td>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc', borderTop: '1px solid #ccc', width: '34%' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Page</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>1/1</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Terms</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.pymtrmid || '30 DAYS'}</div>
+                      </td>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Delivery Date</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.deliveryDate ? new Date(purchaseOrder.header.deliveryDate).toLocaleDateString() : 'N/A'}</div>
+                      </td>
+                      <td style={{ padding: '3px 5px', border: 'none', borderBottom: '1px solid #ccc' }}>
+                        <div style={{ fontSize: '8px', color: '#666' }}>Currency</div>
+                        <div style={{ fontWeight: 'bold', color: '#333' }}>Philippine Peso</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            {/* Order Information */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '9px', marginBottom: '18px' }}>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>VENDOR NAME</div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.vendName || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>PO DATE</div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
-                  {purchaseOrder.header.poDate ? new Date(purchaseOrder.header.poDate).toLocaleDateString() : 'N/A'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', margin: '15px 0' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>Supplier</div>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '5px' }}>{purchaseOrder.header.vendName || 'N/A'}</div>
+                <div style={{ fontSize: '9px', color: '#333', lineHeight: '1.4' }}>
+                  {purchaseOrder.header.vendAddress || 'N/A'}<br />
+                  TIN: {purchaseOrder.header.vendTIN || 'N/A'}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>PAYMENT TERMS</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.pymtrmid || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>DELIVERY TO</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.deliveryTo || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CONTACT PERSON</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.contactPerson || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '1px' }}>CANVASSED BY</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{purchaseOrder.header.canvassedBy || 'N/A'}</div>
+              <div style={{ flex: 1, marginLeft: '30px' }}>
+                <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>Ship To</div>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '5px' }}>{purchaseOrder.header.deliveryTo || 'N/A'}</div>
+                <div style={{ fontSize: '9px', color: '#333', lineHeight: '1.4' }}>
+                  {purchaseOrder.header.deliveryAddress || 'N/A'}
+                </div>
               </div>
             </div>
 
             {/* Items Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Item Description</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Item No</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">UOFM</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center text-xs font-bold">Quantity</th>
-                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-bold">Unit Cost</th>
-                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-bold">Extended Cost</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Budget</th>
-                    {/* <th className="border border-gray-300 px-3 py-2 text-left text-xs font-bold">Status</th> */}
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchaseOrder.details && purchaseOrder.details.length > 0 ? (
-                    purchaseOrder.details.map((item, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.itemDesc || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.itemNmbr || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.uofm || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-center font-semibold">{item.qtyOrder || 0}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">
-                          ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right font-semibold">
-                          ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.budgetNo || '-'}</td>
-                        {/* <td className="border border-gray-300 px-3 py-2 text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.itemStatus === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : item.itemStatus === 'DELIVERED'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {item.itemStatus || 'PENDING'}
-                          </span>
-                        </td> */}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="border border-gray-300 px-3 py-4 text-center text-gray-500">
-                        No items found for this order
+            <table className="w-full border-collapse" style={{ margin: '10px 0', fontSize: '9px', tableLayout: 'fixed' }}>
+              <thead>
+                <tr style={{ background: '#666', color: 'white' }}>
+                  <th style={{ padding: '4px 3px', textAlign: 'left', fontWeight: 'bold', width: '10%' }}>Item Number</th>
+                  <th style={{ padding: '4px 3px', textAlign: 'left', fontWeight: 'bold', width: '40%' }}>Item Description</th>
+                  <th style={{ padding: '4px 3px', textAlign: 'center', fontWeight: 'bold', width: '12%' }}>Quantity</th>
+                  <th style={{ padding: '4px 3px', textAlign: 'center', fontWeight: 'bold', width: '8%' }}>U/M</th>
+                  <th style={{ padding: '4px 3px', textAlign: 'right', fontWeight: 'bold', width: '15%' }}>Unit Price</th>
+                  <th style={{ padding: '4px 3px', textAlign: 'right', fontWeight: 'bold', width: '15%' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseOrder.details && purchaseOrder.details.length > 0 ? (
+                  purchaseOrder.details.map((item, index) => (
+                    <tr key={index}>
+                      <td style={{ padding: '4px 3px', textAlign: 'left', width: '10%' }}>{item.itemNmbr || '-'}</td>
+                      <td style={{ padding: '4px 3px', width: '40%' }}>{item.itemDesc || '-'}</td>
+                      <td style={{ padding: '4px 3px', textAlign: 'center', width: '12%' }}>{item.qtyOrder || 0}</td>
+                      <td style={{ padding: '4px 3px', textAlign: 'center', width: '8%' }}>{item.uofm || '-'}</td>
+                      <td style={{ padding: '4px 3px', textAlign: 'right', width: '15%' }}>
+                        ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 5, maximumFractionDigits: 5 }) || '0.00000'}
+                      </td>
+                      <td style={{ padding: '4px 3px', textAlign: 'right', width: '15%' }}>
+                        ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                       </td>
                     </tr>
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-100 font-bold">
-                    <td colSpan="5" className="border border-gray-300 px-3 py-2 text-right">Subtotal:</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">
-                      ₱{purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '4px 3px', textAlign: 'center', color: '#666' }}>
+                      No items found for this order
                     </td>
-                    <td colSpan="2" className="border border-gray-300"></td>
                   </tr>
-                </tfoot>
-              </table>
+                )}
+              </tbody>
+            </table>
+
+            {/* Nothing Else Follows */}
+            <div style={{ textAlign: 'center', fontWeight: 'bold', margin: '8px 0', padding: '5px 0', fontSize: '9px' }}>
+              ------------------------------------------------------------------------------------------------ Nothing Else Follows ------------------------------------------------------------------------------------------------
+            </div>
+
+            {/* Total Row */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '10px 0', fontWeight: 'bold', fontSize: '11px' }}>
+              <div style={{ textAlign: 'right', marginRight: '20px' }}>Total Php</div>
+              <div style={{ borderBottom: '2px solid #333', paddingBottom: '3px', minWidth: '150px', textAlign: 'right' }}>
+                ₱{purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </div>
+            </div>
+
+            {/* Line Items Count */}
+            <div style={{ fontSize: '9px', margin: '5px 0' }}>
+              Number of Line Items: {purchaseOrder.details?.length || 0}
             </div>
 
             {/* Remarks */}
-            {(purchaseOrder.header.remarks || purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 ||
-              purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) && (
-              <div className="mt-6 p-4 bg-gray-50 border-l-4 border-blue-500">
-                <div className="font-bold text-sm mb-1">REMARKS:</div>
-                {purchaseOrder.header.remarks && (
-                  <div className="text-sm text-gray-700 mb-2">{purchaseOrder.header.remarks}</div>
-                )}
-                {(purchaseOrder.header.isBudgetNo === 1 || purchaseOrder.header.isPrNo === 1 ||
-                  purchaseOrder.header.capex === 1 || purchaseOrder.header.isPerAdvise === 1) && (
-                  <div>
-                    {purchaseOrder.header.isBudgetNo === 1 && purchaseOrder.header.budgetNoList && (
-                      <div className="mb-1">
-                       {purchaseOrder.header.budgetNoList}
-                      </div>
-                    )}
-                    {purchaseOrder.header.isPrNo === 1 && purchaseOrder.header.prList && (
-                      <div className="mb-1">
-                        {purchaseOrder.header.prList}
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {purchaseOrder.header.capex === 1 && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          CAPEX
-                        </span>
-                      )}
-                      {purchaseOrder.header.isPerAdvise === 1 && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          Per Advise
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {purchaseOrder.header.remarks && (
+              <>
+                <div style={{ fontStyle: 'italic', margin: '10px 0 5px 0', fontSize: '9px' }}>Remarks:</div>
+                <div style={{ fontSize: '9px', marginBottom: '10px' }}>{purchaseOrder.header.remarks}</div>
+              </>
             )}
 
-            {/* Confirmed By and Approved By */}
-            <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                Created By: <strong>{purchaseOrder.header.createdBy || '____________________'}</strong><br/>
-                </div>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                Confirmed By: <strong>{purchaseOrder.header.confirmedBy || '____________________'}</strong>
+            {/* Condition of Purchase */}
+            <div style={{ fontSize: '8px', lineHeight: '1.5', color: '#333', margin: '15px 0' }}>
+              <strong>Condition of Purchase:</strong><br />
+              1. Acceptance of Purchase Order. By accepting this Purchase Order (PO), the Seller agrees to the stated terms. Any additional terms from the Seller are rejected unless agreed to in writing by the Buyer.<br />
+              2. Delivery: Delivery must be made on or before the specified date. The Buyer reserves the right to cancel the PO without liability if the Seller fails to deliver on time.<br />
+              3. Quality: The Buyer reserves the right to reject materials that do not meet the agreed-upon specifications. Rejected materials will be returned to the Seller at the Seller's expense.
+            </div>
+
+            {/* Signature Section */}
+            <div style={{ margin: '25px 0', borderTop: '1px solid #333', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', fontWeight: 'bold', marginBottom: '30px' }}>
+                <div style={{ flex: 1, textAlign: 'left' }}>Prepared and Canvassed By:</div>
+                <div style={{ flex: 1, textAlign: 'left' }}>Reviewed By:</div>
+                <div style={{ flex: 1, textAlign: 'left' }}>Approved By:</div>
               </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                Approved By: <strong>{purchaseOrder.header.approvedBy || '____________________'}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '40px' }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ marginTop: '8px', marginBottom: '8px', fontSize: '8px' }}>{purchaseOrder.header.canvassedBy || 'Alexies T Deocareza'}</div>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginTop: '8px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ fontSize: '7px', marginTop: '8px' }}>Signature Over Printed Name</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ marginTop: '8px', marginBottom: '8px', fontSize: '8px' }}>{purchaseOrder.header.confirmedBy_1 && purchaseOrder.header.confirmedBy_2 ? `${purchaseOrder.header.confirmedBy_1} / ${purchaseOrder.header.confirmedBy_2}` : purchaseOrder.header.confirmedBy_1 || purchaseOrder.header.confirmedBy_2 || 'Alexies T Deocareza'}</div>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginTop: '8px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ fontSize: '7px', marginTop: '8px' }}>Signature Over Printed Name</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ marginTop: '8px', marginBottom: '8px', fontSize: '8px' }}>{purchaseOrder.header.approvedBy || 'Alexies T Deocareza'}</div>
+                  <div style={{ borderTop: '1px solid #333', paddingTop: '3px', marginTop: '8px', marginBottom: '8px', fontSize: '8px', width: '100%' }}></div>
+                  <div style={{ fontSize: '7px', marginTop: '8px' }}>Signature Over Printed Name</div>
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-4 text-center text-xs text-gray-500">
-              <div>Generated on: {new Date().toLocaleString()}</div>
-              <div>SANTEH FEEDS CORPORATION - Purchase Order System</div>
+            {/* Footer Section */}
+            <div style={{ fontSize: '7px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
+                <div style={{ flex: 1 }}>
+                  <strong>Acknowledgement Certificate Control No.:</strong> AC-116, 102024_000442<br />
+                  <strong>Date Issued:</strong> October 22, 2024<br />
+                  <strong>Document Series:</strong> POHO00000001-POHO99999999
+                </div>
+                <div style={{ flex: 1 }}>
+                  <strong>Software Provider:</strong> Jupiter Systems Inc.<br />
+                  <strong>Contact No.:</strong> +632 8812 5149 / +632 5328 3342 / +632 8812 3229<br />
+                  <strong>Email:</strong> sales@jupitersystems.com<br />
+                  <strong>Website:</strong> https://www.jupitersystems.com
+                </div>
+              </div>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', textAlign: 'right', marginTop: '5px' }}>
+                "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX."
+              </div>
             </div>
           </div>
         </motion.div>

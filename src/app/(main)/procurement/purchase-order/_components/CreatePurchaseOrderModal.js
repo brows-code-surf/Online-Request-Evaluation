@@ -64,6 +64,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [showDeliveryToDropdown, setShowDeliveryToDropdown] = useState(false);
   const [contactPersons, setContactPersons] = useState([]);
   const [showContactPersonDropdown, setShowContactPersonDropdown] = useState(false);
+  const [showDocTypeDropdown, setShowDocTypeDropdown] = useState(false);
+  const [isDeliveryMode, setIsDeliveryMode] = useState(true); // true = Delivery, false = Pick-up
   const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
   const [showSaveAndPostConfirmModal, setShowSaveAndPostConfirmModal] = useState(false);
 
@@ -284,6 +286,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedVendorId('');
         setSelectedPaymentTerm('');
         setContactPersons([]);
+        setIsDeliveryMode(true);
         setPoData({
           poNumber: '',
           remarks: '',
@@ -399,6 +402,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedVendorId('');
         setSelectedPaymentTerm('');
         setContactPersons([]);
+        setIsDeliveryMode(true);
         setPoData({
           poNumber: '',
           remarks: '',
@@ -439,6 +443,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       setPaymentTermSearch('');
       setShowPaymentTermDropdown(false);
       setContactPersons([]);
+      setIsDeliveryMode(true);
       setPoData({
         poNumber: '',
         remarks: '',
@@ -507,7 +512,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
             {/* Scrollable Content */}
             <div className="px-10 overflow-y-auto flex-1">
               <div className="space-y-6">
-              <h4 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <h4 className={`text-lg font-medium mb-3 mt-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 Purchase Order Header
               </h4>
 
@@ -763,72 +768,159 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div className="relative">
-                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Delivery/Pick-up Location <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
+                  <div className="relative -mt-2.5">
+                    {/* Switch Button with 2 labels */}
+                    <div className="flex items-center mb-1">
+                      <div className={`relative inline-flex items-center justify-center p-1 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} shadow-sm`}>
+                        {/* Active indicator background */}
+                        <div 
+                          className={`absolute top-1 bottom-1 w-[50%] rounded-md transition-all duration-300 ease-in-out shadow-md ${
+                            isDeliveryMode 
+                              ? 'left-1 bg-blue-600' 
+                              : 'left-[calc(100%-50%-4px)] bg-orange-500'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!isDeliveryMode) {
+                              setIsDeliveryMode(true);
+                              setPoData(prev => ({ ...prev, deliveryTo: '' }));
+                            }
+                          }}
+                          className={`relative z-10 px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ${isDeliveryMode ? 'text-white' : darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Delivery
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isDeliveryMode) {
+                              setIsDeliveryMode(false);
+                              setPoData(prev => ({ ...prev, deliveryTo: '' }));
+                            }
+                          }}
+                          className={`relative z-10 px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ${!isDeliveryMode ? 'text-white' : darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                            Pick-up
+                          </span>
+                        </button>
+                      </div>
+                      <span className={`ml-3 text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Location <span className="text-red-500">*</span>
+                      </span>
+                    </div>
+                    {/* Conditional: Dropdown for Delivery, Input for Pick-up */}
+                    {isDeliveryMode ? (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={poData.deliveryTo}
+                          onChange={(e) => {
+                            setPoData(prev => ({ ...prev, deliveryTo: e.target.value }));
+                          }}
+                          onFocus={() => setShowDeliveryToDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowDeliveryToDropdown(false), 200)}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                            }`}
+                          placeholder="Select delivery location"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDeliveryToDropdown(!showDeliveryToDropdown)}
+                          className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showDeliveryToDropdown && (
+                          <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                            }`}>
+                            {deliveryLocations.map((location) => (
+                              <div
+                                key={location.id}
+                                onClick={() => {
+                                  setPoData(prev => ({ ...prev, deliveryTo: location.name }));
+                                  setShowDeliveryToDropdown(false);
+                                }}
+                                className={`px-3 py-2 cursor-pointer ${darkMode
+                                  ? 'text-white hover:bg-gray-600'
+                                  : 'text-gray-900 hover:bg-gray-100'
+                                  }`}
+                              >
+                                {location.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
                       <input
                         type="text"
                         value={poData.deliveryTo}
                         onChange={(e) => {
                           setPoData(prev => ({ ...prev, deliveryTo: e.target.value }));
                         }}
-                        onFocus={() => setShowDeliveryToDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowDeliveryToDropdown(false), 200)}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                           }`}
-                        placeholder="Select delivery location"
+                        placeholder="Enter pick-up location"
                         required
+                      />
+                    )}
+                  </div>
+                  {/* Doc Type */}
+                  <div className="relative">
+                    <label className={`block text-sm font-medium mb-1 mt-2.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Doc Type
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={poData.docType}
+                        onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
+                        onFocus={() => setShowDocTypeDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowDocTypeDropdown(false), 200)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}
+                          `}
+                        placeholder="Select doc type"
                       />
                       <button
                         type="button"
-                        onClick={() => setShowDeliveryToDropdown(!showDeliveryToDropdown)}
+                        onClick={() => setShowDocTypeDropdown(!showDocTypeDropdown)}
                         className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
+                      {showDocTypeDropdown && (
+                        <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
+                          {DOC_TYPE_OPTIONS.map((docType) => (
+                            <div
+                              key={docType}
+                              onClick={() => {
+                                setPoData(prev => ({ ...prev, docType: docType }));
+                                setShowDocTypeDropdown(false);
+                              }}
+                              className={`px-3 py-2 cursor-pointer ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
+                            >
+                              {docType}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {showDeliveryToDropdown && (
-                      <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                        }`}>
-                        {deliveryLocations.map((location) => (
-                          <div
-                            key={location.id}
-                            onClick={() => {
-                              setPoData(prev => ({ ...prev, deliveryTo: location.name }));
-                              setShowDeliveryToDropdown(false);
-                            }}
-                            className={`px-3 py-2 cursor-pointer ${darkMode
-                              ? 'text-white hover:bg-gray-600'
-                              : 'text-gray-900 hover:bg-gray-100'
-                              }`}
-                          >
-                            {location.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* Doc Type */}
-                  <div className="relative">
-                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Doc Type
-                    </label>
-                    <select
-                      value={poData.docType}
-                      onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
-                    >
-                      {DOC_TYPE_OPTIONS.map((docType) => (
-                        <option key={docType} value={docType}>
-                          {docType}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
 
@@ -972,8 +1064,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                   />
                 </div>
 
-                <div >
-                  <h4 className={`text-lg font-medium mb-3 border-t flex-shrink-0 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div className={`border-t flex-shrink-0`}>
+                  <h4 className={`text-lg font-medium mb-3 mt-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Purchase Order Details
                   </h4>
                   {/* Items Selection */}
@@ -1089,10 +1181,10 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                               Item Details
                             </th>
                             <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Quantity
+                              Unit Cost
                             </th>
                             <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Unit Cost
+                              Quantity
                             </th>
                             <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                               Total
@@ -1111,6 +1203,11 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                     {item.itemNumber}
                                   </div>
                                 </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  ₱{(item.unitCost || 0).toLocaleString()}
+                                </span>
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center">
@@ -1137,11 +1234,6 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                 </div>
                               </td>
                               <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  ₱{(item.unitCost || 0).toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
                                 <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                   ₱{((item.unitCost || 0) * (item.qtyOrder || 0)).toLocaleString()}
                                 </span>
@@ -1160,13 +1252,13 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                   Grand Total
                                 </span>
                               </td>
+                              <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <span className="italic"></span>
+                              </td>
                               <td className="px-4 py-3">
                                 <span className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
                                   {selectedItems.reduce((sum, item) => sum + (item.qtyOrder || 0), 0).toLocaleString()}
                                 </span>
-                              </td>
-                              <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                <span className="italic">Subtotal</span>
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>

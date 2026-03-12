@@ -1145,7 +1145,7 @@ class PurchaseOrder {
 
             let query = `
                 SELECT
-                    pqas.PQROWID,
+                    pqd.ROWID as PQROWID,
                     pqh.PQCODE,
                     pqh.REFERENCENUM,
                     pqd.VENDORID,
@@ -1171,13 +1171,12 @@ class PurchaseOrder {
                     pr.COMPANY,
                     pr.ADDRESSEDTO,
                     ISNULL(SUM(pod.QTYORDER), 0) as TOTAL_QTY_ORDERED
-                FROM [PURCHASE.QUOTATIONAPPROVALSTATUS.1] pqas
-                INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] pqd ON pqas.PQROWID = pqd.ROWID
+                FROM [PURCHASE.QUOTATIONDETAILS.1] pqd
                 INNER JOIN [PURCHASE.QUOTATIONHEADER.1] pqh ON pqd.PQCODE = pqh.PQCODE
                 LEFT JOIN [SUPPLIER.1] s ON pqd.VENDORID = s.VENDORID
                 INNER JOIN [PURCHASE.REQUESTHEADER.1] pr ON pqd.PRCODE = pr.REFERENCENO
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON pqd.RID = pod.RID
-                WHERE pqas.IS_APPROVED = 1
+                WHERE pqd.APPROVALSTATUS = 'APPROVED'
                 AND pqh.POSTSTATUS = 1
                 AND pqd.IS_SERVED = 0
             `;
@@ -1194,7 +1193,7 @@ class PurchaseOrder {
             }
 
             query += `
-                GROUP BY pqas.PQROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqh.CREATEDBY, pqd.VENDORID, s.VENDNAME,
+                GROUP BY pqd.ROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqh.CREATEDBY, pqd.VENDORID, s.VENDNAME,
                     pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
                     pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
                     pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,

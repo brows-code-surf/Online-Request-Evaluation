@@ -7,7 +7,7 @@ import { PurchaseOrderPrintModal } from './PurchaseOrderPrintModal';
 import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 
-function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataRefresh, loading = false }) {
+function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
   const [posting, setPosting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +93,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
         toast.success('Purchase order submitted for processing');
         setShowSubmitModal(false);
         await onDataRefresh?.();
+        await onRefreshList?.();
       } else {
         toast.error(result.message || 'Failed to submit purchase order');
       }
