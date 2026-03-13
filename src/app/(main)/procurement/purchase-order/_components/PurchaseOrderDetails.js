@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../utils/authContext';
-import { PurchaseOrderPrintModal } from './PurchaseOrderPrintModal';
+import { handlePrintPurchaseOrder } from './PurchaseOrderPrintModal';
 import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 
@@ -12,7 +12,6 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
   const [posting, setPosting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -126,6 +125,10 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
     setShowDeleteModal(true);
   };
 
+  const handlePrint = () => {
+    handlePrintPurchaseOrder(purchaseOrder);
+  };
+
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
@@ -197,7 +200,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
             {/* Desktop buttons */}
             <div className="hidden sm:flex gap-3">
               <button
-                onClick={() => setShowPrintModal(true)}
+                onClick={handlePrint}
                 disabled={loading || actionLoading || header.poStatus === 'PENDING'}
                 title={header.poStatus === 'PENDING' ? 'Print is not available for pending purchase orders' : 'Print purchase order'}
                 className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium ${darkMode ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[100px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'}
@@ -294,7 +297,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                 >
                   <button
                     onClick={() => {
-                      setShowPrintModal(true);
+                      handlePrint();
                       setShowActionMenu(false);
                     }}
                     disabled={loading || actionLoading || header.poStatus === 'PENDING'}
@@ -743,13 +746,6 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
           </div>
         </div>
       </div>
-
-      {/* Print Modal */}
-      <PurchaseOrderPrintModal
-        isOpen={showPrintModal}
-        onClose={() => setShowPrintModal(false)}
-        purchaseOrder={purchaseOrder}
-      />
 
       {/* Submit Modal */}
       <ConfirmModal
