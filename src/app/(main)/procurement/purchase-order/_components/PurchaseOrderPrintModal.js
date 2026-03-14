@@ -1,7 +1,5 @@
 'use client';
 
-const ITEMS_PER_PAGE = 10;
-
 const generateHeader = (purchaseOrder, currentPage, totalPages) => `
   <!-- Header Top -->
   <div class="header-top">
@@ -136,25 +134,145 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
       return;
     }
 
-    // Calculate total pages
+    // Calculate total pages based on available height
     const items = purchaseOrder.details || [];
     const totalItems = items.length;
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-    const actualTotalPages = totalPages === 0 ? 1 : totalPages;
+    const remarks = purchaseOrder.header.remarks || '';
+    const remarksLength = remarks.length;
+    
+    // Calculate remarks height: ~3px per line, ~80 chars per line
+    // For 500 chars = ~6-7 lines = ~20-25px base height + content
+    const calculateRemarksHeight = (text, usePreWrap = true) => {
+      if (!text || text.length === 0) return 0;
+      
+      if (usePreWrap) {
+        // Calculate height with line breaks preserved
+        const charsPerLine = 100;
+        const lineHeight = 14; // pixels per line (font-size 9px + line-height)
+        const numLines = Math.ceil(text.length / charsPerLine);
+        const basePadding = 20; // margin-bottom and padding
+        return (numLines * lineHeight) + basePadding;
+      } else {
+        // Calculate height with single line (no line breaks)
+        const charsPerLine = 120;
+        const lineHeight = 14;
+        const numLines = Math.ceil(text.length / charsPerLine);
+        const basePadding = 20;
+        return (numLines * lineHeight) + basePadding;
+      }
+    };
+    
+    const remarksHeightPreWrap = calculateRemarksHeight(remarks, true);
+    const remarksHeightNormal = calculateRemarksHeight(remarks, false);
+    const remarksHeight = remarksHeightPreWrap;
+    
+    // Calculate average row height based on description length
+    // Base height is 28px, add extra for long descriptions
+    const calculateRowHeight = (item) => {
+      const baseHeight = 28;
+      const descLength = (item.itemDesc || '').length;
+      // Add ~3px for every 20 characters of description
+      const extraHeight = Math.floor(descLength / 20) * 3;
+      return baseHeight + extraHeight;
+    };
+    
+    // Calculate total estimated height for all items
+    const totalItemsHeight = items.reduce((sum, item) => sum + calculateRowHeight(item), 0);
+    
+    // Standard letter page ~792px with 0.3in margins = ~732px usable
+    // Subtract header, footer, and other elements
+    const HEADER_HEIGHT = 200;
+    const FOOTER_HEIGHT = 180;
+    const availableHeight = 900 - HEADER_HEIGHT - FOOTER_HEIGHT;
+    
+    // Calculate how many items can fit per page based on actual content
+    // Reserve space for remarks on the last page
+    const calculateItemsPerPage = () => {
+      let currentPageItems = [];
+      let currentPageHeight = 0;
+      let pageNum = 1;
+      const pages = [];
+      
+      items.forEach((item) => {
+        const itemHeight = calculateRowHeight(item);
+        
+        // For the last page, reserve space for remarks, total, and other footer elements
+        // These elements take approximately 60px (Nothing Else Follows + Total + Line Items Count)
+        const reservedHeight = 60; // Minimum space reserved for footer elements
+        const effectiveAvailableHeight = availableHeight - reservedHeight;
+        
+        // Check if adding this item would exceed page height
+        if (currentPageHeight + itemHeight > effectiveAvailableHeight && currentPageItems.length > 0) {
+          // Start new page
+          pages.push({ items: currentPageItems, pageNum: pageNum });
+          pageNum++;
+          currentPageItems = [item];
+          currentPageHeight = itemHeight;
+        } else {
+          currentPageItems.push(item);
+          currentPageHeight += itemHeight;
+        }
+      });
+      
+      // Add remaining items as last page
+      if (currentPageItems.length > 0) {
+        pages.push({ items: currentPageItems, pageNum: pageNum });
+      }
+      
+      // Check if remarks would overflow on the last page
+      // First try with pre-wrap (line breaks), if doesn't fit try with normal (single line)
+      // If still doesn't fit, create a separate remarks page
+      const lastPage = pages[pages.length - 1];
+      const lastPageItemsHeight = lastPage ? lastPage.items.reduce((sum, item) => sum + calculateRowHeight(item), 0) : 0;
+      // Footer elements: Nothing Else Follows + Total Row + Line Items Count
+      const footerElementsHeight = 60;
+      
+      // Determine remarks display mode
+      let remarksDisplayMode = 'pre-wrap';
+      
+      // Check remaining space on last page after items and footer elements
+      const remainingSpaceAfterItems = availableHeight - footerElementsHeight - lastPageItemsHeight;
+      
+      // First try with pre-wrap (preserve line breaks)
+      if (remarksHeightPreWrap > remainingSpaceAfterItems && remarksHeightPreWrap > 0) {
+        // Try with normal whitespace (single line - remove \n)
+        const singleLineRemarksHeight = calculateRemarksHeight(remarks, false);
+        
+        if (singleLineRemarksHeight > remainingSpaceAfterItems && singleLineRemarksHeight > 0) {
+          // Neither fits, create a separate page for remarks
+          pages.push({ items: [], pageNum: pageNum + 1, isRemarksOnly: true, remarksDisplayMode: 'pre-wrap' });
+        } else {
+          // Normal (single line) fits, use that mode
+          remarksDisplayMode = 'normal';
+        }
+      }
+      
+      // Store the remarks display mode on the last page
+      if (pages.length > 0) {
+        pages[pages.length - 1].remarksDisplayMode = remarksDisplayMode;
+      }
+      
+      return pages;
+    };
+    
+    const pages = calculateItemsPerPage();
+    const actualTotalPages = pages.length === 0 ? 1 : pages.length;
 
-    // Generate pages with 10 items each
+    // Generate pages
     let allPagesHtml = '';
     
-    for (let pageNum = 1; pageNum <= actualTotalPages; pageNum++) {
-      const startIdx = (pageNum - 1) * ITEMS_PER_PAGE;
-      const endIdx = Math.min(startIdx + ITEMS_PER_PAGE, totalItems);
-      const pageItems = items.slice(startIdx, endIdx);
+    pages.forEach((page, index) => {
+      const pageNum = index + 1;
+      const pageItems = page.items;
       const isLastPage = pageNum === actualTotalPages;
+      const isRemarksOnlyPage = page.isRemarksOnly === true;
+      const remarksDisplayMode = page.remarksDisplayMode || 'pre-wrap';
 
       const pageHtml = `
         <div class="print-page">
           ${generateHeader(purchaseOrder, pageNum, actualTotalPages)}
           
+          ${!isRemarksOnlyPage ? `
           <!-- Items Table -->
           <table>
             <thead>
@@ -171,17 +289,18 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
               ${pageItems.length > 0
                 ? pageItems.map((item, idx) => `
                     <tr>
-                      <td style="width: 10%; padding: 4px 3px; text-align: left;">${item.itemNmbr || '-'}</td>
-                      <td style="width: 40%; padding: 4px 3px;">${item.itemDesc || '-'}</td>
-                      <td style="width: 12%; padding: 4px 3px; text-align: center;">${item.qtyOrder || 0}</td>
-                      <td style="width: 8%; padding: 4px 3px; text-align: center;">${item.uofm || '-'}</td>
-                      <td style="width: 15%; padding: 4px 3px; text-align: right;">${item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 5, maximumFractionDigits: 5 }) || '0.00000'}</td>
-                      <td style="width: 15%; padding: 4px 3px; text-align: right;">₱${item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
+                      <td style="width: 10%; padding: 4px 3px; text-align: left; vertical-align: top;">${item.itemNmbr || '-'}</td>
+                      <td style="width: 40%; padding: 4px 3px; vertical-align: top;">${item.itemDesc || '-'}</td>
+                      <td style="width: 12%; padding: 4px 3px; text-align: center; vertical-align: top;">${item.qtyOrder?.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) || '0.000'}</td>
+                      <td style="width: 8%; padding: 4px 3px; text-align: center; vertical-align: top;">${item.uofm || '-'}</td>
+                      <td style="width: 15%; padding: 4px 3px; text-align: right; vertical-align: top;">${item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 5, maximumFractionDigits: 5 }) || '0.00000'}</td>
+                      <td style="width: 15%; padding: 4px 3px; text-align: right; vertical-align: top;">${item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                     </tr>
                   `).join('')
                 : '<tr><td colspan="6" style="padding: 4px 3px; text-align: center; color: #666;">No items found for this order</td></tr>'}
             </tbody>
           </table>
+          ` : ''}
           
           ${isLastPage ? `
             <!-- Nothing Else Follows -->
@@ -189,7 +308,7 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
 
             <!-- Total Row -->
             <div class="total-row">
-              <div style="text-align: right; margin-right: 20px;">Total Php</div>
+              <div style="text-align: right; margin-right: 20px;">Total ₱</div>
               <div class="total-amount">₱${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
             </div>
 
@@ -200,7 +319,7 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
 
             <!-- Remarks -->
               <div class="remarks-label">Remarks:</div>
-              <div style="font-size: 9px; margin-bottom: 10px;">${purchaseOrder.header.remarks || ''}</div>
+              <div style="font-size: 9px; margin-bottom: 10px; white-space: ${remarksDisplayMode};">${remarksDisplayMode === 'normal' ? (purchaseOrder.header.remarks || '').replace(/\n/g, ' ') : (purchaseOrder.header.remarks || '')}</div>
           ` : ''}
           
           ${generateFooter(purchaseOrder)}
@@ -208,7 +327,7 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
       `;
       
       allPagesHtml += pageHtml;
-    }
+    });
 
     const printContent = `
       <!DOCTYPE html>
@@ -260,8 +379,8 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
             .footer-row { display: flex; justify-content: space-between; margin: 3px 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding-top: 8px;padding-bottom: 8px; }
             .footer-col { flex: 1; text-align: left; min-width: 300px; }
             .tax-warning { font-weight: bold; text-decoration: underline 1px; font-size: 10px; text-align: right; margin-top: 5px; }
-            @page { margin: 0.3in; }
-            .print-page { page-break-after: always; min-height: 100vh; }
+            @page { margin: 0.3in; size: auto; }
+            .print-page { page-break-after: always; min-height: 0; }
             .print-page:last-child { page-break-after: auto; }
           }
         </style>
@@ -289,3 +408,4 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
     alert('Error occurred while preparing print. Please try again.');
   }
 };
+
