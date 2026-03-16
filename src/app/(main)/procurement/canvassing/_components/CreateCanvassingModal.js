@@ -565,16 +565,22 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               </tr>
                             </thead>
                             <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                              {filteredAvailableItems.map((item, index) => (
-                                <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                  <td className="px-2 sm:px-4 py-3">
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedItems.some(selected => selected.uniqueId === item.uniqueId)}
-                                      onChange={(e) => handleItemSelect(item, e.target.checked)}
-                                      className="rounded"
-                                    />
-                                  </td>
+                              {filteredAvailableItems.map((item, index) => {
+                                const isSelected = selectedItems.some(selected => selected.uniqueId === item.uniqueId);
+                                return (
+                                  <tr 
+                                    key={item.uniqueId} 
+                                    className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
+                                    onClick={() => handleItemSelect(item, !isSelected)}
+                                  >
+                                    <td className="px-2 sm:px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                        className="rounded"
+                                      />
+                                    </td>
                                   <td className="px-2 sm:px-4 py-3">
                                     <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                       {item.RID}
@@ -606,7 +612,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                     </span>
                                   </td>
                                 </tr>
-                              ))}
+                              )})} 
                             </tbody>
                           </table>
                         </div>

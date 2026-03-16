@@ -308,8 +308,8 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
 
             <!-- Total Row -->
             <div class="total-row">
-              <div style="text-align: right; margin-right: 20px;">Total ₱</div>
-              <div class="total-amount">₱${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
+              <div style="text-align: right; margin-right: 20px;">Total <span style ="margin-left: 5px;">₱</span></div>
+              <div class="total-amount">${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
             </div>
 
             <!-- Line Items Count -->
@@ -366,7 +366,7 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
             .item-desc-sub { font-size: 8px; color: #666; margin-top: 1px; }
             .nothing-else { text-align: center; font-weight: bold; margin: 8px 0; padding: 5px 0; }
             .total-row { display: flex; justify-content: flex-end; margin: 10px 0; font-weight: bold; font-size: 11px; }
-            .total-amount { border-bottom: 4px double #ccc; padding-bottom: 3px; min-width: 150px; text-align: right; }
+            .total-amount { border-bottom: 4px double #ccc; padding-bottom: 1px; min-width: 150px; text-align: right; }
             .line-items-count { font-size: 9px; margin: 5px 0; }
             .remarks-label { font-style: italic; margin: 10px 0 5px 0; font-size: 9px; }
             .condition-text { font-size: 9px; line-height: 1.5; color: #333; margin: 15px 0; }

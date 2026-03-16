@@ -490,7 +490,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
               {header.confirmedBy && (
                 <div>
                   <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {header.dateConfirmed ? 'Confirmed By:' : 'For Confirmation:'}
+                    {header.dateConfirmed ? 'Reviewed By:' : 'For Review By:'}
                   </span>
                   <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy}</span>
                 </div>

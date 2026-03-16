@@ -11,6 +11,7 @@ class Canvassing {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            // Join with details and PR tables to get all required fields
             let query = `
                 SELECT DISTINCT
                     PQH.ROWID,
@@ -21,8 +22,19 @@ class Canvassing {
                     PQH.PQREMARKS,
                     PQH.CREATEDBY,
                     PQH.DATEMODIFIED,
-                    PQH.MODIFIEDBY
+                    PQH.MODIFIEDBY,
+                    -- Fields from details table
+                    PQD.PRCODE as prId,
+                    PQD.ITEMDESC as itemDescription,
+                    PQD.CANVASSED_BY as canvassedBy,
+                    PQD.APPROVALSTATUS as approvalStatus,
+                    PQD.APPROVEDBY as approvedBy,
+                    -- Fields from PR header
+                    PRH.REQUESTEDBY as prBy,
+                    PRH.DATEAPPROVED as prApprovalDate
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
+                LEFT JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
+                LEFT JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PQD.PRCODE = PRH.REFERENCENO
                 WHERE 1=1
             `;
 
@@ -69,14 +81,22 @@ class Canvassing {
             const result = await request.query(query);
             return result.recordset.map(record => ({
                 id: record.ROWID,
-                referenceNum: `QUO-${record.REFERENCENUM}`,
+                referenceNum: `COQ-${record.REFERENCENUM}`,
                 pqCode: record.PQCODE,
                 dateRequested: record.DATEREQUESTED,
                 postStatus: record.POSTSTATUS,
                 pqRemarks: record.PQREMARKS,
                 createdBy: record.CREATEDBY,
                 dateModified: record.DATEMODIFIED,
-                modifiedBy: record.MODIFIEDBY
+                modifiedBy: record.MODIFIEDBY,
+                approvalStatus: record.approvalStatus,
+                approvedBy: record.approvedBy,
+                // New fields from joined tables
+                prId: record.prId,
+                prBy: record.prBy,
+                itemDescription: record.itemDescription,
+                canvassedBy: record.canvassedBy,
+                prApprovalDate: record.prApprovalDate
             }));
         } catch (error) {
             console.error('Error fetching canvassing requests:', error);
@@ -147,7 +167,7 @@ class Canvassing {
             return {
                 header: {
                     id: header.ROWID,
-                    referenceNum: `QUO-${header.REFERENCENUM}`,
+                    referenceNum: `COQ-${header.REFERENCENUM}`,
                     pqCode: header.PQCODE,
                     dateRequested: header.DATEREQUESTED,
                     postStatus: header.POSTSTATUS,
@@ -226,8 +246,8 @@ class Canvassing {
             // Use reference number as PQ code
             const pqCode = headerData.referenceNum;
 
-            // Extract number from referenceNum (remove 'QUO-' prefix)
-            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+            // Extract number from referenceNum (remove 'COQ-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('COQ-', ''));
 
             // Leave PQREMARKS as blank
             let remarks = '';
@@ -364,8 +384,8 @@ class Canvassing {
 
             const pqCode = headerData.pqCode;
 
-            // Extract number from referenceNum (remove 'QUO-' prefix)
-            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+            // Extract number from referenceNum (remove 'COQ-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('COQ-', ''));
 
             // Update header
             const updateHeaderQuery = `
@@ -524,6 +544,7 @@ class Canvassing {
                 UPDATE [PURCHASE.QUOTATIONDETAILS.1]
                 SET PQDPOSTSTATUS = 1,
                     MODIFIEDDATE = GETDATE(),
+                    APPROVALSTATUS = 'PENDING',
                     MODIFIEDBY = @posterName
                 WHERE PQCODE = @pqCode
             `;
@@ -711,7 +732,7 @@ class Canvassing {
                 nextNumber = lastNumber + 1;
             }
 
-            return `QUO-${nextNumber}`;
+            return `COQ-${nextNumber}`;
         } catch (error) {
             console.error('Error getting next reference number:', error);
             throw new Error('Failed to generate reference number: ' + error.message);
@@ -829,17 +850,28 @@ class Canvassing {
         }
     }
 
-    // Get canvassing statistics
+    // Get canvassing statistics (both postStatus and approvalStatus)
     static async getCanvassingStats(user = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            let query = `
+            // Query for postStatus counts
+            let postStatusQuery = `
                 SELECT
                     POSTSTATUS,
                     COUNT(*) as count
                 FROM [PURCHASE.QUOTATIONHEADER.1]
+                WHERE 1=1
+            `;
+
+            // Query for approvalStatus counts
+            let approvalStatusQuery = `
+                SELECT
+                    PQD.APPROVALSTATUS,
+                    COUNT(*) as count
+                FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
+                INNER JOIN [PURCHASE.QUOTATIONHEADER.1] PQH ON PQD.PQCODE = PQH.PQCODE
                 WHERE 1=1
             `;
 
@@ -849,21 +881,38 @@ class Canvassing {
             // Filter by created by (only show stats for canvassing requests created by the user)
             if (user) {
                 const userName = user.empName;
-                query += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
+                postStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
+                approvalStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
                 params.push({ name: `userName${paramIndex}`, value: userName });
                 paramIndex++;
             }
 
-            query += ` GROUP BY POSTSTATUS`;
+            postStatusQuery += ` GROUP BY POSTSTATUS`;
+            approvalStatusQuery += ` GROUP BY APPROVALSTATUS`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
 
-            const result = await request.query(query);
+            // Execute both queries
+            const postStatusResult = await request.query(postStatusQuery);
+            const approvalStatusResult = await request.query(approvalStatusQuery);
 
-            const stats = {};
-            result.recordset.forEach(record => {
-                stats[record.POSTSTATUS] = record.count;
+            // Process postStatus results
+            const stats = {
+                postStatus: {},
+                approvalStatus: {},
+                total: 0
+            };
+
+            postStatusResult.recordset.forEach(record => {
+                stats.postStatus[record.POSTSTATUS] = record.count;
+                stats.total += record.count;
+            });
+
+            approvalStatusResult.recordset.forEach(record => {
+                if (record.APPROVALSTATUS) {
+                    stats.approvalStatus[record.APPROVALSTATUS.trim()] = record.count;
+                }
             });
 
             return stats;

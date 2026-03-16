@@ -62,8 +62,10 @@ class CanvassApproval {
 
             return result.recordset.map(record => {
                 let status = 'PENDING';
-                if (record.APPROVALSTATUS === 'APPROVED') {
-                    status = 'APPROVED';
+                if (record.APPROVALSTATUS === 'SELECTED') {
+                    status = 'SELECTED';
+                } else if (record.APPROVALSTATUS === 'NOT SELECTED') {
+                    status = 'NOT SELECTED';
                 } else if (record.APPROVALSTATUS === 'REJECTED') {
                     status = 'REJECTED';
                 }
@@ -104,57 +106,6 @@ class CanvassApproval {
         }
     }
 
-    // Get canvassing approval statistics
-    static async getCanvassApprovalStats(user = null, isAdmin = false) {
-        let connection;
-        try {
-            connection = await connectToDatabase(process.env.DB_SFC);
-
-            // Get stats for items that have NOT been approved yet (same filter as getAllCanvassingItems)
-            let query = `
-                SELECT
-                    COUNT(DISTINCT PQD.PRCODE) as totalRequests,
-                    COUNT(PQD.ROWID) as totalItems,
-                    COUNT(CASE WHEN PQD.APPROVALSTATUS = 'APPROVED' THEN 1 END) as approvedItems,
-                    COUNT(CASE WHEN PQD.APPROVALSTATUS = 'REJECTED' THEN 1 END) as rejectedItems,
-                    COUNT(CASE WHEN PQD.APPROVALSTATUS IS NULL OR PQD.APPROVALSTATUS = 'PENDING' THEN 1 END) as pendingItems
-                FROM [PURCHASE.QUOTATIONHEADER.1] PQH
-                INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
-                WHERE PQH.POSTSTATUS = 1
-            `;
-
-            const params = [];
-            let paramIndex = 1;
-
-            // Filter by created by (only show stats for canvassing requests created by the user for non-admin users)
-            // Admin users can see stats for all canvassing requests
-            if (!isAdmin && user) {
-                const userName = user.empName;
-                query += ` AND UPPER(PQH.CREATEDBY) = UPPER(@userName${paramIndex})`;
-                params.push({ name: `userName${paramIndex}`, value: userName });
-                paramIndex++;
-            }
-
-            const request = connection.request();
-            params.forEach(param => request.input(param.name, param.value));
-
-            const result = await request.query(query);
-
-            return {
-                totalRequests: result.recordset[0].totalRequests || 0,
-                totalItems: result.recordset[0].totalItems || 0,
-                pending: result.recordset[0].pendingItems || 0,
-                approved: result.recordset[0].approvedItems || 0,
-                rejected: result.recordset[0].rejectedItems || 0,
-                approvedToday: 0, // TODO: Implement daily stats
-                rejectedToday: 0  // TODO: Implement daily stats
-            };
-        } catch (error) {
-            console.error('Error fetching canvass approval stats:', error);
-            throw new Error('Failed to fetch canvass approval stats: ' + error.message);
-        }
-    }
-
     // Approve individual item (this would typically update the item status)
     static async approveCanvassingItem(itemId, approverName) {
         let connection;
@@ -178,30 +129,29 @@ class CanvassApproval {
             const { PRCODE: prCode, RID: rid } = itemResult.recordset[0];
 
             // Update the QUOTATIONDETAILS table directly
-            const approveQuery = `
-                UPDATE [PURCHASE.QUOTATIONDETAILS.1]
-                SET APPROVALSTATUS = 'APPROVED',
-                    APPROVEDBY = @approverName,
-                    DATECREATED = GETDATE()
-                WHERE ROWID = @itemId
-            `;
+            const approveQuery = ` UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'SELECTED', APPROVEDBY = @approverName, DATECREATED = GETDATE() WHERE ROWID = @itemId `;
 
             let result = await connection.request()
                 .input('itemId', itemId)
                 .input('approverName', approverName)
                 .query(approveQuery);
-
+            
+            // Check if the approval was successful
             if (result.rowsAffected[0] === 0) {
                 throw new Error('Failed to approve canvassing item');
             }
 
+            // Mark other items with the same PRCODE as NOT SELECTED
+            const updateNotSelectedQuery = `UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'NOT SELECTED' WHERE PRCODE = @prCode AND ROWID != @itemId`;
+
+            await connection.request()
+                .input('prCode', prCode)
+                .input('itemId', itemId)
+                .query(updateNotSelectedQuery);
+
             // Update the corresponding purchase request item status to 'QUOTATION APPROVED'
             if (prCode && rid) {
-                const updatePRQuery = `
-                    UPDATE [PURCHASE.REQUESTDETAILS.1]
-                    SET ITEMSTATUS = 'FOR P.O.'
-                    WHERE REFERENCENO = @prCode AND RID = @rid
-                `;
+                const updatePRQuery = ` UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR P.O.' WHERE REFERENCENO = @prCode AND RID = @rid`;
 
                 await connection.request()
                     .input('prCode', prCode)
