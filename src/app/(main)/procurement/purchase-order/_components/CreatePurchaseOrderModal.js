@@ -473,54 +473,66 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={handleClose}></div>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="flex items-end sm:items-center justify-center min-h-screen p-0 sm:p-4">
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
 
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`relative w-full sm:w-full md:w-[90%] lg:w-[85%] xl:w-[80%] max-w-7xl h-[95vh] sm:h-[85vh] md:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
             {/* Header */}
-            <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex items-center justify-between">
-                {/* <div className="flex-2"></div> */}
-                <div className="text-left">
-                  <h3 className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Purchase Order Entry
-                  </h3>
+            <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-white to-gray-50'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`p-2 rounded-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                    <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className={`text-lg sm:text-xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Purchase Order Entry
+                    </h3>
+                  </div>
                 </div>
-                <div className="flex-1 flex justify-end items-center">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {poData.poNumber && (
-                    <p className={`text-2xl font-bold text-blue-800 mr-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                    <span className={`hidden sm:inline-flex px-3 py-1.5 text-2xl font-bold rounded-full ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                       {poData.poNumber}
-                    </p>
+                    </span>
                   )}
                   <button
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'} disabled:opacity-50`}
+                    className={`p-2 rounded-lg transition-colors ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} disabled:opacity-50`}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
+              {/* PO Number for mobile */}
+              {poData.poNumber && (
+                <div className="sm:hidden mt-2">
+                  <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${darkMode ? 'bg-blue-900/60 text-blue-300' : 'bg-blue-100 text-blue-800'}`}>
+                    {poData.poNumber}
+                  </span>
+                </div>
+              )}
             </div>
             {/* Scrollable Content */}
-            <div className="px-10 overflow-y-auto flex-1">
-              <div className="space-y-6">
-              <h4 className={`text-lg font-medium mb-3 mt-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6">
+              <div className="space-y-5 sm:space-y-6 pb-4">
+              <h4 className={`text-base sm:text-lg font-semibold mb-2 sm:mb-3 mt-3 sm:mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 Purchase Order Header
               </h4>
 
                 {/* Supplier Information */}
-                <div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div className="relative">
-                      <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-medium mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                         Supplier <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
@@ -718,7 +730,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <div className="relative">
                     <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Date Needed
@@ -891,7 +903,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
                         onFocus={() => setShowDocTypeDropdown(true)}
                         onBlur={() => setTimeout(() => setShowDocTypeDropdown(false), 200)}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}
+                        className={`w-full px-3 py-2.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}
                           `}
                         placeholder="Select doc type"
                       />
@@ -1172,31 +1184,32 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                 </div>
                 {/* Selected Items Summary */}
                 {selectedItems.length > 0 && (
-                  <div className="border rounded-md overflow-hidden mb-6">
-                    <div className="max-h-96 overflow-y-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                          <tr>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Item Details
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Unit Cost
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Quantity
-                            </th>
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              Total
-                            </th>
-                          </tr>
-                        </thead>
+                  <div className="border rounded-lg overflow-hidden mb-4 sm:mb-6">
+                    <div className="overflow-x-auto">
+                      <div className="max-h-[50vh] sm:max-h-96 overflow-y-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                            <tr>
+                              <th className="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                                Item Details
+                              </th>
+                              <th className="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                                Unit Cost
+                              </th>
+                              <th className="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                                Quantity
+                              </th>
+                              <th className="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                                Total
+                              </th>
+                            </tr>
+                          </thead>
                         <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                           {selectedItems.map((item, index) => (
                             <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors duration-150`}>
-                              <td className="px-4 py-3">
+                              <td className="px-3 sm:px-4 py-2 sm:py-3">
                                 <div>
-                                  <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'} truncate max-w-[150px] sm:max-w-none`}>
                                     {item.itemDescription}
                                   </div>
                                   <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -1204,12 +1217,12 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <td className="px-3 sm:px-4 py-2 sm:py-3">
+                                <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                   ₱{(item.unitCost || 0).toLocaleString()}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-3 sm:px-4 py-2 sm:py-3">
                                 <div className="flex items-center">
                                   <input
                                     type="number"
@@ -1224,17 +1237,17 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                         updateSelectedItem(item.uniqueId, 'qtyOrder', newValue);
                                       }
                                     }}
-                                    className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                    className={`w-16 sm:w-20 px-2 py-1 text-xs sm:text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                                       }`}
                                     title={`Max quantity: ${item.remaining || item.qtyOrder} ${item.uofm}`}
                                   />
-                                  <span className={`ml-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <span className={`ml-1 sm:ml-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     {item.uofm}
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <td className="px-3 sm:px-4 py-2 sm:py-3">
+                                <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                   ₱{((item.unitCost || 0) * (item.qtyOrder || 0)).toLocaleString()}
                                 </span>
                               </td>
@@ -1270,27 +1283,33 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         )}
                       </table>
                     </div>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Footer */}
-            <div className={`px-6 py-4 border-t flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-                <div className="text-sm text-gray-500 text-center sm:text-left">
+            <div className={`px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-white to-gray-50'}`}>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left order-3 sm:order-1">
                   {selectedItems.length > 0 && (
-                    <span>{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                      {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''}
+                    </span>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:space-x-3 order-1 sm:order-2 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 order-2 sm:order-1 ${darkMode
-                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    className={`px-4 sm:px-5 py-2.5 sm:py-2 border rounded-lg text-sm font-medium transition-all duration-200 w-full sm:w-auto ${darkMode
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
                       } disabled:opacity-50`}
                   >
                     Cancel
@@ -1300,18 +1319,34 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     type="button"
                     disabled={submitting || selectedItems.length === 0 || !selectedSupplier.trim() || !selectedPaymentTerm.trim()}
                     onClick={() => setShowSaveConfirmModal(true)}
-                    className="px-4 py-2 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 order-1 sm:order-2"
+                    className="px-4 sm:px-5 py-2.5 sm:py-2 bg-green-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 w-full sm:w-auto shadow-sm hover:shadow-md"
                   >
-                    {submitting ? 'Saving...' : 'Save Purchase Order'}
+                    {submitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </span>
+                    ) : 'Save'}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowSaveAndPostConfirmModal(true)}
                     disabled={posting || selectedItems.length === 0 || !selectedSupplier.trim() || !selectedPaymentTerm.trim()}
-                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 order-1 sm:order-2"
+                    className="px-4 sm:px-5 py-2.5 sm:py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 w-full sm:w-auto shadow-sm hover:shadow-md"
                   >
-                    {posting ? 'Submitting...' : 'Save and Post Purchase Order'}
+                    {posting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                      </span>
+                    ) : 'Save & Post'}
                   </button>
                 </div>
               </div>

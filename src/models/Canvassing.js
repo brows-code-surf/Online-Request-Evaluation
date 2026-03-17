@@ -164,7 +164,39 @@ class Canvassing {
                 .input('pqRowId', header.ROWID)
                 .query(approvalQuery);
 
+            // Get the overall approval status from details (use the first detail's approval status as the overall status)
+            const approvalStatusResult = await connection.request()
+                .input('pqCode', pqCode)
+                .query(`
+                    SELECT DISTINCT APPROVALSTATUS 
+                    FROM [PURCHASE.QUOTATIONDETAILS.1] 
+                    WHERE PQCODE = @pqCode
+                `);
+            
+            // Determine overall approval status: prioritize PENDING > SELECTED > NOT SELECTED > REJECTED
+            let overallApprovalStatus = null;
+            const approvalStatuses = approvalStatusResult.recordset.map(r => r.APPROVALSTATUS);
+            if (approvalStatuses.includes('PENDING')) {
+                overallApprovalStatus = 'PENDING';
+            } else if (approvalStatuses.includes('SELECTED')) {
+                overallApprovalStatus = 'SELECTED';
+            } else if (approvalStatuses.includes('NOT SELECTED')) {
+                overallApprovalStatus = 'NOT SELECTED';
+            } else if (approvalStatuses.includes('REJECTED')) {
+                overallApprovalStatus = 'REJECTED';
+            }
+
             return {
+                id: header.ROWID,
+                referenceNum: `COQ-${header.REFERENCENUM}`,
+                pqCode: header.PQCODE,
+                dateRequested: header.DATEREQUESTED,
+                postStatus: header.POSTSTATUS,
+                pqRemarks: header.PQREMARKS,
+                createdBy: header.CREATEDBY,
+                dateModified: header.DATEMODIFIED,
+                modifiedBy: header.MODIFIEDBY,
+                approvalStatus: overallApprovalStatus,
                 header: {
                     id: header.ROWID,
                     referenceNum: `COQ-${header.REFERENCENUM}`,
@@ -792,6 +824,7 @@ class Canvassing {
                   rh.REQUESTEDBY as requester,
                   rh.ADDRESSEDTO as addressedTo,
                   rh.DATEREQUESTED as dateRequested,
+                  rh.DATEAPPROVED as dateApproved,
                   rh.LOCNCODE as location,
                   rh.REFERENCENO as requestId
                 FROM [PURCHASE.REQUESTDETAILS.1] rd
@@ -827,6 +860,7 @@ class Canvassing {
                 budgetCode: record.BUDGETCODE,
                 remarks: record.REMARKS,
                 dateNeeded: record.DATENEEDED,
+                dateApproved: record.dateApproved,
                 requestId: record.requestId,
                 requestType: record.REQUESTTYPE,
                 company: record.COMPANY,

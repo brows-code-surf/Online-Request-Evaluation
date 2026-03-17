@@ -1176,7 +1176,7 @@ class PurchaseOrder {
                 LEFT JOIN [SUPPLIER.1] s ON pqd.VENDORID = s.VENDORID
                 INNER JOIN [PURCHASE.REQUESTHEADER.1] pr ON pqd.PRCODE = pr.REFERENCENO
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON pqd.RID = pod.RID
-                WHERE pqd.APPROVALSTATUS = 'APPROVED'
+                WHERE pqd.APPROVALSTATUS = 'SELECTED'
                 AND pqh.POSTSTATUS = 1
                 AND pqd.IS_SERVED = 0
             `;

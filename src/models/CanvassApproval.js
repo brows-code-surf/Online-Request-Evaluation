@@ -142,10 +142,10 @@ class CanvassApproval {
             }
 
             // Mark other items with the same PRCODE as NOT SELECTED
-            const updateNotSelectedQuery = `UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'NOT SELECTED' WHERE PRCODE = @prCode AND ROWID != @itemId`;
+            const updateNotSelectedQuery = `UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'NOT SELECTED' WHERE RID = @rid AND ROWID != @itemId`;
 
             await connection.request()
-                .input('prCode', prCode)
+                .input('rid', rid)
                 .input('itemId', itemId)
                 .query(updateNotSelectedQuery);
 

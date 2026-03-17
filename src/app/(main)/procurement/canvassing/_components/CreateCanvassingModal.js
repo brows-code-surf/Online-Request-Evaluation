@@ -329,33 +329,37 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={handleClose}></div>
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
         </div>
 
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`inline-block align-bottom rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <form onSubmit={handleSubmit}>
             {/* Header */}
-            <div className={`px-6 py-4 border-b ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1"></div>
-                <div className="text-center">
-                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Create Canvassing Request
+            <div className={`px-6 py-5 border-b ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
+              <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="text-left w-full sm:w-auto">
+                  <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-white'}`}>
+                    Canvass of Quotation Entry
                   </h3>
+                  <p className={`text-xs mt-1 ${darkMode ? 'text-blue-300' : 'text-blue-100'}`}>
+                    Create new canvassing request
+                  </p>
+                </div>
+                <div className="flex-1 flex justify-end items-center">
                   {canvassingData.referenceNum && (
-                    <p className="text-sm mt-1 font-bold text-blue-800">
-                      Reference: {canvassingData.referenceNum}
-                    </p>
+                    <span className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xl sm:text-2xl font-bold bg-white/10 backdrop-blur-sm rounded-lg ${darkMode ? 'text-blue-300' : 'text-white'}`}>
+                      {canvassingData.referenceNum}
+                    </span>
                   )}
                 </div>
-                <div className="flex-1 flex justify-end">
+                <div className="flex-none flex justify-end">
                   <button
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'} disabled:opacity-50`}
+                    className={`rounded-xl p-2.5 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -364,164 +368,215 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
             </div>
 
             {/* Step Indicator */}
-            <div className="px-4 sm:px-6 py-4 border-b bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-4 sm:mb-0">
-                  <div className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      1
+            <div className={`px-4 sm:px-6 py-5 border-b ${darkMode ? 'bg-gray-800/50 border-gray-700/50' : 'bg-gray-50/50 border-gray-200/50'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-4 sm:mb-0">
+                  <div className={`flex items-center gap-3 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${currentStep >= 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
+                      {currentStep > 1 ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : '1'}
                     </div>
-                    <span className={`ml-2 text-sm font-medium ${currentStep >= 1 ? '' : 'text-gray-500'}`}>Select Items</span>
+                    <span className={`text-sm font-medium ${currentStep >= 1 ? '' : 'text-gray-500'}`}>Select Items</span>
                   </div>
-                  <div className={`hidden sm:block w-8 h-0.5 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                  <div className={`hidden sm:block w-16 h-0.5 rounded-full transition-colors duration-300 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
                   <div className={`sm:hidden w-0.5 h-8 mx-auto ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className={`flex items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      2
+                  <div className={`flex items-center gap-3 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${currentStep >= 2 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
+                      {currentStep > 2 ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : '2'}
                     </div>
-                    <span className={`ml-2 text-sm font-medium ${currentStep >= 2 ? '' : 'text-gray-500'}`}>Canvassing Details</span>
-                  </div>
-                  <div className={`hidden sm:block w-8 h-0.5 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className={`sm:hidden w-0.5 h-8 mx-auto ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className={`flex items-center ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      3
-                    </div>
-                    <span className={`ml-2 text-sm font-medium ${currentStep >= 3 ? '' : 'text-gray-500'}`}>Purchase Order</span>
-                  </div>
-                  <div className={`hidden sm:block w-8 h-0.5 ${currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className={`sm:hidden w-0.5 h-8 mx-auto ${currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className={`flex items-center ${currentStep >= 4 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      4
-                    </div>
-                    <span className={`ml-2 text-sm font-medium ${currentStep >= 4 ? '' : 'text-gray-500'}`}>Receiving Report</span>
+                    <span className={`text-sm font-medium ${currentStep >= 2 ? '' : 'text-gray-500'}`}>Canvassing Details</span>
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-500 text-center sm:text-right">
-                  Step {currentStep} of 4
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                  Step {currentStep} of 2
                 </div>
+              </div>
+              {/* Progress Bar */}
+              <div className={`h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out rounded-full"
+                  style={{ width: currentStep === 1 ? '50%' : '100%' }}
+                ></div>
               </div>
             </div>
 
             {/* Scrollable Content */}
-            <div className="px-6 py-4 overflow-y-auto" style={{ height: 'calc(86vh - 200px)' }}>
+            <div className="px-6 py-2 overflow-y-auto" style={{ height: 'calc(86vh - 220px)' }}>
               {currentStep === 1 && (
                 <>
-                  <h4 className={`text-lg font-medium mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Step 1: Select Items for Canvassing
-                  </h4>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                       Select 1 or multiple item rows having same description
+                      </h4>
+                      {/* <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Select 1 or multiple item rows having same description
+                      </p> */}
+                    </div>
+                  </div>
 
                   {/* Items Selection */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className={`text-md font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Select Items for Canvassing
-                      </h4>
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="filterAddressedTo"
-                            checked={filterByAddressedTo}
-                            onChange={(e) => setFilterByAddressedTo(e.target.checked)}
-                            className="rounded"
-                          />
-                          <label htmlFor="filterAddressedTo" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className={`rounded-2xl p-5 ${darkMode ? 'bg-gray-700/30 border border-gray-700/50' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className={`flex items-center gap-2.5 cursor-pointer group`}>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              id="filterAddressedTo"
+                              checked={filterByAddressedTo}
+                              onChange={(e) => setFilterByAddressedTo(e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${filterByAddressedTo ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                            <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span className={`text-sm font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             My Items Only
-                          </label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="selectAll"
-                            checked={selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0}
-                            onChange={(e) => handleSelectAll(e.target.checked)}
-                            disabled={selectedItems.length === 0}
-                            className="rounded disabled:opacity-50"
-                          />
-                          <label htmlFor="selectAll" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} ${selectedItems.length === 0 ? 'opacity-50' : ''}`}>
+                          </span>
+                        </label>
+                        <label className={`flex items-center gap-2.5 cursor-pointer group ${selectedItems.length === 0 ? 'opacity-50' : ''}`}>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              id="selectAll"
+                              checked={selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0}
+                              onChange={(e) => handleSelectAll(e.target.checked)}
+                              disabled={selectedItems.length === 0}
+                              className="sr-only peer"
+                            />
+                            <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                            <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span className={`text-sm font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             Select All ({filteredAvailableItems.length} items)
-                          </label>
-                        </div>
+                          </span>
+                        </label>
                       </div>
+                      {selectedItems.length > 0 && (
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {selectedItems.length} selected
+                        </div>
+                      )}
                     </div>
 
                     {/* Search Input */}
-                    <div className="mb-4">
-                      <div className="relative">
+                    <div className="mb-2">
+                      <div className="relative group">
                         <input
                           type="text"
-                          placeholder="Search items by reference no., item details, addressed to, company..."
+                          placeholder="Search by reference no., requester, item, company, addressed to..."
                           value={tableSearchTerm}
                           onChange={(e) => setTableSearchTerm(e.target.value)}
-                          className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
-                            }`}
+                          className={`w-full px-4 py-2 pl-12 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-0 ${darkMode 
+                            ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:bg-gray-700' 
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:shadow-sm'
+                          }`}
                         />
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <svg className={`w-5 h-5 ${darkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
                         </div>
+                        {tableSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setTableSearchTerm('')}
+                            className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {loading ? (
-                      <div className="border rounded-md overflow-hidden">
+                      <div className="border-1 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                         <div className="max-h-96 overflow-y-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  Select
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
+                                    Select
+                                  </div>
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Date Approved
+                                </th>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Requester
+                                </th>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Company
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                            <tbody className={`${darkMode ? 'bg-gray-800/50 divide-gray-700' : 'bg-white divide-gray-100'}`}>
                               {Array(5).fill().map((_, index) => (
-                                <tr key={index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                  <td className="px-4 py-3">
-                                    <SkeletonLoader height="h-4" width="w-4" />
+                                <tr key={index} className={`${darkMode ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50'}`}>
+                                  <td className="px-4 py-4">
+                                    <SkeletonLoader height="h-5" width="w-5" />
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <SkeletonLoader height="h-4" width="w-12" />
+                                  <td className="px-4 py-4">
+                                    <SkeletonLoader height="h-4" width="w-16" />
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <div className="space-y-1">
-                                      <SkeletonLoader height="h-4" width="w-32" />
-                                      <SkeletonLoader height="h-3" width="w-24" />
+                                  <td className="px-4 py-4">
+                                    <div className="space-y-2">
+                                      <SkeletonLoader height="h-4" width="w-28" />
+                                      <SkeletonLoader height="h-3" width="w-20" />
                                     </div>
                                   </td>
-                                   <td className="px-4 py-3">
-                                    <div className="space-y-1">
-                                      <SkeletonLoader height="h-4" width="w-32" />
-                                      <SkeletonLoader height="h-3" width="w-24" />
+                                  <td className="px-4 py-4">
+                                    <div className="space-y-2">
+                                      <SkeletonLoader height="h-4" width="w-28" />
+                                      <SkeletonLoader height="h-3" width="w-20" />
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <div className="space-y-1">
-                                      <SkeletonLoader height="h-4" width="w-20" />
+                                  <td className="px-4 py-4">
+                                    <div className="space-y-2">
+                                      <SkeletonLoader height="h-4" width="w-24" />
                                       <SkeletonLoader height="h-3" width="w-16" />
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <SkeletonLoader height="h-4" width="w-16" />
+                                  <td className="px-4 py-4">
+                                    <SkeletonLoader height="h-4" width="w-20" />
                                   </td>
                                 </tr>
                               ))}
@@ -530,89 +585,123 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                         </div>
                       </div>
                     ) : availableItems.length === 0 ? (
-                      <div className="text-center py-8">
-                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
-                        </svg>
-                        <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <div className={`text-center py-16 rounded-2xl ${darkMode ? 'bg-gray-700/20 border border-gray-700/50' : 'bg-gray-50 border-1 border-gray-200'}`}>
+                        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
+                          </svg>
+                        </div>
+                        <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                           No items available for canvassing
+                        </p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                          Try adjusting your filters or check back later
                         </p>
                       </div>
                     ) : (
-                      <div className="border rounded-md overflow-hidden">
+                      <div className="border-1 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                         <div className="max-h-96 overflow-y-auto overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  Select
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600"></div>
+                                    Select
+                                  </div>
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Date Approved
+                                </th>
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Requester
+                                </th>
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Company
                                 </th>
-                                <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden md:table-cell px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                            <tbody className={`${darkMode ? 'bg-gray-800/50 divide-gray-700' : 'bg-white divide-gray-100'}`}>
                               {filteredAvailableItems.map((item, index) => {
                                 const isSelected = selectedItems.some(selected => selected.uniqueId === item.uniqueId);
                                 return (
-                                  <tr 
-                                    key={item.uniqueId} 
-                                    className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
+                                  <tr
+                                    key={item.uniqueId}
+                                    className={`cursor-pointer transition-all duration-200 ${isSelected 
+                                      ? (darkMode ? 'bg-blue-900/30 border-l-4 border-l-blue-500' : 'bg-blue-50 border-l-4 border-l-blue-500')
+                                      : (darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50')
+                                    }`}
                                     onClick={() => handleItemSelect(item, !isSelected)}
                                   >
-                                    <td className="px-2 sm:px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={(e) => handleItemSelect(item, e.target.checked)}
-                                        className="rounded"
-                                      />
+                                    <td className="px-2 sm:px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                                      <div className="relative">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                          className="sr-only peer"
+                                        />
+                                        <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                                        <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
                                     </td>
-                                  <td className="px-2 sm:px-4 py-3">
-                                    <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.RID}
-                                    </div>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-3">
-                                    <div>
-                                      <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                        {item.ITEMDESC}
+                                    <td className="px-2 sm:px-4 py-3.5">
+                                      <div className={`text-xs sm:text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {item.RID}
                                       </div>
-                                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
-                                        Budget: {item.BUDGETCODE}
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-3.5">
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
                                       </div>
-                                    </div>
-                                  </td>
-                                  <td className={`hidden lg:table-cell px-2 sm:px-4 py-3`}>
-                                    <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.company || 'N/A'}
-                                    </div>
-                                  </td>
-                                  <td className={`hidden md:table-cell px-2 sm:px-4 py-3`}>
-                                    <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.addressedTo}
-                                    </div>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-3">
-                                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.QUANTITY} {item.UOFM}
-                                    </span>
-                                  </td>
-                                </tr>
-                              )})} 
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-3.5">
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.requester}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-3.5">
+                                      <div>
+                                        <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                          {item.ITEMDESC}
+                                        </div>
+                                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                          Budget: {item.BUDGETCODE}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className={`hidden lg:table-cell px-2 sm:px-4 py-3.5`}>
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.company || 'N/A'}
+                                      </div>
+                                    </td>
+                                    <td className={`hidden md:table-cell px-2 sm:px-4 py-3.5`}>
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.addressedTo}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-3.5">
+                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                                        {item.QUANTITY} <span className="ml-1 text-gray-400">{item.UOFM}</span>
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -629,20 +718,6 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                     <h4 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       Step 2: Enter Canvassing Details for Selected Items
                     </h4>
-
-                    {/* Summary of selected items */}
-                    {/* <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-                      <h5 className={`text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Selected Items Summary ({selectedItems.length} items)
-                      </h5>
-                      <div className="space-y-1">
-                        {selectedItems.map((item, index) => (
-                          <div key={item.uniqueId} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {index + 1}. {item.ITEMDESC} - Qty: {item.QUANTITY} {item.UOFM}
-                          </div>
-                        ))}
-                      </div>
-                    </div> */}
 
                     {/* Supplier Information */}
                     <div className="mb-4">
@@ -736,8 +811,8 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             </div>
                           )}
                         </div>
-                          <div>
-                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Vendor ID
                           </label>
                           <input
@@ -822,7 +897,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                     {/* Item Details */}
                     <div className="mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                         <div>
+                        <div>
                           <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Delivery Schedule
                           </label>
@@ -885,7 +960,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             placeholder="Enter origin/country"
                           />
                         </div>
-                       
+
                         {/* <div>
                           <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             PO No.
