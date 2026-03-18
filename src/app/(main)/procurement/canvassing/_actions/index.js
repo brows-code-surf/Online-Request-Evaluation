@@ -25,7 +25,7 @@ export async function getCanvassingRequestByPQCode(pqCode, user = null, isAdmin 
   }
 }
 
-export async function createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
+export async function createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '', shouldPost = false) {
   try {
     // Validate required fields
     if (!headerData.referenceNum || !headerData.referenceNum.trim()) {
@@ -55,12 +55,12 @@ export async function createCanvassingRequest(headerData, detailsData, creatorNa
       }
     }
 
-    const result = await Canvassing.createCanvassingRequest(headerData, detailsData, creatorName, supplierName);
+    const result = await Canvassing.createCanvassingRequest(headerData, detailsData, creatorName, supplierName, shouldPost);
 
     return {
       success: true,
       pqCode: result.pqCode,
-      message: 'Canvassing request created successfully'
+      message: shouldPost ? 'Canvassing request saved and posted successfully' : 'Canvassing request created successfully'
     };
   } catch (error) {
     console.error('Error creating canvassing request:', error);

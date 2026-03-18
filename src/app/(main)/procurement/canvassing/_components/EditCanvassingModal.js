@@ -10,6 +10,7 @@ import {
   checkExistingSuppliersForRIDs
 } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
+import currencyData from '@/utils/currency.json';
 
 function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,9 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
   const [selectedPaymentTerm, setSelectedPaymentTerm] = useState('');
   const [paymentTermSearch, setPaymentTermSearch] = useState('');
   const [showPaymentTermDropdown, setShowPaymentTermDropdown] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [currencySearch, setCurrencySearch] = useState('');
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [canvassingFormData, setCanvassingFormData] = useState({
     referenceNum: '',
     remarks: '',
@@ -37,7 +41,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
     itemRemarks: '',
     offeredPrice: '',
     bidPrice: '',
-    agreedPrice: ''
+    agreedPrice: '',
+    currency: ''
   });
   const [filterByAddressedTo, setFilterByAddressedTo] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Item Selection, 2: Canvassing Details
@@ -159,8 +164,15 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       itemRemarks: '',
       offeredPrice: canvassingData.details[0]?.offeredPrice || '',
       bidPrice: canvassingData.details[0]?.bidPrice || '',
-      agreedPrice: canvassingData.details[0]?.finalPrice || ''
+      agreedPrice: canvassingData.details[0]?.finalPrice || '',
+      currency: canvassingData.details[0]?.currency || ''
     });
+
+    // Set currency display
+    const currencyCode = canvassingData.details[0]?.currency || '';
+    if (currencyCode && currencyData[currencyCode]) {
+      setSelectedCurrency(`${currencyData[currencyCode].name} (${currencyData[currencyCode].symbol_native})`);
+    }
 
     // Set supplier
     setSelectedSupplier(canvassingData.details[0]?.vendorName || '');
@@ -248,6 +260,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         brand: canvassingFormData.brand || '',
         origin: canvassingFormData.origin || '',
         isImported: canvassingFormData.isImported ? 1 : 0,
+        currency: canvassingFormData.currency,
         offeredPrice: item.offeredPrice || 0,
         bidPrice: item.bidPrice || 0,
         finalPrice: item.finalPrice || 0,
@@ -331,6 +344,9 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       setSelectedPaymentTerm('');
       setPaymentTermSearch('');
       setShowPaymentTermDropdown(false);
+      setSelectedCurrency('');
+      setCurrencySearch('');
+      setShowCurrencyDropdown(false);
       setTableSearchTerm('');
       setAvailableItems([]);
       setCanvassingFormData({
@@ -345,7 +361,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         itemRemarks: '',
         offeredPrice: '',
         bidPrice: '',
-        agreedPrice: ''
+        agreedPrice: '',
+        currency: ''
       });
       onClose();
     }
@@ -380,34 +397,27 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
         </div>
 
-        <div className={`inline-block align-bottom rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-2 sm:mx-4 h-[85vh] sm:h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
-          <form onSubmit={handleSubmit}>
+        <div className={`inline-block align-bottom rounded-2xl text-left shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[95vh] max-h-[95vh] relative z-10 flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+          <form onSubmit={handleSubmit} className="flex flex-col h-full">
             {/* Header */}
-            <div className={`px-3 sm:px-6 py-3 sm:py-4 border-b ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
+            <div className={`px-2 sm:px-4 py-2 sm:py-3 border-b flex-shrink-0 ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-base sm:text-lg font-semibold truncate ${darkMode ? 'text-white' : 'text-white'}`}>
-                    Edit Canvassing Request
-                  </h3>
-                  <p className={`text-xs mt-0.5 ${darkMode ? 'text-blue-300' : 'text-blue-100'}`}>
-                    Update existing canvassing details
-                  </p>
-                </div>
-                {canvassingFormData.referenceNum && (
-                  <div className="flex-shrink-0">
-                    <span className={`px-3 sm:px-4 py-1.5 sm:py-2 text-lg sm:text-xl font-bold bg-white/10 backdrop-blur-sm rounded-lg ${darkMode ? 'text-blue-300' : 'text-white'}`}>
+                <h3 className={`text-sm sm:text-base font-semibold truncate ${darkMode ? 'text-white' : 'text-white'}`}>
+                  Edit Canvassing Request
+                </h3>
+                <div className="flex items-center gap-2 shrink-0">
+                  {canvassingFormData.referenceNum && (
+                    <span className={`px-1.5 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-lg font-bold bg-white/10 backdrop-blur-sm rounded-lg ${darkMode ? 'text-blue-300' : 'text-white'}`}>
                       {canvassingFormData.referenceNum}
                     </span>
-                  </div>
-                )}
-                <div className="flex-shrink-0">
+                  )}
                   <button
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -415,71 +425,67 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
               </div>
             </div>
             {/* Step Indicator */}
-            <div className={`px-3 sm:px-6 py-3 sm:py-4 border-b ${darkMode ? 'bg-gray-800/50 border-gray-700/50' : 'bg-gray-50/50 border-gray-200/50'}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-0">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:space-y-0 sm:space-x-3 order-2 sm:order-1">
-                  <div className={`flex items-center gap-2.5 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-7 sm:w-8 h-7 sm:h-8 rounded-xl flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-300 ${currentStep >= 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
+            <div className={`px-3 sm:px-4 py-3 border-b flex-shrink-0 ${darkMode ? 'bg-gray-800/50 border-gray-700/50' : 'bg-gray-50/50 border-gray-200/50'}`}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center space-x-2 sm:space-x-3 mx-auto">
+                  <div className={`flex items-center gap-2 sm:gap-3 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${currentStep >= 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
                       {currentStep > 1 ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : '1'}
                     </div>
-                    <span className={`text-xs sm:text-sm font-medium ${currentStep >= 1 ? '' : 'text-gray-500'}`}>Select Items</span>
+                    <span className={`text-xs font-medium ${currentStep >= 1 ? '' : 'text-gray-500'}`}>Select Items</span>
                   </div>
-                  <div className={`hidden sm:block w-10 sm:w-12 h-0.5 rounded-full transition-colors duration-300 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  <div className="sm:hidden w-0.5 h-4"></div>
-                  <div className={`flex items-center gap-2.5 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className={`w-7 sm:w-8 h-7 sm:h-8 rounded-xl flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-300 ${currentStep >= 2 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
+                  <div className={`w-12 sm:w-16 h-0.5 rounded-full transition-colors duration-300 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                  <div className={`flex items-center gap-2 sm:gap-3 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${currentStep >= 2 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-500'}`}>
                       {currentStep > 2 ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : '2'}
                     </div>
-                    <span className={`text-xs sm:text-sm font-medium ${currentStep >= 2 ? '' : 'text-gray-500'}`}>Canvassing Details</span>
+                    <span className={`text-xs font-medium ${currentStep >= 2 ? '' : 'text-gray-500'}`}>Canvassing Details</span>
                   </div>
                 </div>
 
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium order-1 sm:order-2 ${darkMode ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                   Step {currentStep} of 2
                 </div>
               </div>
               {/* Progress Bar */}
-              <div className={`h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <div 
+              <div className={`h-1 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <div
                   className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out rounded-full"
                   style={{ width: currentStep === 1 ? '50%' : '100%' }}
                 ></div>
               </div>
             </div>
 
-            {/* Content */}
-            <div className="px-3 sm:px-6 py-3 sm:py-4 overflow-y-auto" style={{ height: 'calc(85vh - 180px)', maxHeight: 'calc(90vh - 200px)' }}>
+            {/* Scrollable Content */}
+            <div className="px-4 py-1 overflow-y-auto flex-1">
               {currentStep === 1 && (
                 <>
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2 py-4">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
                     <div>
-                      <h4 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Select Items
+                      <h4 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Select 1 or multiple item rows having same description
                       </h4>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Choose items to include in this canvassing request
-                      </p>
                     </div>
                   </div>
 
                   {/* Items Selection */}
-                  <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <div className={`rounded-xl p-3 ${darkMode ? 'bg-gray-700/30 border border-gray-700/50' : 'bg-gray-50 border border-gray-200'}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div className="flex flex-wrap items-center gap-4">
                         <label className={`flex items-center gap-2.5 cursor-pointer group`}>
                           <div className="relative">
                             <input
@@ -489,12 +495,17 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                               onChange={(e) => setFilterByAddressedTo(e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${filterByAddressedTo ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
-                            <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${filterByAddressedTo ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                            <svg
+                              className="absolute inset-0 m-auto w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                          <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             My Items Only
                           </span>
                         </label>
@@ -508,18 +519,18 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                               disabled={selectedItems.length === 0}
                               className="sr-only peer"
                             />
-                            <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
-                            <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${selectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                            <svg className={`absolute top-0.5 left-0.5 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                          <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             Select All ({filteredAvailableItems.length} items)
                           </span>
                         </label>
                       </div>
                       {selectedItems.length > 0 && (
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -536,10 +547,10 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                           placeholder="Search items by reference no., item details, addressed to, company..."
                           value={tableSearchTerm}
                           onChange={(e) => setTableSearchTerm(e.target.value)}
-                          className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-0 ${darkMode 
-                            ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:bg-gray-700' 
+                          className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-0 ${darkMode
+                            ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:bg-gray-700'
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:shadow-sm'
-                          }`}
+                            }`}
                         />
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                           <svg className={`w-5 h-5 ${darkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -561,16 +572,13 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                     </div>
 
                     {loading ? (
-                      <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                      <div className="border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                         <div className="max-h-96 overflow-y-auto">
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
                                 <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
-                                    Select
-                                  </div>
+                                  Select
                                 </th>
                                 <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Ref No.
@@ -617,7 +625,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                         </div>
                       </div>
                     ) : availableItems.length === 0 ? (
-                      <div className={`text-center py-16 rounded-2xl ${darkMode ? 'bg-gray-700/20 border border-gray-700/50' : 'bg-gray-50 border-2 border-dashed border-gray-200'}`}>
+                      <div className={`text-center py-16 rounded-2xl ${darkMode ? 'bg-gray-700/20 border border-gray-700/50' : 'bg-gray-50 border-2 border-gray-200'}`}>
                         <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                           <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
@@ -631,30 +639,112 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                         </p>
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                        <div className="max-h-96 overflow-y-auto overflow-x-auto">
+                      <div className="border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                        {/* Card Layout for Mobile/Small Screens */}
+                        <div className="lg:hidden max-h-[400px] overflow-y-auto p-3 space-y-3">
+                          {filteredAvailableItems.map((item, index) => {
+                            const isSelected = selectedItems.some(selected => selected.uniqueId === item.uniqueId);
+                            return (
+                              <div
+                                key={item.uniqueId}
+                                className={`p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
+                                  isSelected
+                                    ? (darkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500')
+                                    : (darkMode ? 'bg-gray-700/30 border-gray-600 hover:border-gray-500' : 'bg-white border-gray-200 hover:border-gray-300')
+                                }`}
+                                onClick={() => handleItemSelect(item, !isSelected)}
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                        className="sr-only peer"
+                                      />
+                                      <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-500' : 'border-gray-300'} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                                      <svg className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <div className={`text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                                        {item.requestId}
+                                      </div>
+                                      <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                        RID: {item.RID}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                                    {item.QUANTITY} <span className="ml-1 text-gray-400">{item.UOFM}</span>
+                                  </span>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div>
+                                    <div className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.ITEMDESC}
+                                    </div>
+                                    <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      {item.ITEMNMBR}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <div>
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Requester</div>
+                                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.requester || item.addressedTo}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Addressed To</div>
+                                      <div className={`text-xs truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.addressedTo}
+                                      </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Company</div>
+                                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.company || 'N/A'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Table Layout for Large Screens */}
+                        <div className="hidden lg:block max-h-[500px] overflow-y-auto overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
-                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600"></div>
-                                    Select
-                                  </div>
+                                <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Select
                                 </th>
-                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Date Approved
+                                </th>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Requester
+                                </th>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Company
                                 </th>
-                                <th className={`hidden md:table-cell px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
-                                <th className={`px-2 sm:px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
@@ -665,13 +755,13 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                 return (
                                   <tr
                                     key={item.uniqueId}
-                                    className={`cursor-pointer transition-all duration-200 ${isSelected 
+                                    className={`cursor-pointer transition-all duration-200 ${isSelected
                                       ? (darkMode ? 'bg-blue-900/30 border-l-4 border-l-blue-500' : 'bg-blue-50 border-l-4 border-l-blue-500')
                                       : (darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50')
-                                    }`}
+                                      }`}
                                     onClick={() => handleItemSelect(item, !isSelected)}
                                   >
-                                    <td className="px-2 sm:px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-2 sm:px-4 py-2" onClick={(e) => e.stopPropagation()}>
                                       <div className="relative">
                                         <input
                                           type="checkbox"
@@ -679,39 +769,49 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                           onChange={(e) => handleItemSelect(item, e.target.checked)}
                                           className="sr-only peer"
                                         />
-                                        <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
-                                        <svg className={`absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                                        <svg className={`absolute top-0.5 left-0.5 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                         </svg>
                                       </div>
                                     </td>
-                                    <td className="px-2 sm:px-4 py-3.5">
-                                      <div className={`text-xs sm:text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    <td className="px-2 sm:px-4 py-2">
+                                      <div className={`text-[10px] sm:text-xs font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {item.RID}
                                       </div>
                                     </td>
                                     <td className="px-2 sm:px-4 py-3.5">
-                                      <div>
-                                        <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                          {item.ITEMDESC}
-                                        </div>
-                                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                          Budget: {item.BUDGETCODE}
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className={`hidden lg:table-cell px-2 sm:px-4 py-3.5`}>
                                       <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        {item.company || 'N/A'}
-                                      </div>
-                                    </td>
-                                    <td className={`hidden md:table-cell px-2 sm:px-4 py-3.5`}>
-                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        {item.addressedTo}
+                                        {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
                                       </div>
                                     </td>
                                     <td className="px-2 sm:px-4 py-3.5">
-                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.requester}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-2">
+                                      <div>
+                                        <div className={`text-[10px] sm:text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                          {item.ITEMDESC}
+                                        </div>
+                                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                          {item.ITEMNMBR}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className={`hidden lg:table-cell px-2 sm:px-4 py-2`}>
+                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.company || 'N/A'}
+                                      </div>
+                                    </td>
+                                    <td className={`hidden md:table-cell px-2 sm:px-4 py-2`}>
+                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {item.addressedTo}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 sm:px-4 py-2">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
                                         {item.QUANTITY} <span className="ml-1 text-gray-400">{item.UOFM}</span>
                                       </span>
                                     </td>
@@ -732,9 +832,18 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                 <>
                   {/* Canvassing Request Details */}
                   <div className="mb-4">
-                    <h4 className={`text-base sm:text-lg font-medium mb-4 sm:mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Step 2: Edit Canvassing Details
-                    </h4>
+                    <div className="flex items-center gap-2 py-4">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Step 2: Enter Canvassing Details for Selected Row(s)
+                        </h4>
+                      </div>
+                    </div>
 
                     {/* Supplier Information */}
                     <div className="mb-4">
@@ -799,10 +908,10 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                         setShowSupplierDropdown(false);
                                       }}
                                       className={`px-3 py-2 cursor-pointer ${isAlreadyAssigned
-                                          ? 'opacity-50 cursor-not-allowed'
-                                          : darkMode
-                                            ? 'text-white hover:bg-gray-600'
-                                            : 'text-gray-900 hover:bg-gray-100'
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : darkMode
+                                          ? 'text-white hover:bg-gray-600'
+                                          : 'text-gray-900 hover:bg-gray-100'
                                         }`}
                                     >
                                       <div className="flex justify-between items-center">
@@ -910,7 +1019,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                     {/* Item Details */}
                     <div className="mb-4 sm:mb-6">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        <div>
+                        {/* <div>
                           <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Delivery Schedule
                           </label>
@@ -921,7 +1030,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                             className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                               }`}
                           />
-                        </div>
+                        </div> */}
                         <div>
                           <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Supplier QTY
@@ -949,12 +1058,78 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                             placeholder="Enter brand"
                           />
                         </div>
+                        <div className="relative">
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Currency <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={selectedCurrency}
+                              onChange={(e) => {
+                                setSelectedCurrency(e.target.value);
+                                setCurrencySearch(e.target.value);
+                              }}
+                              onFocus={() => setShowCurrencyDropdown(true)}
+                              onBlur={() => setTimeout(() => setShowCurrencyDropdown(false), 200)}
+                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                                }`}
+                              placeholder="Select currency"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                          {showCurrencyDropdown && (
+                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                              }`}>
+                              {Object.entries(currencyData)
+                                .filter(([code, currency]) =>
+                                  currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
+                                  code.toLowerCase().includes(currencySearch.toLowerCase())
+                                )
+                                .map(([code, currency]) => (
+                                  <div
+                                    key={code}
+                                    onClick={() => {
+                                      setSelectedCurrency(`${currency.name} (${currency.symbol_native})`);
+                                      setCanvassingFormData(prev => ({ ...prev, currency: code }));
+                                      setCurrencySearch('');
+                                      setShowCurrencyDropdown(false);
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer text-xs sm:text-sm truncate ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
+                                    title={`${currency.name} (${currency.symbol_native})`}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <span className="truncate">{currency.name}</span>
+                                      <span className={`text-xs ml-2 shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{currency.symbol_native}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              {Object.entries(currencyData).filter(([code, currency]) =>
+                                currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
+                                code.toLowerCase().includes(currencySearch.toLowerCase())
+                              ).length === 0 && currencySearch && (
+                                  <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    No currencies found
+                                  </div>
+                                )}
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <div className="flex items-center justify-between mb-1 sm:mb-2">
                             <label className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               Origin
                             </label>
-                            <label className={`inline-flex items-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {/* <label className={`inline-flex items-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               <input
                                 type="checkbox"
                                 checked={canvassingFormData.isImported}
@@ -962,7 +1137,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
                               <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm">Imported</span>
-                            </label>
+                            </label> */}
                           </div>
                           <input
                             type="text"
@@ -975,15 +1150,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                         </div>
                       </div>
 
-                      <h4 className={`text-sm sm:text-md font-medium mb-3 sm:mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Item Pricing
-                      </h4>
-
                       {/* Global Pricing Inputs */}
                       <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-                        <h5 className={`text-sm font-medium mb-3 sm:mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          Apply Pricing to All Selected Items
-                        </h5>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                           <div>
                             <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>

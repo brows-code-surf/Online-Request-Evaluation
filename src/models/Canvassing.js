@@ -227,6 +227,7 @@ class Canvassing {
                     vendorName: detail.vendorName,
                     brand: detail.BRAND,
                     origin: detail.ORIGIN,
+                    currency: detail.CURRENCY,
                     isImported: detail.IS_IMPORTED,
                     offeredPrice: detail.OFFEREDPRICE,
                     bidPrice: detail.BIDPRICE,
@@ -260,7 +261,7 @@ class Canvassing {
     }
 
     // Create new canvassing request with transaction safety
-    static async createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
+    static async createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '', shouldPost = false) {
         let connection = null;
         let transaction = null;
 
@@ -284,13 +285,16 @@ class Canvassing {
             // Leave PQREMARKS as blank
             let remarks = '';
 
+            // Determine post status based on shouldPost flag
+            const postStatus = shouldPost ? 1 : 0;
+
             // Insert canvassing header
             const headerQuery = `
                 INSERT INTO [PURCHASE.QUOTATIONHEADER.1] (
                     REFERENCENUM, PQCODE, DATEREQUESTED, POSTSTATUS,
                     PQREMARKS, CREATEDBY, DATEMODIFIED, MODIFIEDBY
                 ) VALUES (
-                    @referenceNum, @pqCode, GETDATE(), 0,
+                    @referenceNum, @pqCode, GETDATE(), @postStatus,
                     @pqRemarks, @createdBy, GETDATE(), @createdBy
                 )
             `;
@@ -298,6 +302,7 @@ class Canvassing {
             const headerResult = await transaction.request()
                 .input('referenceNum', referenceNumOnly)
                 .input('pqCode', pqCode)
+                .input('postStatus', postStatus)
                 .input('pqRemarks', remarks)
                 .input('createdBy', creatorName)
                 .query(headerQuery);
@@ -316,6 +321,10 @@ class Canvassing {
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
 
+                // Determine post status and approval status based on shouldPost flag
+                const pqdPostStatus = shouldPost ? 1 : 0;
+                const approvalStatus = shouldPost ? 'PENDING' : null;
+
                 await transaction.request()
                     .input('pqCode', pqCode)
                     .input('prCode', detail.prCode || '')
@@ -327,6 +336,7 @@ class Canvassing {
                     .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
+                    .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
                     .input('isImported', detail.isImported || 0)
                     .input('offeredPrice', detail.offeredPrice || 0)
@@ -341,18 +351,20 @@ class Canvassing {
                     .input('canvassedBy', detail.canvassedBy || creatorName)
                     .input('budgetCode', detail.budgetCode)
                     .input('isServed', detail.isServed || 0)
+                    .input('pqdPostStatus', pqdPostStatus)
+                    .input('approvalStatus', approvalStatus)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, IS_IMPORTED,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
-                        BUDGETCODE, DATECREATED, IS_SERVED
+                        BUDGETCODE, DATECREATED, IS_SERVED, APPROVALSTATUS
                     ) VALUES (
-                        @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
+                        @pqCode, @prCode, @rid, @pqdPostStatus, @itemNumber, @itemDescription,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @isImported,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
-                        @budgetCode, GETDATE(), @isServed
+                        @budgetCode, GETDATE(), @isServed, @approvalStatus
                     )`);
             }
 
@@ -469,6 +481,7 @@ class Canvassing {
                     .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
+                    .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
                     .input('isImported', detail.isImported || 0)
                     .input('offeredPrice', detail.offeredPrice || 0)
@@ -486,13 +499,13 @@ class Canvassing {
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, IS_IMPORTED,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @isImported,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed

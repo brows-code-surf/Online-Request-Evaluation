@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { getCanvassingRequestByPQCode } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 import EditCanvassingModal from './EditCanvassingModal';
+import currencyData from '@/utils/currency.json';
 
 function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
   const [loading, setLoading] = useState(false);
@@ -281,8 +282,8 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         Offered Price
                       </label>
                       <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
-                        <span className="hidden sm:inline">₱{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
-                        <span className="sm:hidden">₱{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
                         <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
                       </div>
                     </div>
@@ -291,8 +292,8 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         Bid Price
                       </label>
                       <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-purple-300' : 'text-purple-800'}`}>
-                        <span className="hidden sm:inline">₱{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
-                        <span className="sm:hidden">₱{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
                         <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
                       </div>
                     </div>
@@ -301,8 +302,8 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         Agreed Price
                       </label>
                       <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>
-                        <span className="hidden sm:inline">₱{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
-                        <span className="sm:hidden">₱{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
                         <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
                       </div>
                     </div>
@@ -311,7 +312,9 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                         Currency
                       </label>
                       <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.details[0].currency || 'PHP'}
+                        {canvassingData.details[0]?.currency && currencyData[canvassingData.details[0].currency]
+                          ? `${currencyData[canvassingData.details[0].currency].name} (${currencyData[canvassingData.details[0].currency].symbol_native})`
+                          : 'PHP'}
                       </div>
                     </div>
                   </div>

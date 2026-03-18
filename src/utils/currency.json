@@ -1,4 +1,13 @@
 {
+	"PHP": {
+		"symbol": "₱",
+		"name": "Philippine Peso",
+		"symbol_native": "₱",
+		"decimal_digits": 2,
+		"rounding": 0,
+		"code": "PHP",
+		"name_plural": "Philippine pesos"
+	},
 	"USD": {
 		"symbol": "$",
 		"name": "US Dollar",
@@ -763,15 +772,6 @@
 		"rounding": 0,
 		"code": "PEN",
 		"name_plural": "Peruvian nuevos soles"
-	},
-	"PHP": {
-		"symbol": "₱",
-		"name": "Philippine Peso",
-		"symbol_native": "₱",
-		"decimal_digits": 2,
-		"rounding": 0,
-		"code": "PHP",
-		"name_plural": "Philippine pesos"
 	},
 	"PKR": {
 		"symbol": "PKRs",
