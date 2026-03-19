@@ -266,11 +266,8 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                       </label>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {canvassingData.details[0].purchaseType === '1' ? 'Regular' : canvassingData.details[0].purchaseType === '2' ? 'Emergency' : 'N/A'}
+                          {canvassingData.details[0].purchaseType === 'Local' ? 'Local' : canvassingData.details[0].purchaseType === 'Foreign' ? 'Foreign' : 'N/A'}
                         </span>
-                        {canvassingData.details[0].purchaseType === '2' && (
-                          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">Emergency</span>
-                        )}
                       </div>
                     </div>
                   </div>

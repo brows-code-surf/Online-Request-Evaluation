@@ -29,6 +29,11 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
   const [selectedCurrency, setSelectedCurrency] = useState('');
   const [currencySearch, setCurrencySearch] = useState('');
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [showPurchaseTypeDropdown, setShowPurchaseTypeDropdown] = useState(false);
+  const purchaseTypes = [
+    { value: 'Local', label: 'Local' },
+    { value: 'Foreign', label: 'Foreign' }
+  ];
   const [canvassingFormData, setCanvassingFormData] = useState({
     referenceNum: '',
     remarks: '',
@@ -42,7 +47,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
     offeredPrice: '',
     bidPrice: '',
     agreedPrice: '',
-    currency: ''
+    currency: '',
+    purchaseType: ''
   });
   const [filterByAddressedTo, setFilterByAddressedTo] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Item Selection, 2: Canvassing Details
@@ -165,7 +171,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       offeredPrice: canvassingData.details[0]?.offeredPrice || '',
       bidPrice: canvassingData.details[0]?.bidPrice || '',
       agreedPrice: canvassingData.details[0]?.finalPrice || '',
-      currency: canvassingData.details[0]?.currency || ''
+      currency: canvassingData.details[0]?.currency || '',
+      purchaseType: canvassingData.details[0]?.purchaseType || ''
     });
 
     // Set currency display
@@ -195,7 +202,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       offeredPrice: detail.offeredPrice || 0,
       bidPrice: detail.bidPrice || 0,
       finalPrice: detail.finalPrice || 0,
-      addressedTo: detail.requester || ''
+      addressedTo: detail.addressedTo || detail.requester || '',
+      requester: detail.requester || ''
     }));
     setSelectedItems(items);
   };
@@ -236,6 +244,11 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       return;
     }
 
+    if (!canvassingFormData.purchaseType) {
+      toast.error('Purchase type is required');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Prepare header data (company is now optional at header level)
@@ -261,6 +274,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         origin: canvassingFormData.origin || '',
         isImported: canvassingFormData.isImported ? 1 : 0,
         currency: canvassingFormData.currency,
+        purchaseType: canvassingFormData.purchaseType || '',
         offeredPrice: item.offeredPrice || 0,
         bidPrice: item.bidPrice || 0,
         finalPrice: item.finalPrice || 0,
@@ -347,6 +361,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
       setSelectedCurrency('');
       setCurrencySearch('');
       setShowCurrencyDropdown(false);
+      setShowPurchaseTypeDropdown(false);
       setTableSearchTerm('');
       setAvailableItems([]);
       setCanvassingFormData({
@@ -362,7 +377,8 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
         offeredPrice: '',
         bidPrice: '',
         agreedPrice: '',
-        currency: ''
+        currency: '',
+        purchaseType: ''
       });
       onClose();
     }
@@ -647,11 +663,10 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                             return (
                               <div
                                 key={item.uniqueId}
-                                className={`p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
-                                  isSelected
+                                className={`p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${isSelected
                                     ? (darkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500')
                                     : (darkMode ? 'bg-gray-700/30 border-gray-600 hover:border-gray-500' : 'bg-white border-gray-200 hover:border-gray-300')
-                                }`}
+                                  }`}
                                 onClick={() => handleItemSelect(item, !isSelected)}
                               >
                                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -681,7 +696,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                     {item.QUANTITY} <span className="ml-1 text-gray-400">{item.UOFM}</span>
                                   </span>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                   <div>
                                     <div className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -691,7 +706,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                       {item.ITEMNMBR}
                                     </div>
                                   </div>
-                                  
+
                                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                     <div>
                                       <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Requester</div>
@@ -1018,46 +1033,61 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
 
                     {/* Item Details */}
                     <div className="mb-4 sm:mb-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        {/* <div>
+                      {/* First Row: Purchase Type, Currency, Origin */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                        {/* Purchase Type */}
+                        <div className="relative">
                           <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Delivery Schedule
+                            Purchase Type <span className="text-red-500">*</span>
                           </label>
-                          <input
-                            type="date"
-                            value={canvassingFormData.deliverySchedule}
-                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, deliverySchedule: e.target.value }))}
-                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                              }`}
-                          />
-                        </div> */}
-                        <div>
-                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Supplier QTY
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={canvassingFormData.supplierQty}
-                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, supplierQty: e.target.value }))}
-                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                              }`}
-                            placeholder="Enter supplier qty"
-                          />
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={purchaseTypes.find(p => p.value === canvassingFormData.purchaseType)?.label || ''}
+                              onChange={(e) => {
+                                const found = purchaseTypes.find(p => p.label.toLowerCase().includes(e.target.value.toLowerCase()));
+                                setCanvassingFormData(prev => ({ ...prev, purchaseType: found ? found.value : '' }));
+                              }}
+                              onFocus={() => setShowPurchaseTypeDropdown(true)}
+                              onBlur={() => setTimeout(() => setShowPurchaseTypeDropdown(false), 200)}
+                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                              placeholder="Select purchase type"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPurchaseTypeDropdown(!showPurchaseTypeDropdown)}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                          {showPurchaseTypeDropdown && (
+                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-40 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
+                              {purchaseTypes.map((type) => (
+                                <div
+                                  key={type.value}
+                                  onClick={() => {
+                                    setCanvassingFormData(prev => ({ ...prev, purchaseType: type.value }));
+                                    // Auto-select PHP for Local
+                                    if (type.value === 'Local') {
+                                      setSelectedCurrency('Philippine Peso (₱)');
+                                      setCanvassingFormData(prev => ({ ...prev, currency: 'PHP' }));
+                                    }
+                                    setShowPurchaseTypeDropdown(false);
+                                  }}
+                                  className={`px-3 py-2 cursor-pointer text-xs sm:text-sm ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'} ${canvassingFormData.purchaseType === type.value ? (darkMode ? 'bg-blue-900/50' : 'bg-blue-100') : ''}`}
+                                >
+                                  {type.label}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Brand
-                          </label>
-                          <input
-                            type="text"
-                            value={canvassingFormData.brand}
-                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, brand: e.target.value }))}
-                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                              }`}
-                            placeholder="Enter brand"
-                          />
-                        </div>
+
+                        {/* Currency */}
                         <div className="relative">
                           <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             Currency <span className="text-red-500">*</span>
@@ -1067,34 +1097,47 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                               type="text"
                               value={selectedCurrency}
                               onChange={(e) => {
-                                setSelectedCurrency(e.target.value);
-                                setCurrencySearch(e.target.value);
+                                if (canvassingFormData.purchaseType !== 'Local') {
+                                  setSelectedCurrency(e.target.value);
+                                  setCurrencySearch(e.target.value);
+                                }
                               }}
-                              onFocus={() => setShowCurrencyDropdown(true)}
+                              onFocus={() => canvassingFormData.purchaseType !== 'Local' && setShowCurrencyDropdown(true)}
                               onBlur={() => setTimeout(() => setShowCurrencyDropdown(false), 200)}
-                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                }`}
-                              placeholder="Select currency"
+                              readOnly={canvassingFormData.purchaseType === 'Local'}
+                              className={`w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} ${canvassingFormData.purchaseType === 'Local' ? 'cursor-not-allowed opacity-75' : ''}`}
+                              placeholder={canvassingFormData.purchaseType === 'Local' ? 'PHP (Fixed for Local)' : 'Select currency'}
                               required
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
+                            {canvassingFormData.purchaseType !== 'Local' && (
+                              <button
+                                type="button"
+                                onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                                className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                            )}
+                            {canvassingFormData.purchaseType === 'Local' && (
+                              <div className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
-                          {showCurrencyDropdown && (
-                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                              }`}>
+                          {showCurrencyDropdown && canvassingFormData.purchaseType !== 'Local' && (
+                            <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
                               {Object.entries(currencyData)
-                                .filter(([code, currency]) =>
-                                  currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
-                                  code.toLowerCase().includes(currencySearch.toLowerCase())
-                                )
+                                .filter(([code, currency]) => {
+                                  const isPHP = code === 'PHP';
+                                  const isImport = canvassingFormData.purchaseType === 'Foreign';
+                                  const matchesSearch = currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
+                                    code.toLowerCase().includes(currencySearch.toLowerCase());
+                                  return matchesSearch && !(isPHP && isImport);
+                                })
                                 .map(([code, currency]) => (
                                   <div
                                     key={code}
@@ -1113,10 +1156,13 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                     </div>
                                   </div>
                                 ))}
-                              {Object.entries(currencyData).filter(([code, currency]) =>
-                                currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
-                                code.toLowerCase().includes(currencySearch.toLowerCase())
-                              ).length === 0 && currencySearch && (
+                              {Object.entries(currencyData).filter(([code, currency]) => {
+                                const isPHP = code === 'PHP';
+                                const isImport = canvassingFormData.purchaseType === 'Foreign';
+                                const matchesSearch = currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
+                                  code.toLowerCase().includes(currencySearch.toLowerCase());
+                                return matchesSearch && !(isPHP && isImport);
+                              }).length === 0 && currencySearch && (
                                   <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     No currencies found
                                   </div>
@@ -1124,173 +1170,213 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                             </div>
                           )}
                         </div>
+
+                        {/* Origin */}
                         <div>
                           <div className="flex items-center justify-between mb-1 sm:mb-2">
                             <label className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               Origin
                             </label>
-                            {/* <label className={`inline-flex items-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              <input
-                                type="checkbox"
-                                checked={canvassingFormData.isImported}
-                                onChange={(e) => setCanvassingFormData(prev => ({ ...prev, isImported: e.target.checked }))}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm">Imported</span>
-                            </label> */}
                           </div>
                           <input
                             type="text"
                             value={canvassingFormData.origin}
                             onChange={(e) => setCanvassingFormData(prev => ({ ...prev, origin: e.target.value }))}
-                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                              }`}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                             placeholder="Origin/country"
                           />
                         </div>
                       </div>
 
-                      {/* Global Pricing Inputs */}
-                      <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                          <div>
-                            <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Offered <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={canvassingFormData.offeredPrice || ''}
-                              onChange={(e) => handleGlobalPriceUpdate('offeredPrice', e.target.value)}
-                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                }`}
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Bid <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={canvassingFormData.bidPrice || ''}
-                              onChange={(e) => handleGlobalPriceUpdate('bidPrice', e.target.value)}
-                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                }`}
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Agreed <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={canvassingFormData.agreedPrice || ''}
-                              onChange={(e) => handleGlobalPriceUpdate('agreedPrice', e.target.value)}
-                              className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                                }`}
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
+                      {/* Second Row: Brand, Supplier QTY */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                        {/* Brand */}
+                        <div>
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Brand
+                          </label>
+                          <input
+                            type="text"
+                            value={canvassingFormData.brand}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, brand: e.target.value }))}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                            placeholder="Enter brand"
+                          />
                         </div>
-                        <p className={`text-xs mt-2 sm:mt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          Applies to all selected items.
-                        </p>
-                      </div>
 
-                      {/* Selected Items Summary */}
-                      <div className="border rounded-md overflow-hidden">
-                        <div className="overflow-x-auto max-h-72 sm:max-h-96">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                              <tr>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Ref No.
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Item Details
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Qty
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Offered
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Bid
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Final
-                                </th>
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
-                                  Act
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                              {selectedItems.map((item, index) => (
-                                <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.RID}
-                                    </div>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <div>
-                                      <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'} truncate max-w-[100px] sm:max-w-none`}>
-                                        {item.ITEMDESC}
-                                      </div>
-                                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        {item.ITEMNMBR}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {item.QUANTITY} {item.UOFM}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      ₱{item.offeredPrice?.toLocaleString() || '0'}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      ₱{item.bidPrice?.toLocaleString() || '0'}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      ₱{item.finalPrice?.toLocaleString() || '0'}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedItems(prev => prev.filter(selected => selected.uniqueId !== item.uniqueId))}
-                                      className={`p-1 rounded-md ${darkMode ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-700 hover:bg-red-50'} transition-colors duration-200`}
-                                      title="Remove"
-                                    >
-                                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        {/* Supplier QTY */}
+                        <div>
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Supplier QTY
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={canvassingFormData.supplierQty}
+                            onChange={(e) => setCanvassingFormData(prev => ({ ...prev, supplierQty: e.target.value }))}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                            placeholder="Enter supplier qty"
+                          />
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Global Pricing Inputs */}
+                    <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div>
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Offered <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={canvassingFormData.offeredPrice || ''}
+                            onChange={(e) => handleGlobalPriceUpdate('offeredPrice', e.target.value)}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Bid <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={canvassingFormData.bidPrice || ''}
+                            onChange={(e) => handleGlobalPriceUpdate('bidPrice', e.target.value)}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Agreed <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={canvassingFormData.agreedPrice || ''}
+                            onChange={(e) => handleGlobalPriceUpdate('agreedPrice', e.target.value)}
+                            className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                              }`}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <p className={`text-xs mt-2 sm:mt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Applies to all selected items.
+                      </p>
+                    </div>
+
+                    {/* Selected Items Summary */}
+                    <div className="border rounded-md overflow-hidden">
+                      <div className="overflow-x-auto max-h-72 sm:max-h-96">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                            <tr>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Ref No.
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Date Approved
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Requester
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Item Details
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Qty
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Offered
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Bid
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Final
+                              </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">
+                                Act
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
+                            {selectedItems.map((item, index) => (
+                              <tr key={item.uniqueId} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {item.RID}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.requester}
+                                    </div>
+                                  </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <div>
+                                    <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'} truncate max-w-[100px] sm:max-w-none`}>
+                                      {item.ITEMDESC}
+                                    </div>
+                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      {item.ITEMNMBR}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {item.QUANTITY} {item.UOFM}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    ₱{item.offeredPrice?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    ₱{item.bidPrice?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    ₱{item.finalPrice?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedItems(prev => prev.filter(selected => selected.uniqueId !== item.uniqueId))}
+                                    className={`p-1 rounded-md ${darkMode ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-700 hover:bg-red-50'} transition-colors duration-200`}
+                                    title="Remove"
+                                  >
+                                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>

@@ -32,8 +32,8 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showPurchaseTypeDropdown, setShowPurchaseTypeDropdown] = useState(false);
   const purchaseTypes = [
-    { value: '1', label: 'Local' },
-    { value: '2', label: 'Foreign' }
+    { value: 'Local', label: 'Local' },
+    { value: 'Foreign', label: 'Foreign' }
   ];
   const [canvassingData, setCanvassingData] = useState({
     referenceNum: '',
@@ -1149,11 +1149,11 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                 onClick={() => {
                                   setCanvassingData(prev => ({ ...prev, purchaseType: type.value }));
                                   // Auto-select PHP for Local, remove PHP for Import
-                                  if (type.value === '1') {
+                                  if (type.value === 'Local') {
                                     setSelectedCurrency('Philippine Peso (₱)');
                                     setCanvassingData(prev => ({ ...prev, currency: 'PHP' }));
                                     setCurrencySearch('');
-                                  } else if (type.value === '2') {
+                                  } else if (type.value === 'Foreign') {
                                     // For Import, remove PHP from selection if selected
                                     if (selectedCurrency.includes('PHP') || canvassingData.currency === 'PHP') {
                                       setSelectedCurrency('');
@@ -1181,19 +1181,19 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             value={selectedCurrency}
                             onChange={(e) => {
                               // Only allow changes if not Local purchase type
-                              if (canvassingData.purchaseType !== '1') {
+                              if (canvassingData.purchaseType !== 'Local') {
                                 setSelectedCurrency(e.target.value);
                                 setCurrencySearch(e.target.value);
                               }
                             }}
-                            onFocus={() => canvassingData.purchaseType !== '1' && setShowCurrencyDropdown(true)}
+                            onFocus={() => canvassingData.purchaseType !== 'Local' && setShowCurrencyDropdown(true)}
                             onBlur={() => setTimeout(() => setShowCurrencyDropdown(false), 200)}
-                            readOnly={canvassingData.purchaseType === '1'}
-                            className={`w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} ${canvassingData.purchaseType === '1' ? 'cursor-not-allowed opacity-75' : ''}`}
-                            placeholder={canvassingData.purchaseType === '1' ? 'PHP (Fixed for Local)' : 'Select currency'}
+                            readOnly={canvassingData.purchaseType === 'Local'}
+                            className={`w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} ${canvassingData.purchaseType === 'Local' ? 'cursor-not-allowed opacity-75' : ''}`}
+                            placeholder={canvassingData.purchaseType === 'Local' ? 'PHP (Fixed for Local)' : 'Select currency'}
                             required
                           />
-                          {canvassingData.purchaseType !== '1' && (
+                          {canvassingData.purchaseType !== 'Local' && (
                             <button
                               type="button"
                               onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
@@ -1204,7 +1204,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               </svg>
                             </button>
                           )}
-                          {canvassingData.purchaseType === '1' && (
+                          {canvassingData.purchaseType === 'Local' && (
                             <div className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -1212,7 +1212,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             </div>
                           )}
                         </div>
-                        {showCurrencyDropdown && canvassingData.purchaseType !== '1' && (
+                        {showCurrencyDropdown && canvassingData.purchaseType !== 'Local' && (
                           <div className={`absolute z-50 left-0 right-0 mt-1 border rounded-md shadow-lg max-h-48 sm:max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                             }`}>
                             {Object.entries(currencyData)
@@ -1222,7 +1222,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                   code.toLowerCase().includes(currencySearch.toLowerCase());
                                 // Exclude PHP when purchase type is Import (value '2')
                                 const isPHP = code === 'PHP';
-                                const isImport = canvassingData.purchaseType === '2';
+                                const isImport = canvassingData.purchaseType === 'Foreign';
                                 return matchesSearch && !(isPHP && isImport);
                               })
                               .map(([code, currency]) => (
@@ -1247,7 +1247,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               const matchesSearch = currency.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
                                 code.toLowerCase().includes(currencySearch.toLowerCase());
                               const isPHP = code === 'PHP';
-                              const isImport = canvassingData.purchaseType === '2';
+                              const isImport = canvassingData.purchaseType === 'Foreign';
                               return matchesSearch && !(isPHP && isImport);
                             }).length === 0 && currencySearch && (
                                 <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -1409,6 +1409,12 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                   Item Ref No.
                                 </th>
                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Date Approved
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  Requester
+                                </th>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
@@ -1422,6 +1428,16 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                   <td className="px-4 py-3">
                                     <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                       {item.RID}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {item.requester}
                                     </div>
                                   </td>
                                   <td className="px-4 py-3">

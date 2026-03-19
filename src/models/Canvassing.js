@@ -144,9 +144,10 @@ class Canvassing {
 
             // Get details with supplier information and company
             const detailsQuery = `
-                SELECT PQD.*, S.VENDNAME as vendorName
+                SELECT PQD.*, S.VENDNAME as vendorName, rh.REQUESTEDBY as requester, rh.DATEAPPROVED as dateApproved
                 FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
                 LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
+                LEFT JOIN [PURCHASE.REQUESTHEADER.1] rh ON PQD.PRCODE = rh.REFERENCENO
                 WHERE PQD.PQCODE = @pqCode
                 ORDER BY PQD.ROWID
             `;
@@ -217,7 +218,7 @@ class Canvassing {
                     approvalStatus: detail.APPROVALSTATUS,
                     approvedBy: detail.APPROVEDBY,
                     rejectRemarks: detail.REJECTREMARKS,
-                    dateApproved: detail.DATECREATED,
+                    dateApproved: detail.dateApproved,
                     itemNumber: detail.ITEMNMBR,
                     itemDescription: detail.ITEMDESC,
                     unitOfMeasure: detail.UOFM,
@@ -229,6 +230,7 @@ class Canvassing {
                     origin: detail.ORIGIN,
                     currency: detail.CURRENCY,
                     isImported: detail.IS_IMPORTED,
+                    purchaseType: detail.PURCHASETYPE,
                     offeredPrice: detail.OFFEREDPRICE,
                     bidPrice: detail.BIDPRICE,
                     finalPrice: detail.FINALPRICE,
@@ -243,7 +245,8 @@ class Canvassing {
                     dateCreated: detail.DATECREATED,
                     modifiedBy: detail.MODIFIEDBY,
                     modifiedDate: detail.MODIFIEDDATE,
-                    isServed: detail.IS_SERVED
+                    isServed: detail.IS_SERVED,
+                    requester: detail.requester
                 })),
                 approvals: approvalResult.recordset.map(approval => ({
                     id: approval.ROWID,
@@ -338,7 +341,7 @@ class Canvassing {
                     .input('brand', detail.brand || '')
                     .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
-                    .input('isImported', detail.isImported || 0)
+                    .input('purchaseType', detail.purchaseType || '')
                     .input('offeredPrice', detail.offeredPrice || 0)
                     .input('bidPrice', detail.bidPrice || 0)
                     .input('finalPrice', detail.finalPrice || 0)
@@ -355,13 +358,13 @@ class Canvassing {
                     .input('approvalStatus', approvalStatus)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, PURCHASETYPE,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, IS_SERVED, APPROVALSTATUS
                     ) VALUES (
                         @pqCode, @prCode, @rid, @pqdPostStatus, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @purchaseType,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @isServed, @approvalStatus
@@ -483,7 +486,7 @@ class Canvassing {
                     .input('brand', detail.brand || '')
                     .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
-                    .input('isImported', detail.isImported || 0)
+                    .input('purchaseType', detail.purchaseType || '')
                     .input('offeredPrice', detail.offeredPrice || 0)
                     .input('bidPrice', detail.bidPrice || 0)
                     .input('finalPrice', detail.finalPrice || 0)
@@ -499,13 +502,13 @@ class Canvassing {
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, PURCHASETYPE,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @purchaseType,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
