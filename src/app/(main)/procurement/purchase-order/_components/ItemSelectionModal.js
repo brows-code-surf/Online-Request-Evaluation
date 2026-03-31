@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { getCanvassingDataForPO } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
+import currencyData from '@/utils/currency.json';
+import { toast } from 'react-toastify';
 
 function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, selectedSupplier, onItemsSelected }) {
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
       item.pqCode?.toLowerCase().includes(searchTerm) ||
       item.prCode?.toLowerCase().includes(searchTerm) ||
       item.itemNumber?.toString().toLowerCase().includes(searchTerm) ||
+      item.canvassedBy?.toLowerCase().includes(searchTerm) ||
       item.itemDescription?.toLowerCase().includes(searchTerm) ||
       item.budgetCode?.toLowerCase().includes(searchTerm) ||
       item.company?.toLowerCase().includes(searchTerm) ||
@@ -86,6 +89,14 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
 
   const handleItemSelect = (item, checked) => {
     if (checked) {
+      // Check if there are already selected items with a different purchase type
+      if (currentSelectedItems.length > 0) {
+        const existingPurchaseType = currentSelectedItems[0].purchaseType;
+        if (item.purchaseType !== existingPurchaseType) {
+          toast.error(`You can only select items with the same purchase type. Currently selected: ${existingPurchaseType || 'None'}`);
+          return;
+        }
+      }
       setCurrentSelectedItems(prev => [...prev, {
         ...item,
         unitCost: item.unitCost || 0,
@@ -98,11 +109,23 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setCurrentSelectedItems(filteredAvailableItems.map(item => ({
-        ...item,
-        unitCost: item.unitCost || 0,
-        qtyOrder: item.qtyOrder || 0
-      })));
+      // If there are already selected items, only select items with the same purchase type
+      if (currentSelectedItems.length > 0) {
+        const existingPurchaseType = currentSelectedItems[0].purchaseType;
+        const itemsToSelect = filteredAvailableItems.filter(item => item.purchaseType === existingPurchaseType);
+        setCurrentSelectedItems(itemsToSelect.map(item => ({
+          ...item,
+          unitCost: item.unitCost || 0,
+          qtyOrder: item.qtyOrder || 0
+        })));
+      } else {
+        // No items selected yet, select all items (they will all have the same purchase type)
+        setCurrentSelectedItems(filteredAvailableItems.map(item => ({
+          ...item,
+          unitCost: item.unitCost || 0,
+          qtyOrder: item.qtyOrder || 0
+        })));
+      }
     } else {
       setCurrentSelectedItems([]);
     }
@@ -112,6 +135,17 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
     onItemsSelected(currentSelectedItems);
     onClose();
   };
+
+  const currencyDisplay = (currencyCode) => {
+    if (!currencyCode) return '';
+    try{
+      const currency = currencyData[currencyCode];
+      return currency ? currency.symbol_native : currencyCode;
+    }catch (error){
+      console.error('Error formatting currency:', error);
+      return currencyCode;
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -126,14 +160,14 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex items-center justify-between">
+              <div className="flex justify-between">
                 <div className="flex-1"></div>
                 <div className="text-center">
-                  <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Select Items for Purchase Order
+                  <h3 className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
+                    Approved Canvasses
                   </h3>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {currentSelectedItems.length} item{currentSelectedItems.length !== 1 ? 's' : ''} selected
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Select Items for Purchase Order
                   </p>
                 </div>
                 <div className="flex-1 flex justify-end">
@@ -161,6 +195,9 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                     </svg>
                     <span className={`font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                       Selected Supplier: {selectedSupplier}
+                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {currentSelectedItems.length} item{currentSelectedItems.length !== 1 ? 's' : ''} selected
+                      </p>
                     </span>
                   </div>
                 </div>
@@ -202,7 +239,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search items by PQ code, PR code, item details, company..."
+                    placeholder="Search by PR#, COQ code, Canvass By, Item Code, Description"
                     value={tableSearchTerm}
                     onChange={(e) => setTableSearchTerm(e.target.value)}
                     className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'}`}
@@ -227,22 +264,22 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                             PR No
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            PQ Code
+                            COQ CODE
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Canvass Date
+                            COQ POST DATE
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Canvassed By
+                            CANVASS BY
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Item Details
+                            ITEM CODE | DESCRIPTION
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Unit Cost / U of M
+                            UNIT COST (CURRENCY) / U OF M
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Agreed Price
+                            PURCHASE TYPE
                           </th>
                         </tr>
                       </thead>
@@ -305,29 +342,29 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                             PR No
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            PQ Code
+                            COQ Code
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Canvass Date
+                            COQ POST DATE
                           </th>
                           <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Canvassed By
+                            CANVASS BY
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Item Details
+                            ITEM CODE | DESCRIPTION
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Unit Cost / U of M
+                            UNIT COST (CURRENCY) / U OF M
                           </th>
                           <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Agreed Price
+                            PURCHASE TYPE
                           </th>
                         </tr>
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                         {filteredAvailableItems.map((item, index) => (
-                          <tr 
-                            key={item.uniqueId} 
+                          <tr
+                            key={item.uniqueId}
                             onClick={() => handleItemSelect(item, !currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId))}
                             className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                             <td className="px-2 sm:px-4 py-3">
@@ -372,12 +409,12 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
 
                             <td className="px-2 sm:px-4 py-3">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.remaining} {item.uofm}
+                                {currencyDisplay(item.currency)}{item.remaining} ({item.currency}) / {item.uofm}
                               </span>
                             </td>
                             <td className="px-2 sm:px-4 py-3">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                ₱{item.finalPrice?.toLocaleString() || '0.00'}
+                                {item.purchaseType || '-'}
                               </span>
                             </td>
                           </tr>

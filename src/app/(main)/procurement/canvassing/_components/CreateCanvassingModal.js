@@ -353,7 +353,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
         deliverySchedule: canvassingData.deliverySchedule || '',
         poNumber: canvassingData.poNumber || '',
         canvassedBy: user?.empName || '',
-        isServed: 1 // Mark as served for post
+        isServed: 0 // Mark as served for post
       }));
 
       const result = await createCanvassingRequest(headerData, detailsData, user?.empName, selectedSupplier, true);

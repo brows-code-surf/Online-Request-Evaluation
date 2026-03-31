@@ -6,6 +6,7 @@ import { useAuth } from '../../../../../utils/authContext';
 import { handlePrintPurchaseOrder } from './PurchaseOrderPrintModal';
 import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
+import currencyData from '@/utils/currency.json';
 
 function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
@@ -141,6 +142,17 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
       setDeleting(false);
     }
   };
+
+  const currencyDisplay = (currencyCode) => {
+    if (!currencyCode) return '';
+    try{
+      const currency = currencyData[currencyCode];
+      return currency ? currency.symbol_native : currencyCode;
+    }catch (error){
+      console.error('Error formatting currency:', error);
+      return currencyCode;
+    }
+  }
 
   if (!purchaseOrder) {
     return (
@@ -623,12 +635,12 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      {currencyDisplay(details[0]?.currency)}{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      {currencyDisplay(details[0]?.currency)}{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -655,7 +667,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                   Subtotal:
                 </td>
                 <td className={`px-6 py-4 text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  ₱{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                  {currencyDisplay(details[0]?.currency)}{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </td>
                 <td></td>
               </tr>
@@ -699,7 +711,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                       Unit Cost
                     </div>
                     <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      {currencyDisplay(details[0]?.currency)}{item.unitCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </div>
                   </div>
                   <div>
@@ -707,7 +719,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                       Extended Cost
                     </div>
                     <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      ₱{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                      {currencyDisplay(details[0]?.currency)}{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </div>
                   </div>
                   <div>
@@ -740,7 +752,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                 Subtotal:
               </span>
               <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                ₱{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                {currencyDisplay(details[0]?.currency)}{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
               </span>
             </div>
           </div>

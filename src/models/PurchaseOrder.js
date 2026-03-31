@@ -184,7 +184,7 @@ class PurchaseOrder {
             // Get details
             const detailsQuery = `
                 SELECT ROWID, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
-                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO
+                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO, PURCHASETYPE, CURRENCY
                 FROM [PURCHASE.ORDERDETAILS.1]
                 WHERE PONUMBER = @poNumber
                 ORDER BY ROWID
@@ -247,7 +247,9 @@ class PurchaseOrder {
                     origin: detail.ORIGIN,
                     qtyServed: detail.QTYSERVED,
                     // itemStatus: detail.ITEMSTATUS,
-                    budgetNo: detail.BUDGETNO
+                    budgetNo: detail.BUDGETNO,
+                    purchaseType: detail.PURCHASETYPE,
+                    currency: detail.CURRENCY
                 }))
             };
         } catch (error) {
@@ -346,11 +348,11 @@ class PurchaseOrder {
                     INSERT INTO [PURCHASE.ORDERDETAILS.1] (
                         PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER,
                         QTYCANCEL, QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN,
-                        QTYSERVED, ITEMSTATUS, BUDGETNO
+                        QTYSERVED, ITEMSTATUS, BUDGETNO, PURCHASETYPE, CURRENCY
                     ) VALUES (
                         @poNumber, @rid, @pqCode, @prCode, @itemNmbr, @itemDesc, @uofm, @qtyOrder,
                         @qtyCancel, @qtyAllocated, @unitCost, @extdCost, @brand, @origin,
-                        @qtyServed, @itemStatus, @budgetNo
+                        @qtyServed, @itemStatus, @budgetNo, @purchaseType, @currency
                     )
                 `;
 
@@ -372,6 +374,8 @@ class PurchaseOrder {
                     .input('qtyServed', detail.qtyServed || 0)
                     .input('itemStatus', detail.itemStatus || 'PENDING')
                     .input('budgetNo', detail.budgetNo || '')
+                    .input('purchaseType', detail.purchaseType || '')
+                    .input('currency', detail.currency || '')
                     .query(detailInsertQuery);
             }
 
@@ -1151,11 +1155,13 @@ class PurchaseOrder {
                     pqd.VENDORID,
                     s.VENDNAME as SUPPLIER_NAME,
                     pqd.PYMTRMID as PAYMENT_TERMS,
-                    pqh.DATEREQUESTED,
+                    pqh.DATEMODIFIED,
                     pqh.CREATEDBY,
                     pqd.DELIVERYSCHEDULE,
                     pqd.BRAND,
                     pqd.ORIGIN,
+                    pqd.PURCHASETYPE,
+                    pqd.CURRENCY,
                     pqd.IS_IMPORTED,
                     pqd.RID,
                     pqd.PRCODE,
@@ -1193,13 +1199,14 @@ class PurchaseOrder {
             }
 
             query += `
-                GROUP BY pqd.ROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqh.CREATEDBY, pqd.VENDORID, s.VENDNAME,
-                    pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
+               GROUP BY pqd.ROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEMODIFIED, pqh.CREATEDBY, pqd.VENDORID, s.VENDNAME,
+                    pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.PURCHASETYPE,
+                    pqd.CURRENCY, pqd.IS_IMPORTED,
                     pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
                     pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,
                     pr.COMPANY, pr.ADDRESSEDTO
                 HAVING pqd.QUANTITY - ISNULL(SUM(pod.QTYORDER), 0) != 0
-                ORDER BY pqh.DATEREQUESTED DESC, pqd.RID
+                ORDER BY pqh.DATEMODIFIED DESC, pqd.RID
             `;
 
             const request = connection.request();
@@ -1213,11 +1220,13 @@ class PurchaseOrder {
                 supplierName: record.SUPPLIER_NAME,
                 vendorId: record.VENDORID,
                 paymentTerms: record.PAYMENT_TERMS,
-                canvassDate: record.DATEREQUESTED,
+                canvassDate: record.DATEMODIFIED,
                 canvassedBy: record.CREATEDBY,
                 deliverySchedule: record.DELIVERYSCHEDULE,
                 brand: record.BRAND,
                 origin: record.ORIGIN,
+                purchaseType: record.PURCHASETYPE,
+                currency: record.CURRENCY,
                 isImported: record.IS_IMPORTED,
                 rid: record.RID,
                 prCode: record.PRCODE,

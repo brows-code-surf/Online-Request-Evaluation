@@ -271,7 +271,9 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         brand: item.brand || '',
         origin: item.origin || '',
         budgetNo: item.budgetCode,
-        itemStatus: 'PENDING'
+        itemStatus: 'PENDING',
+        purchaseType: item.purchaseType || '',
+        currency: item.currency || ''
       }));
 
       const result = await createPurchaseOrder(headerData, detailsData, user?.empName);
@@ -386,7 +388,9 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         brand: item.brand || '',
         origin: item.origin || '',
         budgetNo: item.budgetCode,
-        itemStatus: 'PENDING'
+        itemStatus: 'PENDING',
+        purchaseType: item.purchaseType || '',
+        currency: item.currency || ''
       }));
 
       // Create the purchase order first

@@ -1,5 +1,7 @@
 'use client';
 
+import currencyData from '@/utils/currency.json';
+
 const generateHeader = (purchaseOrder, currentPage, totalPages) => `
   <!-- Header Top -->
   <div class="header-top">
@@ -45,7 +47,7 @@ const generateHeader = (purchaseOrder, currentPage, totalPages) => `
           </td>
           <td class="po-info-cell">
             <div class="po-info-label">Currency</div>
-            <div class="po-info-value">Philippine Peso</div>
+            <div class="po-info-value">${purchaseOrder.details && purchaseOrder.details.length > 0 && purchaseOrder.details[0].currency ? (currencyData[purchaseOrder.details[0].currency]?.name || purchaseOrder.details[0].currency) : 'Philippine Peso'}</div>
           </td>
         </tr>
       </table>
@@ -308,7 +310,7 @@ export const handlePrintPurchaseOrder = async (purchaseOrder) => {
 
             <!-- Total Row -->
             <div class="total-row">
-              <div style="text-align: right; margin-right: 20px;">Total <span style ="margin-left: 5px;">₱</span></div>
+              <div style="text-align: right; margin-right: 20px;">Total <span style ="margin-left: 5px;">${purchaseOrder.details && purchaseOrder.details.length > 0 && purchaseOrder.details[0].currency ? (currencyData[purchaseOrder.details[0].currency]?.symbol_native || '₱') : '₱'}</span></div>
               <div class="total-amount">${purchaseOrder.header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
             </div>
 

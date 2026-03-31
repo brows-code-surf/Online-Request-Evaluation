@@ -129,7 +129,7 @@ class CanvassApproval {
             const { PRCODE: prCode, RID: rid } = itemResult.recordset[0];
 
             // Update the QUOTATIONDETAILS table directly
-            const approveQuery = ` UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'SELECTED', APPROVEDBY = @approverName, DATECREATED = GETDATE() WHERE ROWID = @itemId `;
+            const approveQuery = ` UPDATE [PURCHASE.QUOTATIONDETAILS.1] SET APPROVALSTATUS = 'SELECTED', APPROVEDBY = @approverName, DATEAPPROVED = GETDATE() WHERE ROWID = @itemId `;
 
             let result = await connection.request()
                 .input('itemId', itemId)
