@@ -545,9 +545,9 @@ export async function fetchPurchaseOrderDetails(poNumber) {
     }
 }
 
-export async function confirmPurchaseOrder(poNumber, confirmBy) {
+export async function confirmPurchaseOrder(poNumber, confirmBy, isAdmin = false) {
     try {
-        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, confirmBy);
+        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, confirmBy, isAdmin);
         return result;
     } catch (error) {
         console.error('Error confirming purchase order:', error);

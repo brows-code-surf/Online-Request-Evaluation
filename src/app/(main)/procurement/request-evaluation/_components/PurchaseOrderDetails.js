@@ -5,6 +5,7 @@ import { SkeletonRequestEvaluationDetail } from '../../../../_components/skeleto
 import ConfirmModal from '../../../_components/confirmModal';
 import RejectRequestModal from '../../../_components/rejectRequestModal';
 import SuccessModal from '../../../_components/successModal';
+import currencyData from '@/utils/currency.json';
 
 function PurchaseOrderDetails({
     selectedApproval,
@@ -116,6 +117,17 @@ function PurchaseOrderDetails({
         return cleanStatus;
     };
 
+    const currencyDisplay = (currencyCode) => {
+        if (!currencyCode) return '';
+        try {
+            const currency = currencyData[currencyCode];
+            return currency ? currency.symbol_native : currencyCode;
+        } catch (error) {
+            console.error('Error formatting currency:', error);
+            return currencyCode;
+        }
+    }
+
     return (
         <>
             {detailsLoading ? (
@@ -180,20 +192,64 @@ function PurchaseOrderDetails({
 
                                 <div>
                                     <div className="space-y-2 lg:ml-8">
-                                        {header?.confirmedBy && (
+                                        {/* Confirmed By */}
+                                        {header?.confirmedBy_1 && (
                                             <div>
-                                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                    {header.dateConfirmed ? 'Confirmed By:' : 'For Confirmation:'}
-                                                </span>
-                                                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy}</span>
+                                                <div className="flex items-center">
+                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_1 ? 'Reviewed By:' : 'For Review By:'}</span>
+                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_1}</span>
+                                                </div>
+                                                <div className="ml-[100px] mt-1">
+                                                    {header?.dateConfirmed_1 ? (
+                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                            [DATE: {formatDate(header.dateConfirmed_1)}]
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                            [PENDING]
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
+                                        {header?.confirmedBy_2 && (
+                                            <div>
+                                                <div className="flex items-center">
+                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_2 ? 'Reviewed By:' : 'For Review By:'}</span>
+                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_2}</span>
+                                                </div>
+                                                <div className="ml-[100px] mt-1">
+                                                    {header?.dateConfirmed_2 ? (
+                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                            [DATE: {formatDate(header.dateConfirmed_2)}]
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                            [PENDING]
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Approved By */}
                                         {header?.approvedBy && (
                                             <div>
-                                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                    {header.dateApproved ? 'Approved By:' : 'For Approval:'}
-                                                </span>
-                                                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.approvedBy}</span>
+                                                <div className="flex items-center">
+                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Approved By:</span>
+                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}></span>
+                                                </div>
+                                                <div className="ml-[100px] mt-1">
+                                                    {header.approvedBy}
+                                                    {header?.dateApproved ? (
+                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
+                                                            [DATE: {formatDate(header.dateApproved)}]
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
+                                                            [PENDING]
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -208,7 +264,7 @@ function PurchaseOrderDetails({
                                         <div>
                                             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
                                             <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                {header?.dateCreated ? new Date(header.dateCreated).toLocaleDateString() : 'N/A'}
+                                                {formatDate(header.poDate)}
                                             </span>
                                         </div>
                                     </div>
@@ -263,150 +319,134 @@ function PurchaseOrderDetails({
                                         {/* Desktop Table View */}
                                         <div className={`hidden sm:block overflow-x-auto border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg`}>
                                             <table className="w-full">
-                                    <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                                        <tr>
-                                            <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Code</th>
-                                            <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Description</th>
-                                            <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>UOFM</th>
-                                            <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
-                                            <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Unit Price</th>
-                                            <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {details && details.length > 0 ? (
-                                            details.map((item, index) => (
-                                                <tr key={index} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition`}>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.ITEMNMBR || '-'}</td>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.ITEMDESC || '-'}</td>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</td>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.QUANTITY || 0}</td>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} text-right`}>
-                                                        {item.unitPrice ? `₱${parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                                                    </td>
-                                                    <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>
-                                                        {item.unitPrice && item.QUANTITY ? `₱${(parseFloat(item.unitPrice) * parseFloat(item.QUANTITY)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="6" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                    No items found for this order
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                    <tfoot className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                                        <tr>
-                                            <td></td>
-                                            <td></td>
-                                            <td className={`px-4 py-3 text-left text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Quantity</td>
-                                            <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-bold`}>{totalQuantity}</td>
-                                            <td className={`px-4 py-3 text-right text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Amount</td>
-                                            <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-black`}>
-                                                {(() => {
-                                                    if (!details || !Array.isArray(details) || details.length === 0) {
-                                                        return '₱0.00';
-                                                    }
-                                                    const subtotal = details.reduce((sum, item) => {
-                                                        const price = parseFloat(item.unitPrice || 0);
-                                                        const qty = parseFloat(item.QUANTITY || 0);
-                                                        return sum + (isNaN(price) ? 0 : price) * (isNaN(qty) ? 0 : qty);
-                                                    }, 0);
-                                                    const tax = parseFloat(header?.taxAmount || 0);
-                                                    const freight = parseFloat(header?.freight || 0);
-                                                    const total = subtotal + (isNaN(tax) ? 0 : tax) + (isNaN(freight) ? 0 : freight);
-                                                    const formatted = isNaN(total) ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                                    return `₱${formatted}`;
-                                                })()}
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
+                                                <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                                                    <tr>
+                                                        <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Code</th>
+                                                        <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Description</th>
+                                                        <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>UOFM</th>
+                                                        <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
+                                                        <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Unit Price</th>
+                                                        <th className={`px-4 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {details && details.length > 0 ? (
+                                                        details.map((item, index) => (
+                                                            <tr key={index} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition`}>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.ITEMNMBR || '-'}</td>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.ITEMDESC || '-'}</td>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</td>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.QUANTITY || 0}</td>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} text-right`}>
+                                                                    {item.unitPrice ? `${currencyDisplay(header?.currencyCode || 'PHP')}${parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                                                                </td>
+                                                                <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>
+                                                                    {item.unitPrice && item.QUANTITY ? `${currencyDisplay(header?.currencyCode || 'PHP')}${(parseFloat(item.unitPrice) * parseFloat(item.QUANTITY)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr>
+                                                            <td colSpan="6" className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                                No items found for this order
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                                <tfoot className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td className={`px-4 py-3 text-left text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Quantity</td>
+                                                        <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-bold`}>{totalQuantity}</td>
+                                                        <td className={`px-4 py-3 text-right text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Total Amount</td>
+                                                        <td className={`px-4 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-black`}>
+                                                            {(() => {
+                                                                if (!details || !Array.isArray(details) || details.length === 0) {
+                                                                    return `${currencyDisplay(header?.currencyCode || 'PHP')}0.00`;
+                                                                }
+                                                                const subtotal = details.reduce((sum, item) => {
+                                                                    const price = parseFloat(item.unitPrice || 0);
+                                                                    const qty = parseFloat(item.QUANTITY || 0);
+                                                                    return sum + (isNaN(price) ? 0 : price) * (isNaN(qty) ? 0 : qty);
+                                                                }, 0);
+                                                                const tax = parseFloat(header?.taxAmount || 0);
+                                                                const freight = parseFloat(header?.freight || 0);
+                                                                const total = subtotal + (isNaN(tax) ? 0 : tax) + (isNaN(freight) ? 0 : freight);
+                                                                const formatted = isNaN(total) ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                                                return `${currencyDisplay(header?.currencyCode || 'PHP')}${formatted}`;
+                                                            })()}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
 
-                            {/* Mobile Card View */}
-                            <div className="sm:hidden space-y-4">
-                                {details && details.length > 0 ? (
-                                    details.map((item, index) => (
-                                        <div key={index} className={`p-4 border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'} rounded-lg shadow-sm`}>
-                                            <div className="space-y-3">
-                                                {/* Item Code */}
-                                                <div>
-                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                        {item.ITEMNMBR || '-'}
+                                        {/* Mobile Card View */}
+                                        <div className="sm:hidden space-y-4">
+                                            {details && details.length > 0 ? (
+                                                details.map((item, index) => (
+                                                    <div key={index} className={`p-4 border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'} rounded-lg shadow-sm`}>
+                                                        <div className="space-y-3">
+                                                            {/* Item Code */}
+                                                            <div>
+                                                                <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                    {item.ITEMNMBR || '-'}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Item Description */}
+                                                            <div>
+                                                                <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Description</p>
+                                                                <p className={`text-sm leading-relaxed ${darkMode ? 'text-white' : 'text-gray-900'} break-words`}>
+                                                                    {item.ITEMDESC || '-'}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Quantity and UOFM */}
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div>
+                                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Quantity</p>
+                                                                        <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.QUANTITY || 0}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>UOFM</p>
+                                                                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Unit Price and Total */}
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Unit Price</p>
+                                                                    <p className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                                        {item.unitPrice ? `${currencyDisplay(header?.currencyCode || 'PHP')}${parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Total</p>
+                                                                    <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                        {item.unitPrice && item.QUANTITY ? `${currencyDisplay(header?.currencyCode || 'PHP')}${(parseFloat(item.unitPrice) * parseFloat(item.QUANTITY)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className={`p-8 text-center border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'} rounded-lg`}>
+                                                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                        No items found for this order
                                                     </p>
                                                 </div>
-
-                                                {/* Item Description */}
-                                                <div>
-                                                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Description</p>
-                                                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-white' : 'text-gray-900'} break-words`}>
-                                                        {item.ITEMDESC || '-'}
-                                                    </p>
-                                                </div>
-
-                                                {/* Quantity and UOFM */}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div>
-                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Quantity</p>
-                                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.QUANTITY || 0}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>UOFM</p>
-                                                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.UOFM || '-'}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Unit Price and Total */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Unit Price</p>
-                                                        <p className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                            {item.unitPrice ? `₱${parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium mb-1`}>Total</p>
-                                                        <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                            {item.unitPrice && item.QUANTITY ? `₱${(parseFloat(item.unitPrice) * parseFloat(item.QUANTITY)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className={`p-8 text-center border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'} rounded-lg`}>
-                                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            No items found for this order
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                            </>
-                        );
-                    })()}
-
-                            {/* Totals */}
-                            {/* {details && details.length > 0 && (
-                                <div className={`mt-4 p-4 ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'} rounded-lg border`}>
-                                    <div className="flex justify-end">
-                                        <div className="w-full md:w-1/2 space-y-2">
-                                            <div className="flex justify-between border-t pt-2 border-gray-300 dark:border-gray-600">
-                                                <span className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total:</span>
-                                                <span className={`text-base font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                    ₱{((details.reduce((sum, item) => sum + (parseFloat(item.unitPrice || 0) * parseFloat(item.QUANTITY || 0)), 0) + parseFloat(header?.taxAmount || 0) + parseFloat(header?.freight || 0))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )} */}
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Remarks */}
@@ -473,8 +513,9 @@ function PurchaseOrderDetails({
                             </div>
                         )}
                     </div>
-                </div>
-            )}
+                </div >
+            )
+            }
 
             {/* Modals */}
             <ConfirmModal

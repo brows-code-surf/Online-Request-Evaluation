@@ -270,16 +270,52 @@ function RequestEvaluationContent() {
         try {
             let result;
             if (selectedApproval.header) {
-                // It's a purchase order
-                if (selectedApproval.header.poStatus === 'FOR P.O. CONFIRMATION') {
-                    result = await confirmPurchaseOrder(selectedApproval.id, user.empName);
-                } else if (selectedApproval.header.poStatus === 'FOR P.O. APPROVAL') {
-                    result = await approvePurchaseOrder(selectedApproval.id, user.empName);
+                // It's a purchase order - normalize status for comparison
+                let poStatus = String(selectedApproval.header.poStatus || '').trim().toUpperCase();
+                console.log('PO Status for approval (raw):', poStatus);
+                
+                // Handle potential database duplication issue
+                // If status appears twice consecutively, return just once
+                const statusPatterns = [
+                    'FOR P.O. CONFIRMATION',
+                    'FOR P.O. APPROVAL',
+                    'P.O. APPROVED',
+                    'PENDING'
+                ];
+
+                for (const pattern of statusPatterns) {
+                    if (poStatus === pattern + pattern || poStatus === pattern + ' ' + pattern || poStatus === pattern + ',' + pattern) {
+                        poStatus = pattern;
+                        break;
+                    }
                 }
-            } else {
-                // It's a purchase request
-                result = await approveEvaluation(selectedApproval.id, user.empName, selectedApproval.status);
+
+                // If comma-separated duplicates, take the first unique part
+                if (poStatus.includes(',')) {
+                    const parts = poStatus.split(',').map(p => p.trim());
+                    const uniqueParts = [...new Set(parts)];
+                    if (uniqueParts.length === 1) {
+                        poStatus = uniqueParts[0];
+                    }
+                }
+
+                console.log('PO Status for approval (normalized):', poStatus);
+                
+                if (poStatus === 'FOR P.O. CONFIRMATION') {
+                    result = await confirmPurchaseOrder(selectedApproval.id, user.empName, isAdmin());
+                } else if (poStatus === 'FOR P.O. APPROVAL') {
+                    result = await approvePurchaseOrder(selectedApproval.id, user.empName);
+                } else {
+                    console.error('Unknown PO status:', poStatus);
+                    setSuccessMessage({
+                        title: 'Approval Error',
+                        message: `Cannot approve purchase order with status: ${poStatus}. Expected 'FOR P.O. CONFIRMATION' or 'FOR P.O. APPROVAL'.`
+                    });
+                    setShowSuccessModal(true);
+                }
             }
+
+            console.log('Approval result:', result);
 
             if (result && (result.headerUpdated || result.success)) {
                 setSuccessMessage({
@@ -299,9 +335,23 @@ function RequestEvaluationContent() {
                     const details = await fetchEvaluationDetails(selectedApproval.id);
                     setApprovalDetails(details);
                 }
+            } else if (result) {
+                // Result exists but doesn't have expected properties
+                console.error('Unexpected result structure:', result);
+                setSuccessMessage({
+                    title: 'Approval Issue',
+                    message: result.message || 'The approval was processed but the response was unexpected. Please refresh to see the updated status.'
+                });
+                setShowSuccessModal(true);
+                await reloadApprovalsData();
             }
         } catch (error) {
             console.error('Error approving:', error);
+            setSuccessMessage({
+                title: 'Approval Failed',
+                message: `An error occurred while approving: ${error.message || 'Unknown error'}. Please try again.`
+            });
+            setShowSuccessModal(true);
         } finally {
             setIsSubmitting(false);
             setShowApproveModal(false);
@@ -360,7 +410,7 @@ function RequestEvaluationContent() {
             case 'FOR P.O. CONFIRMATION':
                 return 'bg-blue-100 text-blue-800 border-blue-300';
             case 'FOR P.O. APPROVAL':
-                return 'bg-blue-100 text-blue-800 border-blue-300';
+                return 'bg-orange-100 text-orange-800 border-orange-300';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-300';
         }
