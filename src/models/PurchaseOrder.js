@@ -6,6 +6,7 @@ import connectToDatabase from '@/lib/db.js';
 import { Notification } from './Notification.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import UserProfile from './UserProfile.js';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 class PurchaseOrder {
     // Get all purchase orders with filtering and role-based access
@@ -60,6 +61,9 @@ class PurchaseOrder {
                 paramIndex++;
             }
 
+            if(isAdmin){
+                
+            }
             // Apply filters
             if (filters.status) {
                 if (filters.status === 'POSTED') {
@@ -396,6 +400,12 @@ class PurchaseOrder {
             // COMMIT TRANSACTION - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
+
+            // Broadcast real-time update for request evaluation page
+            broadcastRequestEvaluationUpdate("po-created", {
+                poNumber: poNumber,
+                poStatus: 'PENDING'
+            });
 
             return {
                 poNumber: poNumber,
@@ -957,6 +967,12 @@ class PurchaseOrder {
                     }
                 }
             }
+
+            // Broadcast real-time update for request evaluation page
+            broadcastRequestEvaluationUpdate("po-submitted", {
+                poNumber: poNumber,
+                poStatus: 'FOR P.O. CONFIRMATION'
+            });
 
             return {
                 success: true,

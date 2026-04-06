@@ -163,7 +163,7 @@ function PurchaseOrderDetails({
                         <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg border`}>
                             <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Purchase Order Header</h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ml-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-4">
                                 <div>
                                     <div className="space-y-2">
                                         <div>
@@ -173,6 +173,10 @@ function PurchaseOrderDetails({
                                         <div>
                                             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Payment Terms:</span>
                                             <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.pymtrmid || 'N/A'}</span>
+                                        </div>
+                                        <div>
+                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
+                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.deliveryTo || 'N/A'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -187,6 +191,12 @@ function PurchaseOrderDetails({
                                             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Canvassed By:</span>
                                             <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.canvassedBy || 'N/A'}</span>
                                         </div>
+                                        <div>
+                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
+                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                {formatDate(header.poDate)}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -195,78 +205,50 @@ function PurchaseOrderDetails({
                                         {/* Confirmed By */}
                                         {header?.confirmedBy_1 && (
                                             <div>
-                                                <div className="flex items-center">
-                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_1 ? 'Reviewed By:' : 'For Review By:'}</span>
-                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_1}</span>
-                                                </div>
-                                                <div className="ml-[100px] mt-1">
-                                                    {header?.dateConfirmed_1 ? (
-                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                                                            [DATE: {formatDate(header.dateConfirmed_1)}]
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-                                                            [PENDING]
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_1 ? 'Reviewed By:' : 'For Review By:'}</span>
+                                                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_1}</span>
+                                                {header?.dateConfirmed_1 ? (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                        [DATE: {formatDate(header.dateConfirmed_1)}]
+                                                    </span>
+                                                ) : (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                        [PENDING]
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                         {header?.confirmedBy_2 && (
                                             <div>
-                                                <div className="flex items-center">
-                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_2 ? 'Reviewed By:' : 'For Review By:'}</span>
-                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_2}</span>
-                                                </div>
-                                                <div className="ml-[100px] mt-1">
-                                                    {header?.dateConfirmed_2 ? (
-                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                                                            [DATE: {formatDate(header.dateConfirmed_2)}]
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-                                                            [PENDING]
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{header?.dateConfirmed_2 ? 'Reviewed By:' : 'For Review By:'}</span>
+                                                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_2}</span>
+                                                {header?.dateConfirmed_2 ? (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                        [DATE: {formatDate(header.dateConfirmed_2)}]
+                                                    </span>
+                                                ) : (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                        [PENDING]
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                         {/* Approved By */}
                                         {header?.approvedBy && (
                                             <div>
-                                                <div className="flex items-center">
-                                                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Approved By:</span>
-                                                    <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}></span>
-                                                </div>
-                                                <div className="ml-[100px] mt-1">
-                                                    {header.approvedBy}
-                                                    {header?.dateApproved ? (
-                                                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} ml-2`}>
-                                                            [DATE: {formatDate(header.dateApproved)}]
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'} ml-2`}>
-                                                            [PENDING]
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Approved By:</span>
+                                                <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.approvedBy}</span>
+                                                {header?.dateApproved ? (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                        [DATE: {formatDate(header.dateApproved)}]
+                                                    </span>
+                                                ) : (
+                                                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                                                        [PENDING]
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div className="space-y-2">
-                                        <div>
-                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Delivery To:</span>
-                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header?.deliveryTo || 'N/A'}</span>
-                                        </div>
-                                        <div>
-                                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PO Date:</span>
-                                            <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                {formatDate(header.poDate)}
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

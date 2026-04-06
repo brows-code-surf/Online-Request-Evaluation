@@ -48,7 +48,7 @@ function PurchaseOrderContent() {
         filters.status = filterStatus;
       }
 
-      const data = await getAllPurchaseOrders(filters, user);
+      const data = await getAllPurchaseOrders(filters, user, isAdmin);
       if (data.success) {
         setPurchaseOrders(data.purchaseOrders);
         const approvalsData = data.purchaseOrders.map(po => ({
@@ -293,6 +293,8 @@ function PurchaseOrderContent() {
         return 'bg-green-100 text-green-800 border-green-300';
       case 'FOR P.O. CONFIRMATION':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'FOR P.O. APPROVAL':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'POSTED':

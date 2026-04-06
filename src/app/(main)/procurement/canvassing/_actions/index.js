@@ -129,9 +129,9 @@ export async function deleteCanvassingRequest(pqCode, deleterName) {
   }
 }
 
-export async function getCanvassingStats(user = null) {
+export async function getCanvassingStats(user = null, isAdmin = false ) {
   try {
-    const stats = await Canvassing.getCanvassingStats(user);
+    const stats = await Canvassing.getCanvassingStats(user, isAdmin);
     return { success: true, stats };
   } catch (error) {
     console.error('Error getting canvassing stats:', error);

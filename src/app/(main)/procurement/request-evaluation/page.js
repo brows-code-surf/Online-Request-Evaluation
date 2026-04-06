@@ -221,10 +221,13 @@ function RequestEvaluationContent() {
 
     // Handle approval selection without redundant loading
     const handleSelectApproval = (approval) => {
-        setSelectedApproval(approval);
-        // Update URL with selected id to persist selection
-        router.replace(`?id=${encodeURIComponent(approval.id)}`);
-        // Details will be loaded by useEffect
+        // Only update if clicking a different approval
+        if (!selectedApproval || selectedApproval.id !== approval.id) {
+            setSelectedApproval(approval);
+            // Update URL with selected id to persist selection
+            router.replace(`?id=${encodeURIComponent(approval.id)}`);
+            // Details will be loaded by useEffect
+        }
     };
 
     // Filter and sort approvals - only show requests/POs that need evaluation
@@ -465,6 +468,46 @@ function RequestEvaluationContent() {
         "purchase-request-posted": useCallback(
             (data) => {
                 console.log("Purchase request posted event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "po-confirmed": useCallback(
+            (data) => {
+                console.log("PO confirmed event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "po-approved": useCallback(
+            (data) => {
+                console.log("PO approved event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "po-rejected": useCallback(
+            (data) => {
+                console.log("PO rejected event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "po-created": useCallback(
+            (data) => {
+                console.log("PO created event received:", data);
+                reloadApprovalsData();
+            },
+            [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]
+        ),
+
+        "po-submitted": useCallback(
+            (data) => {
+                console.log("PO submitted event received:", data);
                 reloadApprovalsData();
             },
             [filterStatus, filterDepartment, filterLocation, filterStartDate, filterEndDate, user?.empName]

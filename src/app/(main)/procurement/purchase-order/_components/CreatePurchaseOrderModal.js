@@ -11,7 +11,8 @@ import {
   getApprovedBy,
   getDeliveryLocations,
   getSupplierContactPersons,
-  postPurchaseOrder
+  postPurchaseOrder,
+  submitPurchaseOrderForProcessing
 } from '../_actions';
 import ItemSelectionModal from './ItemSelectionModal';
 import ConfirmModal from '../../../_components/confirmModal';
@@ -351,7 +352,6 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       // Prepare header data
       const headerData = {
         poNumber: poData.poNumber,
-        poStatus: 'FOR P.O. CONFIRMATION',
         vendorId: selectedVendorId,
         vendName: selectedSupplier,
         pymtrmid: selectedPaymentTerm,
@@ -397,6 +397,12 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       const result = await createPurchaseOrder(headerData, detailsData, user?.empName);
 
       if (result.success) {
+        // Submit for processing to trigger notifications/emails to confirmers
+        const submitResult = await submitPurchaseOrderForProcessing(result.poNumber, user?.empName);
+        if (!submitResult.success) {
+          console.error('Failed to submit for processing:', submitResult.message);
+        }
+
         toast.success('Purchase order submitted for processing successfully!');
         onSuccess?.();
 

@@ -42,8 +42,9 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
       case 'P.O. APPROVED':
         return 'bg-green-100 text-green-800 border-green-300';
       case 'FOR P.O. CONFIRMATION':
-      case 'FOR P.O. APPROVAL':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'FOR P.O. APPROVAL':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       default:
@@ -64,6 +65,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
     // If status appears twice consecutively, return just once
     const statusPatterns = [
       'FOR P.O. CONFIRMATION',
+      'FOR P.O. APPROVAL',
       'P.O. APPROVED',
       'PENDING'
     ];
@@ -499,12 +501,40 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Canvassed By:</span>
                 <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.canvassedBy || 'N/A'}</span>
               </div>
-              {header.confirmedBy && (
+              {header.confirmedBy_1 && (
                 <div>
                   <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {header.dateConfirmed ? 'Reviewed By:' : 'For Review By:'}
+                    {header.dateConfirmed_1 ? 'Reviewed By:' : 'For Review By:'}
                   </span>
-                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy}</span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_1}</span>
+                  {header.dateConfirmed_1 && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      [DATE: {formatDate(header.dateConfirmed_1)}]
+                    </span>
+                  )}
+                  {!header.dateConfirmed_1 && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                      [PENDING]
+                    </span>
+                  )}
+                </div>
+              )}
+              {header.confirmedBy_2 && (
+                <div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {header.dateConfirmed_2 ? 'Reviewed By:' : 'For Review By:'}
+                  </span>
+                  <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.confirmedBy_2}</span>
+                  {header.dateConfirmed_2 && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      [DATE: {formatDate(header.dateConfirmed_2)}]
+                    </span>
+                  )}
+                  {!header.dateConfirmed_2 && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                      [PENDING]
+                    </span>
+                  )}
                 </div>
               )}
               {header.approvedBy && (
@@ -513,6 +543,16 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                     {header.dateApproved ? 'Approved By:' : 'For Approval:'}
                   </span>
                   <span className={`ml-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{header.approvedBy}</span>
+                  {header.dateApproved && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      [DATE: {formatDate(header.dateApproved)}]
+                    </span>
+                  )}
+                  {!header.dateApproved && (
+                    <span className={`ml-2 text-xs ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                      [PENDING]
+                    </span>
+                  )}
                 </div>
               )}
             </div>

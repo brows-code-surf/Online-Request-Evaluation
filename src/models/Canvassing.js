@@ -901,7 +901,7 @@ class Canvassing {
     }
 
     // Get canvassing statistics (both postStatus and approvalStatus)
-    static async getCanvassingStats(user = null) {
+    static async getCanvassingStats(user = null, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -929,7 +929,7 @@ class Canvassing {
             let paramIndex = 1;
 
             // Filter by created by (only show stats for canvassing requests created by the user)
-            if (user) {
+            if (user && !isAdmin) {
                 const userName = user.empName;
                 postStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
                 approvalStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;

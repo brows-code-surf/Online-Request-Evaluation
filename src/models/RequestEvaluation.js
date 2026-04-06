@@ -1,6 +1,7 @@
 import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 import Notification from './Notification.js';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 class RequestEvaluation {
 //#region PURCHASE REQUEST
@@ -781,11 +782,12 @@ class RequestEvaluation {
 
 //#region PURCHASE ORDER
 
-    // Helper function to check if user is in comma-separated field
+    // Helper function to check if user is in comma-separated field (case-insensitive)
     static isUserInCommaSeparated(fieldValue, userName) {
         if (!fieldValue || !userName) return false;
-        const names = fieldValue.split(',').map(n => n.trim());
-        return names.includes(userName);
+        const userNameUpper = userName.toUpperCase();
+        const names = fieldValue.split(',').map(n => n.trim().toUpperCase());
+        return names.includes(userNameUpper);
     }
 
     // Get purchase orders for left panel that need confirmation/approval
@@ -808,10 +810,10 @@ class RequestEvaluation {
                     h.DELIVERY_TO as deliveryTo,
                     h.DATENEEDED as dateNeeded,
                     h.CANVASSEDBY as canvassedBy,
-                    h.CONFIRMEDBY_1,
-                    h.DATECONFIRMED_1,
-                    h.CONFIRMEDBY_2,
-                    h.DATECONFIRMED_2,
+                    h.CONFIRMEDBY_1 as confirmedBy_1,
+                    h.DATECONFIRMED_1 as dateConfirmed_1,
+                    h.CONFIRMEDBY_2 as confirmedBy_2,
+                    h.DATECONFIRMED_2 as dateConfirmed_2,
                     h.APPROVEDBY as approvedBy,
                     h.DATEAPPROVED as dateApproved,
                     h.REMARKS as remarks,
@@ -833,20 +835,22 @@ class RequestEvaluation {
                 // No additional WHERE conditions needed - already filtered above
             } else {
                 // Non-admin: Apply role-based filtering
-                // We need to check multiple conditions in SQL to determine user's role
+                // Use case-insensitive matching for user
+                // Both reviewers (confirmedby_1 OR confirmedby_2) can see FOR P.O. CONFIRMATION POs
                 query += ` AND (
-                    -- User is confirmedby_1: confirmedby_1 = current user AND dateconfirmed_1 IS NULL
-                    (h.CONFIRMEDBY_1 LIKE @userName AND h.DATECONFIRMED_1 IS NULL AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
+                    -- Either confirmedby_1 OR confirmedby_2 contains current user in FOR P.O. CONFIRMATION status
+                    (UPPER(h.CONFIRMEDBY_1) LIKE @userName AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
                     OR
-                    -- User is confirmedby_2: confirmedby_2 = current user AND dateconfirmed_1 IS NOT NULL AND dateconfirmed_2 IS NULL
-                    (h.CONFIRMEDBY_2 LIKE @userName AND h.DATECONFIRMED_1 IS NOT NULL AND h.DATECONFIRMED_2 IS NULL AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
+                    (UPPER(h.CONFIRMEDBY_2) LIKE @userName AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
                     OR
-                    -- User is approver: dateconfirmed_1 IS NOT NULL AND dateconfirmed_2 IS NOT NULL
-                    (h.DATECONFIRMED_1 IS NOT NULL AND h.DATECONFIRMED_2 IS NOT NULL AND h.PO_STATUS = 'FOR P.O. APPROVAL' AND h.APPROVEDBY LIKE @userName)
+                    -- User is approver: APPROVEDBY contains current user AND status is FOR P.O. APPROVAL
+                    (UPPER(h.APPROVEDBY) LIKE @userName AND h.PO_STATUS = 'FOR P.O. APPROVAL')
                 )`;
                 
-                // Use LIKE pattern for comma-separated names matching
-                request.input('userName', `%${userName}%`);
+                // Use LIKE pattern for comma-separated names matching (case-insensitive with UPPER)
+                request.input('userName', `%${userName.toUpperCase()}%`);
+                console.log('Non-admin user filter applied with userName:', userName);
+                console.log('Number of parameters:', Object.keys(request.parameters).length);
             }
 
             query += ` GROUP BY h.ROWID, h.PONUMBER, h.PO_STATUS, h.DATECREATED, h.CREATEDBY,
@@ -858,24 +862,28 @@ class RequestEvaluation {
             const result = await request.query(query);
             console.log('PO query result:', result.recordset.length, 'records');
             if (result.recordset.length > 0) {
-                console.log('First PO status:', result.recordset[0].status);
-                console.log('First PO id:', result.recordset[0].id);
+                const firstPO = result.recordset[0];
+                console.log('First PO record: ', {
+                    id: firstPO.id,
+                    status: firstPO.status,
+                    confirmedBy_1: firstPO.confirmedBy_1,
+                    dateConfirmed_1: firstPO.dateConfirmed_1,
+                    confirmedBy_2: firstPO.confirmedBy_2,
+                    dateConfirmed_2: firstPO.dateConfirmed_2,
+                    approvedBy: firstPO.approvedBy,
+                    dateApproved: firstPO.dateApproved
+                });
             }
 
             // For non-admin users, apply additional client-side filtering to ensure exact name matching
             // (since SQL LIKE with wildcards might match partial names)
             if (!isAdmin) {
-                return result.recordset.filter(po => {
-                    // User is confirmedby_1: confirmedby_1 contains current user AND dateconfirmed_1 IS NULL
-                    if (po.status === 'FOR P.O. CONFIRMATION' && !po.dateConfirmed_1) {
-                        if (this.isUserInCommaSeparated(po.confirmedBy_1, userName)) {
-                            return true;
-                        }
-                    }
-                    
-                    // User is confirmedby_2: confirmedby_2 contains current user AND dateconfirmed_1 IS NOT NULL AND dateconfirmed_2 IS NULL
-                    if (po.status === 'FOR P.O. CONFIRMATION' && po.dateConfirmed_1 && !po.dateConfirmed_2) {
-                        if (this.isUserInCommaSeparated(po.confirmedBy_2, userName)) {
+                const filtered = result.recordset.filter(po => {
+                    // Both reviewers (confirmedby_1 OR confirmedby_2) can see PO in FOR P.O. CONFIRMATION status
+                    // regardless of whether confirmation dates are null
+                    if (po.status === 'FOR P.O. CONFIRMATION') {
+                        if (this.isUserInCommaSeparated(po.confirmedBy_1, userName) || 
+                            this.isUserInCommaSeparated(po.confirmedBy_2, userName)) {
                             return true;
                         }
                     }
@@ -889,6 +897,12 @@ class RequestEvaluation {
                     
                     return false;
                 });
+                
+                console.log('Client-side filter - Input records:', result.recordset.length, 'Output records:', filtered.length);
+                if (filtered.length > 0) {
+                    console.log('First filtered PO:', filtered[0].id, filtered[0].status);
+                }
+                return filtered;
             }
 
             return result.recordset;
@@ -1043,89 +1057,105 @@ class RequestEvaluation {
             const confirmedBy2 = checkResult.recordset[0].CONFIRMEDBY_2 || '';
             const dateConfirmed1 = checkResult.recordset[0].DATECONFIRMED_1;
             const dateConfirmed2 = checkResult.recordset[0].DATECONFIRMED_2;
-            
+
             let updateQuery;
             let newStatus = 'FOR P.O. CONFIRMATION';
-            
-            // Check if current user is in CONFIRMEDBY_1 or CONFIRMEDBY_2
-            const isUserInConfirmedBy1 = this.isUserInCommaSeparated(confirmedBy1, confirmBy);
-            const isUserInConfirmedBy2 = this.isUserInCommaSeparated(confirmedBy2, confirmBy);
-            
+
             // Helper function to check if a smalldatetime field is empty
             const isDateEmpty = (dateValue) => {
-                // For smalldatetime: null or undefined indicates empty
-                // Date objects are truthy, so we only check for null/undefined
                 return dateValue === null || dateValue === undefined;
             };
-            
-            // Admin can confirm at any stage (bypass role checks)
-            if (isAdmin) {
-                const isDate1Empty = isDateEmpty(dateConfirmed1);
-                const isDate2Empty = isDateEmpty(dateConfirmed2);
-                
-                if (isDate1Empty) {
-                    // First confirmation - update DATECONFIRMED_1
-                    updateQuery = `
-                        UPDATE [PURCHASE.ORDERHEADER.1]
-                        SET DATECONFIRMED_1 = GETDATE(),
-                            PO_STATUS = @newStatus
-                        WHERE PONUMBER = @poNumber
-                    `;
-                    // Keep status as 'FOR P.O. CONFIRMATION' for second reviewer
-                } else if (isDate2Empty && !isDate1Empty) {
-                    // Second confirmation - update DATECONFIRMED_2
-                    updateQuery = `
-                        UPDATE [PURCHASE.ORDERHEADER.1]
-                        SET DATECONFIRMED_2 = GETDATE(),
-                            PO_STATUS = @newStatus
-                        WHERE PONUMBER = @poNumber
-                    `;
-                    // Change status to 'FOR P.O. APPROVAL' after both confirm
-                    newStatus = 'FOR P.O. APPROVAL';
-                } else {
-                    // Both dates are already filled
-                    throw new Error('Both reviewers have already confirmed this purchase order');
-                }
-            } else if (isUserInConfirmedBy1 && isDateEmpty(dateConfirmed1)) {
-                // User is in CONFIRMEDBY_1 and hasn't confirmed yet
+
+            // Check if user is in CONFIRMEDBY_1 or CONFIRMEDBY_2
+            const isUserInConfirmedBy1 = this.isUserInCommaSeparated(confirmedBy1, confirmBy);
+            const isUserInConfirmedBy2 = this.isUserInCommaSeparated(confirmedBy2, confirmBy);
+
+            // Determine which date field to update
+            if (isUserInConfirmedBy1 && isDateEmpty(dateConfirmed1)) {
+                // User matches CONFIRMEDBY_1 and hasn't confirmed yet
                 updateQuery = `
                     UPDATE [PURCHASE.ORDERHEADER.1]
-                    SET DATECONFIRMED_1 = GETDATE(),
-                        PO_STATUS = @newStatus
+                    SET DATECONFIRMED_1 = GETDATE()
                     WHERE PONUMBER = @poNumber
                 `;
                 // Keep status as 'FOR P.O. CONFIRMATION' for second reviewer
-            } else if (isUserInConfirmedBy2 && !isDateEmpty(dateConfirmed1) && isDateEmpty(dateConfirmed2)) {
-                // User is in CONFIRMEDBY_2, first confirmation done, and hasn't confirmed yet
+            } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed2)) {
+                // User matches CONFIRMEDBY_2 and hasn't confirmed yet
                 updateQuery = `
                     UPDATE [PURCHASE.ORDERHEADER.1]
-                    SET DATECONFIRMED_2 = GETDATE(),
-                        PO_STATUS = @newStatus
+                    SET DATECONFIRMED_2 = GETDATE()
                     WHERE PONUMBER = @poNumber
                 `;
-                // Change status to 'FOR P.O. APPROVAL' after both confirm
-                newStatus = 'FOR P.O. APPROVAL';
+                // Check if both dates are now confirmed before changing status
+                // We'll check after the update
             } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1)) {
-                // User is in CONFIRMEDBY_1 but has already confirmed
                 throw new Error('You have already confirmed this purchase order');
             } else if (isUserInConfirmedBy2 && !isDateEmpty(dateConfirmed2)) {
-                // User is in CONFIRMEDBY_2 but has already confirmed
                 throw new Error('You have already confirmed this purchase order');
             } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed1)) {
-                // User is in CONFIRMEDBY_2 but first confirmation not done yet
                 throw new Error('Waiting for first confirmation before you can confirm');
+            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && isDateEmpty(dateConfirmed2)) {
+                throw new Error('You have already confirmed this purchase order');
             } else {
-                // User is not in either CONFIRMEDBY field and not admin
-                throw new Error('You are not authorized to confirm this purchase order');
+                // User doesn't match either CONFIRMEDBY field - treat as admin ascending order
+                if (isDateEmpty(dateConfirmed1)) {
+                    // Update dateConfirmed_1 first
+                    updateQuery = `
+                        UPDATE [PURCHASE.ORDERHEADER.1]
+                        SET DATECONFIRMED_1 = GETDATE()
+                        WHERE PONUMBER = @poNumber
+                    `;
+                } else if (isDateEmpty(dateConfirmed2)) {
+                    // Update dateConfirmed_2 second
+                    updateQuery = `
+                        UPDATE [PURCHASE.ORDERHEADER.1]
+                        SET DATECONFIRMED_2 = GETDATE()
+                        WHERE PONUMBER = @poNumber
+                    `;
+                } else {
+                    throw new Error('Both reviewers have already confirmed this purchase order');
+                }
             }
-            
+
             // Execute the update query
             await transaction.request()
                 .input('poNumber', poNumber)
                 .input('newStatus', newStatus)
                 .query(updateQuery);
 
+            // Check if both confirmations are done before updating status to FOR P.O. APPROVAL
+            const checkBothQuery = `
+                SELECT DATECONFIRMED_1, DATECONFIRMED_2 FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const checkBothResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(checkBothQuery);
+
+            const dateConf1 = checkBothResult.recordset[0].DATECONFIRMED_1;
+            const dateConf2 = checkBothResult.recordset[0].DATECONFIRMED_2;
+
+            // Only change status to FOR P.O. APPROVAL if both dates are confirmed
+            if (!isDateEmpty(dateConf1) && !isDateEmpty(dateConf2)) {
+                const statusUpdateQuery = `
+                    UPDATE [PURCHASE.ORDERHEADER.1]
+                    SET PO_STATUS = 'FOR P.O. APPROVAL'
+                    WHERE PONUMBER = @poNumber
+                `;
+                await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(statusUpdateQuery);
+                newStatus = 'FOR P.O. APPROVAL';
+            }
+
             await transaction.commit();
+
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-confirmed", {
+                poNumber: poNumber,
+                newStatus: newStatus,
+                confirmedBy: confirmBy
+            });
 
             return {
                 success: true,
@@ -1198,6 +1228,13 @@ class RequestEvaluation {
 
             await transaction.commit();
 
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-approved", {
+                poNumber: poNumber,
+                newStatus: 'P.O. APPROVED',
+                approvedBy: approvedBy
+            });
+
             return {
                 success: true,
                 message: 'Purchase order approved successfully',
@@ -1244,6 +1281,14 @@ class RequestEvaluation {
                 .query(updateQuery);
 
             await transaction.commit();
+
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-rejected", {
+                poNumber: poNumber,
+                newStatus: 'P.O. REJECTED',
+                rejectedBy: rejectedBy,
+                reason: reason
+            });
 
             return {
                 success: result.rowsAffected[0] > 0,

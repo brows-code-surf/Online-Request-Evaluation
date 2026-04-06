@@ -51,21 +51,6 @@ function CanvassingContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [postStatusFilter, setPostStatusFilter] = useState('all');
 
-  // Quick filter options
-  const statusFilters = [
-    { value: 'all', label: 'All Status' },
-    { value: 'PENDING', label: 'Pending' },
-    { value: 'SELECTED', label: 'Selected' },
-    { value: 'NOT SELECTED', label: 'Not Selected' },
-    { value: 'REJECTED', label: 'Rejected' },
-  ];
-
-  const postStatusFilters = [
-    { value: 'all', label: 'All Post Status' },
-    { value: '0', label: 'Not Posted' },
-    { value: '1', label: 'Posted' },
-  ];
-
   // Filter canvassing requests based on search term and filters
   const filteredCanvassingRequests = canvassingRequests.filter((request) => {
     const searchLower = searchTerm.toLowerCase();
@@ -122,7 +107,7 @@ function CanvassingContent() {
   // Function to reload stats data without page refresh
   const reloadStatsData = async () => {
     try {
-      const result = await getCanvassingStats(user);
+      const result = await getCanvassingStats(user, isAdmin ? isAdmin() : false);
       if (result.success) {
         setStats(result.stats);
         return { success: true };
@@ -155,7 +140,7 @@ function CanvassingContent() {
       if (!user?.empName) return;
 
       try {
-        const result = await getCanvassingStats(user);
+const result = await getCanvassingStats(user, isAdmin ? isAdmin() : false);
         if (result.success) {
           setStats(result.stats);
         }
