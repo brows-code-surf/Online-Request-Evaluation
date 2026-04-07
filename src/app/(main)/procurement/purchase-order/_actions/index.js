@@ -2,6 +2,7 @@
 
 import PurchaseOrder from '@/models/PurchaseOrder.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
+import PurchaseRequestDetails from '../../purchase-request/_components/PurchaseRequestDetails';
 
 export async function getAllPurchaseOrders(filters = {}, user = null, isAdmin = false) {
   try {

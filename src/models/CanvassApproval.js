@@ -135,7 +135,7 @@ class CanvassApproval {
                 .input('itemId', itemId)
                 .input('approverName', approverName)
                 .query(approveQuery);
-            
+
             // Check if the approval was successful
             if (result.rowsAffected[0] === 0) {
                 throw new Error('Failed to approve canvassing item');
@@ -149,7 +149,7 @@ class CanvassApproval {
                 .input('itemId', itemId)
                 .query(updateNotSelectedQuery);
 
-            // Update the corresponding purchase request item status to 'QUOTATION APPROVED'
+            // Update the corresponding purchase request item status to 'FOR P.O. PROCESSING'
             if (prCode && rid) {
                 const updatePRQuery = ` UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR P.O.' WHERE REFERENCENO = @prCode AND RID = @rid`;
 
@@ -158,27 +158,21 @@ class CanvassApproval {
                     .input('rid', rid)
                     .query(updatePRQuery);
 
-                // Check if all items for this purchase request are now 'FOR P.O.'
-                const checkAllItemsQuery = `
-                    SELECT COUNT(*) as totalItems, COUNT(CASE WHEN ITEMSTATUS = 'FOR P.O.' THEN 1 END) as poItems
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE REFERENCENO = @prCode
-                `;
+                // Check if all item statuses are at or below FOR P.O. PROCESSING
+                let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
 
                 const checkResult = await connection.request()
                     .input('prCode', prCode)
-                    .query(checkAllItemsQuery);
+                    .query(checkAllItemStatusQuery);
 
-                const { totalItems, poItems } = checkResult.recordset[0];
-                const allItemsArePO = totalItems > 0 && totalItems === poItems;
+                const allStatuses = checkResult.recordset.map(record => record.itemStatus);
+                const advancedStatuses = ['P.O. PROCESSING','FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
 
-                // Only update header to 'PROCESSING' if all items are 'FOR P.O.'
-                if (allItemsArePO) {
-                    const updatePRHQuery = `
-                        UPDATE [PURCHASE.REQUESTHEADER.1]
-                        SET REQUESTSTATUS = 'PROCESSING'
-                        WHERE REFERENCENO = @prCode
-                    `;
+                // Only update header to 'FOR P.O. PROCESSING' if no items have advanced beyond it
+                const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+
+                if (noneHaveAdvancedStatus) {
+                    const updatePRHQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'FOR P.O.' WHERE REFERENCENO = @prCode`;
 
                     await connection.request()
                         .input('prCode', prCode)

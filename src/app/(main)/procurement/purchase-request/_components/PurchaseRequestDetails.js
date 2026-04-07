@@ -15,7 +15,11 @@ const STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
   { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
-  { value: 'PROCESSING', label: 'Processing', color: 'bg-fuchsia-100 text-fuchsia-800' },
+  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
+  { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
+  { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
+  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' }
 ];
 
 const ITEM_STATUS_OPTIONS = [
@@ -25,7 +29,11 @@ const ITEM_STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
   { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
-  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' }
+  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
+  { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
+  { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
+  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' }
 ];
 
 export default function PurchaseRequestDetails({

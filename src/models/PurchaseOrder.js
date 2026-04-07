@@ -61,8 +61,8 @@ class PurchaseOrder {
                 paramIndex++;
             }
 
-            if(isAdmin){
-                
+            if (isAdmin) {
+
             }
             // Apply filters
             if (filters.status) {
@@ -285,10 +285,7 @@ class PurchaseOrder {
             }
 
             // Check if PO number is already taken
-            const checkRefQuery = `
-                SELECT COUNT(*) as count FROM [PURCHASE.ORDERHEADER.1]
-                WHERE PONUMBER = @poNumber
-            `;
+            const checkRefQuery = `SELECT COUNT(*) as count FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
 
             const refCheckResult = await transaction.request()
                 .input('poNumber', poNumber)
@@ -384,6 +381,40 @@ class PurchaseOrder {
             }
 
             console.log(`${detailsData.length} purchase order details inserted`);
+
+            const prCode = detailsData.length > 0 ? detailsData[0].prCode : null;
+
+            if (!prCode) {
+                await transaction.rollback();
+                throw new Error('PR code is required for purchase order creation');
+            }
+
+            let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
+
+            const checkResult = await connection.request()
+                .input('prCode', prCode)
+                .query(checkAllItemStatusQuery);
+
+            const allStatuses = checkResult.recordset.map(record => record.itemStatus);
+            const advancedStatuses = ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
+
+            const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+
+            // Update purchase request item status to P.O. PROCESSING (created but not yet submitted)
+            const updatePurchaseRequestQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. PROCESSING' WHERE RID IN (${detailsData.map((_, index) => `@rid${index}`).join(',')})`;
+
+            const updateRequest = transaction.request();
+            detailsData.forEach((pr, index) => {
+                updateRequest.input(`rid${index}`, pr.rid);
+            });
+            await updateRequest.query(updatePurchaseRequestQuery);
+
+            if (noneHaveAdvancedStatus) {
+                const updatePRHQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'P.O. PROCESSING' WHERE REFERENCENO = @prCode`;
+                await transaction.request()
+                    .input('prCode', prCode)
+                    .query(updatePRHQuery);
+            }
 
             // Insert audit/history log
             const activityQuery = `
@@ -631,12 +662,9 @@ class PurchaseOrder {
             console.log('Transaction started for purchase order posting');
 
             // Check if PO exists and get RIDs
-            const checkQuery = `
-                SELECT h.POSTSTATUS, d.RID
-                FROM [PURCHASE.ORDERHEADER.1] h
-                LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
-                WHERE h.PONUMBER = @poNumber
-            `;
+            const checkQuery = ` SELECT h.POSTSTATUS, d.RID FROM [PURCHASE.ORDERHEADER.1] h 
+                                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
+                                 WHERE h.PONUMBER = @poNumber `;
             const checkResult = await transaction.request()
                 .input('poNumber', poNumber)
                 .query(checkQuery);
@@ -653,13 +681,7 @@ class PurchaseOrder {
             const rids = [...new Set(checkResult.recordset.map(row => row.RID).filter(rid => rid))];
 
             // Update POSTSTATUS to 1
-            const updatePOQuery = `
-                UPDATE [PURCHASE.ORDERHEADER.1]
-                SET POSTSTATUS = 1,
-                    MODIFIEDBY = @modifiedBy,
-                    DATEMODIFIED = GETDATE()
-                WHERE PONUMBER = @poNumber
-            `;
+            const updatePOQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET POSTSTATUS = 1, MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE() WHERE PONUMBER = @poNumber `;
 
             const poResult = await transaction.request()
                 .input('poNumber', poNumber)
@@ -674,27 +696,17 @@ class PurchaseOrder {
             let affectedPrCodes = [];
             if (rids.length > 0) {
                 // First, get the REFERENCENOs (PRCODEs) for the RIDs being updated
-                const getPrCodesQuery = `
-                    SELECT DISTINCT REFERENCENO
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE RID IN (${rids.map((rid, index) => `@rid${index}`).join(',')})
-                `;
+                const getPrCodesQuery = ` SELECT DISTINCT REFERENCENO FROM [PURCHASE.REQUESTDETAILS.1] WHERE RID IN (${rids.map((rid, index) => `@rid${index}`).join(',')}) `;
 
                 const prCodeRequest = transaction.request();
-                rids.forEach((rid, index) => {
-                    prCodeRequest.input(`rid${index}`, rid);
-                });
+                rids.forEach((rid, index) => { prCodeRequest.input(`rid${index}`, rid); });
 
                 const prCodeResult = await prCodeRequest.query(getPrCodesQuery);
                 affectedPrCodes = prCodeResult.recordset.map(row => row.REFERENCENO);
 
                 // Update request item statuses to "P.O. POSTED" where RID matches
                 const ridParameters = rids.map((rid, index) => `@rid${index}`).join(',');
-                const updateRequestQuery = `
-                    UPDATE [PURCHASE.REQUESTDETAILS.1]
-                    SET ITEMSTATUS = 'P.O. POSTED'
-                    WHERE RID IN (${ridParameters})
-                `;
+                const updateRequestQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. POSTED' WHERE RID IN (${ridParameters}) `;
 
                 const request = transaction.request();
                 rids.forEach((rid, index) => {
@@ -703,18 +715,17 @@ class PurchaseOrder {
 
                 await request.query(updateRequestQuery);
                 console.log(`Updated ${rids.length} request items to "P.O. POSTED" status`);
+
+                const updatePurchaseRequestQuery = ` UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. POSTED' WHERE RID IN (${ridParameters})`;
+
+                await transaction.request().query(updatePurchaseRequestQuery);
             }
 
             // Check and update request header status if all items are P.O. POSTED
             for (const prCode of affectedPrCodes) {
                 // Check if all items for this REFERENCENO are P.O. POSTED
-                const checkAllPostedQuery = `
-                    SELECT
-                        COUNT(*) as totalItems,
-                        COUNT(CASE WHEN ITEMSTATUS = 'P.O. POSTED' THEN 1 END) as postedItems
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE REFERENCENO = @prCode
-                `;
+                const checkAllPostedQuery = `SELECT COUNT(*) as totalItems, COUNT(CASE WHEN ITEMSTATUS = 'P.O. POSTED' THEN 1 END) as postedItems
+                                             FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode `;
 
                 const checkResult = await transaction.request()
                     .input('prCode', prCode)
@@ -724,11 +735,7 @@ class PurchaseOrder {
 
                 // If all items are P.O. POSTED, update the request header status
                 if (totalItems > 0 && totalItems === postedItems) {
-                    const updateHeaderQuery = `
-                        UPDATE [PURCHASE.REQUESTHEADER.1]
-                        SET REQUESTSTATUS = 'P.O. POSTED'
-                        WHERE REFERENCENO = @prCode
-                    `;
+                    const updateHeaderQuery = ` UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'P.O. POSTED' WHERE REFERENCENO = @prCode `;
 
                     await transaction.request()
                         .input('prCode', prCode)
@@ -739,10 +746,7 @@ class PurchaseOrder {
             }
 
             // Log activity for posted order
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @modifiedBy, GETDATE())
-            `;
+            const activityQuery = ` INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED) VALUES (@activity, @modifiedBy, GETDATE()) `;
             await transaction.request()
                 .input('activity', `Purchase Order ${poNumber} posted by ${posterName}`)
                 .input('modifiedBy', posterName)
@@ -896,12 +900,40 @@ class PurchaseOrder {
                 throw new Error('Failed to update purchase order status');
             }
 
+
+            // Update purchase request item status to FOR P.O. CONFIRMATION
+            const updateItemStatusQuery = `UPDATE rd SET rd.ITEMSTATUS = 'FOR P.O. CONFIRMATION' FROM [PURCHASE.REQUESTDETAILS.1] rd
+                                           INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
+            await connection.request()
+                .input('poNumber', poNumber)
+                .query(updateItemStatusQuery);
+
+            const prCode = detailsData.length > 0 ? detailsData[0].prCode : null;
+            
+            if (!prCode) {
+                await transaction.rollback();
+                throw new Error('PR code is required for purchase order creation');
+            }
+
+            let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
+            const checkStatus = await connection.request()
+                .input('prCode', prCode)
+                .query(checkAllItemStatusQuery);
+
+            const allStatuses = checkStatus.recordset.map(record => record.itemStatus);
+            const advancedStatuses = ['FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
+
+            const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+
+            if (noneHaveAdvancedStatus) {
+                const updatePRHQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'FOR P.O. CONFIRMATION' WHERE REFERENCENO = @prCode`;
+                await connection.request()
+                    .input('prCode', prCode)
+                    .query(updatePRHQuery);
+            }
+
             // Get confirmedBy for notifications
-            const getConfirmedByQuery = `
-                SELECT CONFIRMEDBY_1, CONFIRMEDBY_2
-                FROM [PURCHASE.ORDERHEADER.1]
-                WHERE PONUMBER = @poNumber
-            `;
+            const getConfirmedByQuery = `SELECT CONFIRMEDBY_1, CONFIRMEDBY_2 FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
             const confirmedByResult = await connection.request()
                 .input('poNumber', poNumber)
                 .query(getConfirmedByQuery);
@@ -911,10 +943,8 @@ class PurchaseOrder {
             const confirmedBy = [confirmedBy_1, confirmedBy_2].filter(Boolean).join(', ');
 
             // Log activity
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @submitterName, GETDATE())
-            `;
+            const activityQuery = ` INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED) 
+                                    VALUES (@activity, @submitterName, GETDATE())`;
             await connection.request()
                 .input('activity', `Purchase Order ${poNumber} submitted for processing by ${submitterName}`)
                 .input('submitterName', submitterName)

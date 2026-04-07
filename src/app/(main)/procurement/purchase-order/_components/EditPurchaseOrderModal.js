@@ -343,7 +343,7 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
         isPerAdvise: poData.isPerAdvise,
         remarks: poData.remarks,
         budgetNoList: poData.isBudgetNo ? 'Budget No. ' + selectedItems.map(item => `${item.itemNumber}-${item.budgetCode}`).filter(Boolean).join(', ') : '',
-        prList: poData.isPrNo ? 'PR No. ' + selectedItems.map(item => `${item.itemNumber}-${item.prCode}`).filter(Boolean).join(', ') : '',
+        prList: poData.isPrNo ? [...new Set(selectedItems.map(item => item.prCode).filter(Boolean))].join(', ') : '',
         subtotal: selectedItems.reduce((sum, item) => sum + (item.unitCost * item.qtyOrder), 0),
         contactPerson: poData.contactPerson
       };
