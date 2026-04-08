@@ -11,7 +11,6 @@ import {
   getApprovedBy,
   getDeliveryLocations,
   getSupplierContactPersons,
-  postPurchaseOrder,
   submitPurchaseOrderForProcessing
 } from '../_actions';
 import ItemSelectionModal from './ItemSelectionModal';

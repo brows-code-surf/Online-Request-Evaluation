@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/utils/authContext';
 import { SkeletonRequestEvaluationDetail } from '../../../../_components/skeletonLoader';
 import ConfirmModal from '../../../_components/confirmModal';
 import RejectRequestModal from '../../../_components/rejectRequestModal';
+import RejectOptionModal from './RejectOptionModal';
 import SuccessModal from '../../../_components/successModal';
 import currencyData from '@/utils/currency.json';
 
@@ -11,10 +13,12 @@ function PurchaseOrderDetails({
     selectedApproval,
     approvalDetails,
     detailsLoading,
-    darkMode,
+    darkMode: propDarkMode,
     isAdmin,
     showApproveModal,
     showRejectModal,
+    showRejectOptionModal,
+    rejectionType,
     showSuccessModal,
     rejectionRemarks,
     successMessage,
@@ -26,12 +30,15 @@ function PurchaseOrderDetails({
     handleRejectConfirm,
     setShowApproveModal,
     setShowRejectModal,
+    setShowRejectOptionModal,
     setShowSuccessModal,
     setRejectionRemarks,
     setSelectedApproval
 }) {
+    const { darkMode: darkModeContext } = useAuth();
     const [showActionMenu, setShowActionMenu] = useState(false);
     const menuRef = useRef(null);
+    const darkMode = propDarkMode !== undefined ? propDarkMode : darkModeContext;
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -513,6 +520,7 @@ function PurchaseOrderDetails({
 
             <RejectRequestModal
                 isOpen={showRejectModal}
+                rejectionType={rejectionType}
                 remarks={rejectionRemarks}
                 onRemarksChange={setRejectionRemarks}
                 onConfirm={handleRejectConfirm}
@@ -521,6 +529,17 @@ function PurchaseOrderDetails({
                     setRejectionRemarks('');
                 }}
                 isLoading={isSubmitting}
+            />
+
+            <RejectOptionModal
+                isOpen={showRejectOptionModal}
+                onConfirm={(type) => {
+                    setShowRejectOptionModal(false);
+                    setShowRejectModal(true);
+                }}
+                onCancel={() => setShowRejectOptionModal(false)}
+                isLoading={isSubmitting}
+                darkMode={darkMode}
             />
 
             <SuccessModal

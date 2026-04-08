@@ -93,24 +93,6 @@ export async function updatePurchaseOrder(poNumber, headerData, detailsData, upd
   }
 }
 
-export async function postPurchaseOrder(poNumber, posterName) {
-  try {
-    const result = await PurchaseOrder.postPurchaseOrder(poNumber, posterName);
-
-    if (result.success) {
-      return {
-        success: true,
-        message: result.message
-      };
-    } else {
-      return { success: false, message: result.message };
-    }
-  } catch (error) {
-    console.error('Error posting purchase order:', error);
-    return { success: false, message: 'Failed to post purchase order' };
-  }
-}
-
 export async function submitPurchaseOrderForProcessing(poNumber, submitterName) {
    try {
      const result = await PurchaseOrder.submitPurchaseOrderForProcessing(poNumber, submitterName);

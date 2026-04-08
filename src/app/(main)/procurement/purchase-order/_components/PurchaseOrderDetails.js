@@ -8,7 +8,7 @@ import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 import currencyData from '@/utils/currency.json';
 
-function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
+function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
   const [posting, setPosting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +47,24 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
         return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'P.O. REJECTED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'C.O.Q. REJECTED FROM P.O.':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'P.R. REJECTED FROM P.O.':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'DELIVERED':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'P.O. PROCESSING':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'PARTIALLY SERVED':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'SERVED':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -107,9 +125,6 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
     }
   };
 
-  const handlePost = () => {
-    setShowPostModal(true);
-  };
 
   const handleConfirmPost = async () => {
     setPosting(true);
@@ -147,10 +162,10 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
 
   const currencyDisplay = (currencyCode) => {
     if (!currencyCode) return '';
-    try{
+    try {
       const currency = currencyData[currencyCode];
       return currency ? currency.symbol_native : currencyCode;
-    }catch (error){
+    } catch (error) {
       console.error('Error formatting currency:', error);
       return currencyCode;
     }
@@ -173,7 +188,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
   const { header, details } = purchaseOrder;
 
   const isEditDisabled = loading || actionLoading ||
-    ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED'].includes(header.poStatus);
+    ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. REJECTED', 'C.O.Q. REJECTED FROM P.O.', 'P.R. REJECTED FROM P.O.', 'CANCELLED'].includes(header.poStatus);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -240,33 +255,21 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                     </svg>
                     Edit
                   </button>
-                  {header.poStatus === 'P.O. APPROVED' ? (
-                    <button
-                      onClick={() => handlePost()}
-                      disabled={loading || actionLoading}
-                      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                        }`}
-                      aria-label="Post purchase order"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      Post
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSubmit()}
-                      disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
-                      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                        }`}
-                      aria-label="Submit purchase order for processing"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      {header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
-                    </button>
-                  )}
+
+                  <button
+                    onClick={() => handleSubmit()}
+                    disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
+                    hidden={header.poStatus === 'P.O. APPROVED' || header.poStatus === 'P.O. REJECTED' || header.poStatus === 'C.O.Q. REJECTED FROM P.O.' || header.poStatus === 'P.R. REJECTED FROM P.O.' || header.poStatus === 'CANCELLED'}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                      }`}
+                    aria-label="Submit purchase order for processing"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    {header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
+                  </button>
+
                   <button
                     onClick={() => handleDelete()}
                     disabled={isEditDisabled}
@@ -685,12 +688,7 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${!item.itemStatus || item.itemStatus === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : item.itemStatus === 'DELIVERED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                        }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
                         {item.itemStatus || 'PENDING'}
                       </span>
                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -767,14 +765,9 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
                       Status
                     </div>
                     <div className="flex flex-col space-y-1">
-                      <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${!item.itemStatus || item.itemStatus === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : item.itemStatus === 'DELIVERED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                        }`}>
-                        {item.itemStatus || 'PENDING'}
-                      </span>
+                        <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
+                          {item.itemStatus || 'PENDING'}
+                        </span>
                       <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         Served: {item.qtyServed || 0}
                       </div>
@@ -808,18 +801,6 @@ function PurchaseOrderDetails({ purchaseOrder, onPost, onDelete, onEdit, onDataR
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowSubmitModal(false)}
         isLoading={submitting}
-        confirmButtonColor="green"
-      />
-
-      {/* Post Modal */}
-      <ConfirmModal
-        isOpen={showPostModal}
-        title="Confirm Post"
-        message="Are you sure you want to post this purchase order? This action cannot be undone."
-        confirmButtonText="Post Order"
-        onConfirm={handleConfirmPost}
-        onCancel={() => setShowPostModal(false)}
-        isLoading={posting}
         confirmButtonColor="green"
       />
 

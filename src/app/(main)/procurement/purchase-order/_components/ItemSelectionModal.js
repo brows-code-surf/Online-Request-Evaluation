@@ -74,7 +74,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
         setAvailableItems(result.items.map((item, index) => ({
           ...item,
           uniqueId: `${item.pqCode}-${item.rid || index}`,
-          unitCost: item.finalPrice || item.bidPrice || item.offeredPrice || 0,
+          unitCost: item.finalPrice || 0,
           qtyOrder: item.remaining || 0
         })));
       } else {

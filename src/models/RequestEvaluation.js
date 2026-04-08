@@ -41,6 +41,7 @@ class RequestEvaluation {
                             PRD.ITEMDESC,
                             PRD.UOFM,
                             ISNULL(PRD.QUANTITY, 0) as QUANTITY,
+                            ISNULL(PRD.QTYCANCEL, 0) as QTYCANCEL,
                             PRD.BUDGETCODE,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
@@ -785,6 +786,11 @@ class RequestEvaluation {
     // Helper function to check if user is in comma-separated field (case-insensitive)
     static isUserInCommaSeparated(fieldValue, userName) {
         if (!fieldValue || !userName) return false;
+        // Ensure userName is a string
+        if (typeof userName !== 'string') {
+            console.error('isUserInCommaSeparated: userName is not a string:', userName);
+            return false;
+        }
         const userNameUpper = userName.toUpperCase();
         const names = fieldValue.split(',').map(n => n.trim().toUpperCase());
         return names.includes(userNameUpper);
@@ -1025,7 +1031,7 @@ class RequestEvaluation {
     }
 
     // Confirm purchase order
-    static async confirmPurchaseOrder(poNumber, confirmBy, isAdmin = false) {
+    static async confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin = false) {
         let connection = null;
         let transaction = null;
 
@@ -1067,6 +1073,13 @@ class RequestEvaluation {
             const isUserInConfirmedBy1 = this.isUserInCommaSeparated(confirmedBy1, confirmBy);
             const isUserInConfirmedBy2 = this.isUserInCommaSeparated(confirmedBy2, confirmBy);
 
+            const selectRid = ` SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+            const selectRidResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(selectRid);
+            const ridFromDetails = selectRidResult.recordset[0]?.RID;
+            console.log(`RID from order details for PO ${poNumber}:`, ridFromDetails);
+
             // Determine which date field to update
             if (isUserInConfirmedBy1 && isDateEmpty(dateConfirmed1)) {
                 // User matches CONFIRMEDBY_1 and hasn't confirmed yet
@@ -1079,13 +1092,13 @@ class RequestEvaluation {
                 // Check if both dates are now confirmed before changing status
                 // We'll check after the update
 
-            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1)) {
+            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && !isAdmin) {
                 throw new Error('You have already confirmed this purchase order');
-            } else if (isUserInConfirmedBy2 && !isDateEmpty(dateConfirmed2)) {
+            } else if (isUserInConfirmedBy2 && !isDateEmpty(dateConfirmed2) && !isAdmin) {
                 throw new Error('You have already confirmed this purchase order');
-            } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed1)) {
+            } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed1) && !isAdmin) {
                 throw new Error('Waiting for first confirmation before you can confirm');
-            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && isDateEmpty(dateConfirmed2)) {
+            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && isDateEmpty(dateConfirmed2) && !isAdmin) {
                 throw new Error('You have already confirmed this purchase order');
             } else {
                 // User doesn't match either CONFIRMEDBY field - treat as admin ascending order
@@ -1120,7 +1133,7 @@ class RequestEvaluation {
             // 2. First date is confirmed and there's no second reviewer
             const hasSecondReviewer = confirmedBy2 && confirmedBy2.trim() !== '';
             const shouldTransitionToApproval = hasSecondReviewer
-                ? (!isDateEmpty(dateConf1) && confirmedBy1 !== '' && !isDateEmpty(dateConf2) && confirmedBy2 !== '' )  // Both confirmed with 2 reviewers
+                ? (!isDateEmpty(dateConf1) && confirmedBy1 !== '' && !isDateEmpty(dateConf2) && confirmedBy2 !== '')  // Both confirmed with 2 reviewers
                 : (confirmedBy2 === '');  // Single reviewer - just need first confirmation
 
             if (shouldTransitionToApproval) {
@@ -1135,22 +1148,43 @@ class RequestEvaluation {
                 await transaction.request()
                     .input('poNumber', poNumber)
                     .query(statusUpdateQuery);
+                
+                const itemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE PONUMBER = @poNumber `;
+                await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(itemStatusQuery);
+
                 newStatus = 'FOR P.O. APPROVAL';
 
                 console.log(`PO ${poNumber} PR codes to process:`, prCodes);
                 for (const prCode of prCodes) {
                     try {
-                        console.log(`Processing PR ${prCode} for PO ${poNumber}`);
-                        const updateItemStatusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE REFERENCENO = @prCode`;
+                        console.log(`Processing PR ${prCode} and RID ${rid} for PO ${poNumber}`);
 
-                        await transaction.request()
+                        // Get all RID values for this PO from order details
+                        const getRidsQuery = `SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE = @prCode`;
+                        const ridsResult = await transaction.request()
+                            .input('poNumber', poNumber)
                             .input('prCode', prCode)
-                            .query(updateItemStatusQuery);
+                            .query(getRidsQuery);
 
-                        let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
+                        const rids = ridsResult.recordset.map(r => r.RID);
+                        console.log(`RIDs for PR ${prCode}:`, rids);
 
+                        // Update each RID individually
+                        for (const ridToUpdate of rids) {
+                            console.log(`Updating item with RID ${ridToUpdate} to FOR P.O. APPROVAL`);
+                            const updateItemStatusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE RID = @rid`;
+
+                            const updateResult = await transaction.request()
+                                .input('rid', ridToUpdate)
+                                .query(updateItemStatusQuery);
+                            console.log(`Updated item with RID ${ridToUpdate}, rows affected:`, updateResult.rowsAffected);
+                        }
+
+                        let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
                         const checkResult = await transaction.request()
-                            .input('prCode', prCode)
+                            .input('poNumber', poNumber)
                             .query(checkAllItemStatusQuery);
 
                         const allStatuses = checkResult.recordset.map(record => record.itemStatus);
@@ -1249,6 +1283,11 @@ class RequestEvaluation {
                 .input('poNumber', poNumber)
                 .query(updateQuery);
 
+            const updateItemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'P.O. APPROVED' WHERE poNumber = @poNumber `;
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .query(updateItemStatusQuery);
+
             // Get PR codes from ORDERDETAILS
             const getPrCodesQuery = `SELECT DISTINCT PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE IS NOT NULL AND PRCODE != ''`;
             const prCodesResult = await transaction.request()
@@ -1258,10 +1297,31 @@ class RequestEvaluation {
             const prCodes = prCodesResult.recordset.map(r => r.PRCODE);
 
             for (const prCode of prCodes) {
-                let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
+                // Get all RID values for this PO from order details
+                const getRidsQuery = `SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE = @prCode`;
+                const ridsResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .input('prCode', prCode)
+                    .query(getRidsQuery);
+
+                const rids = ridsResult.recordset.map(r => r.RID);
+                console.log(`RIDs for PR ${prCode}:`, rids);
+
+                // Update each RID individually
+                for (const ridToUpdate of rids) {
+                    console.log(`Updating item with RID ${ridToUpdate} to P.O. APPROVED`);
+                    const updateItemStatusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. APPROVED' WHERE RID = @rid`;
+
+                    const updateResult = await transaction.request()
+                        .input('rid', ridToUpdate)
+                        .query(updateItemStatusQuery);
+                    console.log(`Updated item with RID ${ridToUpdate}, rows affected:`, updateResult.rowsAffected);
+                }
+
+                let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
 
                 const checkStatus = await transaction.request()
-                    .input('prCode', prCode)
+                    .input('poNumber', poNumber)
                     .query(checkAllItemStatusQuery);
 
                 const allStatuses = checkStatus.recordset.map(record => record.itemStatus);
@@ -1304,7 +1364,7 @@ class RequestEvaluation {
     }
 
     // Reject purchase order
-    static async rejectPurchaseOrder(poNumber, rejectedBy, reason) {
+    static async rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType = 'PO') {
         let connection = null;
         let transaction = null;
 
@@ -1314,23 +1374,70 @@ class RequestEvaluation {
             transaction = new sql.Transaction(connection);
             await transaction.begin();
 
+            let newStatus = 'P.O. REJECTED';
+
+            // Handle different rejection types
+            switch (rejectionType) {
+                case 'PR':
+                    newStatus = 'P.R. REJECTED FROM P.O.';
+                    break;
+                case 'PO':
+                default:
+                    newStatus = 'P.O. REJECTED';
+                    break;
+            }
+
             // Update the PO status to rejected
-            const updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'P.O. REJECTED',
-                                  CANCELREMARKS = @reason, DATEMODIFIED = GETDATE(), MODIFIEDBY = @rejectedBy
+            const updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = @newStatus,
+                                  REJECTREMARKS = @reason, DATEMODIFIED = GETDATE(), MODIFIEDBY = @rejectedBy
                                   WHERE PONUMBER = @poNumber `;
 
             const result = await transaction.request()
                 .input('poNumber', poNumber)
                 .input('reason', reason)
                 .input('rejectedBy', rejectedBy)
+                .input('newStatus', newStatus)
                 .query(updateQuery);
 
+            // Update each item's QTYCANCEL to its own QTYORDER value
+            const updateItemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYCANCEL = QTYORDER WHERE PONUMBER = @poNumber `;
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .input('newStatus', newStatus)
+                .query(updateItemStatusQuery);
+
+            // Get PO details for related updates
+            const getDetailsQuery = `SELECT PQCODE, RID, QTYORDER FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+            const detailsResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(getDetailsQuery);
+
+            if (detailsResult.recordset.length > 0) {
+                switch (rejectionType) {
+                    case 'PR':
+                        // Update each request detail item with its corresponding QTYORDER
+                        for (const detail of detailsResult.recordset) {
+                            if (detail.RID) {
+                                const updatePrQuery = ` UPDATE [PURCHASE.REQUESTDETAILS.1] 
+                                                        SET ITEMSTATUS = @newStatus, 
+                                                            QTYCANCEL = @itemQtyCancel 
+                                                        WHERE RID = @rid `;
+                                const ridRequest = transaction.request();
+                                ridRequest.input('newStatus', newStatus);
+                                ridRequest.input('itemQtyCancel', detail.QTYORDER || 0);
+                                ridRequest.input('rid', detail.RID);
+                                await ridRequest.query(updatePrQuery);
+                            }
+                        }
+                        break;
+                }
+            }
             await transaction.commit();
 
             // Broadcast the update for real-time UI
             broadcastRequestEvaluationUpdate("po-rejected", {
                 poNumber: poNumber,
-                newStatus: 'P.O. REJECTED',
+                newStatus: newStatus,
                 rejectedBy: rejectedBy,
                 reason: reason
             });

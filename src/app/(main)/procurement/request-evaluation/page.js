@@ -12,6 +12,7 @@ import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
 import PurchaseOrderDetails from './_components/PurchaseOrderDetails';
+import RejectOptionModal from './_components/RejectOptionModal';
 
 function RequestEvaluationContent() {
     //#region EVENTS AND STATES
@@ -35,6 +36,8 @@ function RequestEvaluationContent() {
     const [filterEndDate, setFilterEndDate] = useState('');
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showRejectOptionModal, setShowRejectOptionModal] = useState(false);
+    const [rejectionType, setRejectionType] = useState('');
     const [rejectionRemarks, setRejectionRemarks] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -305,7 +308,20 @@ function RequestEvaluationContent() {
                 console.log('PO Status for approval (normalized):', poStatus);
                 
                 if (poStatus === 'FOR P.O. CONFIRMATION') {
-                    result = await confirmPurchaseOrder(selectedApproval.id, user.empName, isAdmin());
+                    // Get RID from the first item in the PO details
+                    const rid = selectedApproval.details?.[0]?.rid;
+                    if (!rid) {
+                        console.error('No RID found in PO details');
+                        setSuccessMessage({
+                            title: 'Confirmation Error',
+                            message: 'Could not find reference number for this purchase order. Please refresh and try again.'
+                        });
+                        setShowSuccessModal(true);
+                        setIsSubmitting(false);
+                        setShowApproveModal(false);
+                        return;
+                    }
+                    result = await confirmPurchaseOrder(selectedApproval.id, rid, user.empName, isAdmin());
                 } else if (poStatus === 'FOR P.O. APPROVAL') {
                     result = await approvePurchaseOrder(selectedApproval.id, user.empName);
                 } else {
@@ -315,7 +331,35 @@ function RequestEvaluationContent() {
                         message: `Cannot approve purchase order with status: ${poStatus}. Expected 'FOR P.O. CONFIRMATION' or 'FOR P.O. APPROVAL'.`
                     });
                     setShowSuccessModal(true);
+                    setIsSubmitting(false);
+                    setShowApproveModal(false);
+                    return;
                 }
+            } else {
+                // It's a purchase request (not a purchase order)
+                const currentStatus = selectedApproval.status;
+                console.log('Purchase request status for approval:', currentStatus);
+                
+                if (currentStatus === 'FOR CONFIRMATION' || currentStatus === 'FOR REQUEST APPROVAL' || currentStatus === 'FOR PURCHASING LEAD TIME') {
+                    result = await approveEvaluation(selectedApproval.id, user.empName, currentStatus);
+                } else {
+                    console.error('Unknown request status:', currentStatus);
+                    setSuccessMessage({
+                        title: 'Approval Error',
+                        message: `Cannot approve request with status: ${currentStatus}. Expected 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', or 'FOR PURCHASING LEAD TIME'.`
+                    });
+                    setShowSuccessModal(true);
+                    setIsSubmitting(false);
+                    setShowApproveModal(false);
+                    return;
+                }
+            }
+
+            // If result is undefined (e.g., when status didn't match), skip to finally
+            if (!result) {
+                setIsSubmitting(false);
+                setShowApproveModal(false);
+                return;
             }
 
             console.log('Approval result:', result);
@@ -337,6 +381,13 @@ function RequestEvaluationContent() {
                 } else {
                     const details = await fetchEvaluationDetails(selectedApproval.id);
                     setApprovalDetails(details);
+                    // Also refresh the selected approval to update its status in the left panel
+                    // The status comes from the header (REQUESTSTATUS) which is returned in the first item
+                    if (details && details.length > 0) {
+                        const newStatus = details[0].REQUESTSTATUS || details[0].ITEMSTATUS || selectedApproval.status;
+                        const updatedApproval = { ...selectedApproval, status: newStatus };
+                        setSelectedApproval(updatedApproval);
+                    }
                 }
             } else if (result) {
                 // Result exists but doesn't have expected properties
@@ -363,6 +414,13 @@ function RequestEvaluationContent() {
     };
 
     const handleRejectClick = () => {
+        setRejectionType('');
+        setShowRejectOptionModal(true);
+    };
+
+    const handleRejectOptionSelect = (type) => {
+        setRejectionType(type);
+        setShowRejectOptionModal(false);
         setShowRejectModal(true);
     };
 
@@ -374,7 +432,7 @@ function RequestEvaluationContent() {
             let result;
             if (selectedApproval.header) {
                 // It's a purchase order
-                result = await rejectPurchaseOrder(selectedApproval.id, user.empName, rejectionRemarks);
+                result = await rejectPurchaseOrder(selectedApproval.id, user.empName, rejectionRemarks, rejectionType);
             } else {
                 // It's a purchase request
                 result = await rejectEvaluation(selectedApproval.id, user.empName, rejectionRemarks);
@@ -395,6 +453,7 @@ function RequestEvaluationContent() {
             setIsSubmitting(false);
             setShowRejectModal(false);
             setRejectionRemarks('');
+            setRejectionType('');
         }
     };
 
@@ -569,6 +628,8 @@ function RequestEvaluationContent() {
                             isAdmin={isAdmin}
                             showApproveModal={showApproveModal}
                             showRejectModal={showRejectModal}
+                            showRejectOptionModal={showRejectOptionModal}
+                            rejectionType={rejectionType}
                             showSuccessModal={showSuccessModal}
                             rejectionRemarks={rejectionRemarks}
                             successMessage={successMessage}
@@ -582,6 +643,7 @@ function RequestEvaluationContent() {
                             handleSelectApproval={handleSelectApproval}
                             setShowApproveModal={setShowApproveModal}
                             setShowRejectModal={setShowRejectModal}
+                            setShowRejectOptionModal={setShowRejectOptionModal}
                             setShowSuccessModal={setShowSuccessModal}
                             setRejectionRemarks={setRejectionRemarks}
                             setSelectedApproval={setSelectedApproval}
@@ -616,6 +678,14 @@ function RequestEvaluationContent() {
                             setSelectedApproval={setSelectedApproval}
                         />
                     )}
+
+                    <RejectOptionModal
+                        isOpen={showRejectOptionModal}
+                        onConfirm={handleRejectOptionSelect}
+                        onCancel={() => setShowRejectOptionModal(false)}
+                        isLoading={isSubmitting}
+                        darkMode={darkMode}
+                    />
                 </div>
             </div>
 

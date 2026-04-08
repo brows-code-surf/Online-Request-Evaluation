@@ -545,9 +545,9 @@ export async function fetchPurchaseOrderDetails(poNumber) {
     }
 }
 
-export async function confirmPurchaseOrder(poNumber, confirmBy, isAdmin = false) {
+export async function confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin = false) {
     try {
-        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, confirmBy, isAdmin);
+        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin);
         return result;
     } catch (error) {
         console.error('Error confirming purchase order:', error);
@@ -565,9 +565,9 @@ export async function approvePurchaseOrder(poNumber, approvedBy) {
     }
 }
 
-export async function rejectPurchaseOrder(poNumber, rejectedBy, reason) {
+export async function rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType = null) {
     try {
-        const result = await RequestEvaluation.rejectPurchaseOrder(poNumber, rejectedBy, reason);
+        const result = await RequestEvaluation.rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType);
         return result;
     } catch (error) {
         console.error('Error rejecting purchase order:', error);

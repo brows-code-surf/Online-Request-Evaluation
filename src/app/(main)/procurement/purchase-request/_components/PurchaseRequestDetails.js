@@ -527,6 +527,7 @@ export default function PurchaseRequestDetails({
                   <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'} ${showItemStatusColumn ? 'w-80' : ' '}`}>Item Description</th>
                   <th className={`px-1 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'} w-15`}>UOFM</th>
                   <th className={`px-2 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Quantity</th>
+                  <th className={`px-2 py-3 text-right text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Qty Cancel</th>
                   <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Budget Code</th>
                   <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Date Needed</th>
                   {showItemStatusColumn && (
@@ -543,6 +544,7 @@ export default function PurchaseRequestDetails({
                       <td className={`px-2 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} ${showItemStatusColumn ? 'w-80' : ' '}`} title={item.itemDescription}>{item.itemDescription || '-'}</td>
                       <td className={`px-1 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} w-15`}>{item.unitOfMeasure || '-'}</td>
                       <td className={`px-2 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.quantity || 0}</td>
+                      <td className={`px-2 py-3 text-sm ${darkMode ? 'text-white' : 'text-gray-900'} text-right font-semibold`}>{item.qtyCancel || 0}</td>
                       <td className={`px-2 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.budgetCode || '-'}</td>
                       <td className={`px-2 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>
                         {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}
@@ -559,7 +561,7 @@ export default function PurchaseRequestDetails({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={showItemStatusColumn ? 8 : 7} className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <td colSpan={showItemStatusColumn ? 9 : 8} className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       No items found for this request
                     </td>
                   </tr>
@@ -605,6 +607,12 @@ export default function PurchaseRequestDetails({
                           <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>UOFM</p>
                           <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.unitOfMeasure || '-'}</p>
                         </div>
+                        {showItemStatusColumn && item.qtyCancel > 0 && (
+                          <div>
+                            <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-600'} font-medium`}>Qty Cancel</p>
+                            <p className={`text-sm font-semibold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{item.qtyCancel || 0}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -161,7 +161,7 @@ class PurchaseRequest {
 
             // Get details
             const detailsQuery = `
-                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, LINETYPE FROM [PURCHASE.REQUESTDETAILS.1]
+                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, QTYCANCEL, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, LINETYPE FROM [PURCHASE.REQUESTDETAILS.1]
                 WHERE REFERENCENO = @referenceNo
                 ORDER BY ROWID
             `;
@@ -205,6 +205,7 @@ class PurchaseRequest {
                     rid: detail.RID,
                     unitOfMeasure: detail.UOFM,
                     quantity: detail.QUANTITY,
+                    qtyCancel: detail.QTYCANCEL,
                     budgetCode: detail.BUDGETCODE,
                     remarks: detail.REMARKS,
                     dateNeeded: detail.DATENEEDED,

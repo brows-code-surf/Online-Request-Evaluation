@@ -158,11 +158,11 @@ class CanvassApproval {
                     .input('rid', rid)
                     .query(updatePRQuery);
 
-                // Check if all item statuses are at or below FOR P.O. PROCESSING
-                let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode`;
+                // Check only items with the same RID (same request item)
+                let checkAllItemStatusQuery = `SELECT ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] WHERE RID = @rid`;
 
                 const checkResult = await connection.request()
-                    .input('prCode', prCode)
+                    .input('rid', rid)
                     .query(checkAllItemStatusQuery);
 
                 const allStatuses = checkResult.recordset.map(record => record.itemStatus);
