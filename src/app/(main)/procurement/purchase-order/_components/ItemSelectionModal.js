@@ -150,42 +150,39 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="flex items-start justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={onClose}></div>
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose}></div>
         </div>
 
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`inline-block align-bottom rounded-2xl text-left shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[95vh] max-h-[95vh] relative z-10 flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex justify-between">
-                <div className="flex-1"></div>
-                <div className="text-center">
-                  <h3 className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Approved Canvasses
-                  </h3>
-                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Select Items for Purchase Order
-                  </p>
-                </div>
-                <div className="flex-1 flex justify-end">
+            <div className={`px-2 sm:px-4 py-2 sm:py-3 border-b flex-shrink-0 ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className={`text-sm sm:text-base font-semibold truncate ${darkMode ? 'text-white' : 'text-white'}`}>
+                  Approved Canvasses
+                </h3>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'}`}
+                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'}`}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
+              <p className={`text-xs sm:text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-white/70'}`}>
+                Select Items for Purchase Order
+              </p>
             </div>
 
             {/* Content */}
-            <div className="px-6 py-4 flex-1 overflow-y-auto">
+            <div className="px-4 py-1 flex-1 overflow-hidden flex flex-col">
               {/* Supplier Header */}
               {selectedSupplier && (
                 <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-blue-900/50 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
@@ -204,114 +201,162 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
               )}
 
               {/* Controls */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="filterAssignedToModal"
-                      checked={filterByAssignedTo}
-                      onChange={(e) => setFilterByAssignedTo(e.target.checked)}
-                      className="rounded"
-                    />
-                    <label htmlFor="filterAssignedToModal" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      My Items Only
+              <div className={`mb-4 ${darkMode ? 'bg-gray-700/30 border border-gray-700/50' : 'bg-gray-50 border border-gray-200'} rounded-lg p-3`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className={`flex items-center gap-2.5 cursor-pointer group`}>
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          id="filterAssignedToModal"
+                          checked={filterByAssignedTo}
+                          onChange={(e) => setFilterByAssignedTo(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${filterByAssignedTo ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                        <svg
+                          className="absolute inset-0 m-auto w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                        My Items Only
+                      </span>
+                    </label>
+                    <label className={`flex items-center gap-2.5 cursor-pointer group ${filteredAvailableItems.length === 0 ? 'opacity-50' : ''}`}>
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          id="selectAllModal"
+                          checked={currentSelectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          disabled={filteredAvailableItems.length === 0}
+                          className="sr-only peer"
+                        />
+                        <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 ${darkMode ? 'border-gray-600 peer-checked:bg-blue-600' : 'border-gray-300 peer-checked:bg-blue-600'} ${currentSelectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                        <svg className={`absolute top-0.5 left-0.5 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                        Select All ({filteredAvailableItems.length} items)
+                      </span>
                     </label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="selectAllModal"
-                      checked={currentSelectedItems.length === filteredAvailableItems.length && filteredAvailableItems.length > 0}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      disabled={filteredAvailableItems.length === 0}
-                      className="rounded disabled:opacity-50"
-                    />
-                    <label htmlFor="selectAllModal" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} ${filteredAvailableItems.length === 0 ? 'opacity-50' : ''}`}>
-                      Select All ({filteredAvailableItems.length} items)
-                    </label>
-                  </div>
+                  {currentSelectedItems.length > 0 && (
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {currentSelectedItems.length} selected
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Search Input */}
-              <div className="mb-4">
-                <div className="relative">
+              <div className={`mb-4 ${darkMode ? 'bg-gray-700/30 border border-gray-700/50' : 'bg-gray-50 border border-gray-200'} rounded-lg`}>
+                <div className="relative group">
                   <input
                     type="text"
                     placeholder="Search by PR#, COQ code, Canvass By, Item Code, Description"
                     value={tableSearchTerm}
                     onChange={(e) => setTableSearchTerm(e.target.value)}
-                    className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'}`}
+                    className={`w-full px-3 py-1.5 pl-10 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-0 ${darkMode
+                      ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:bg-gray-700'
+                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:shadow-sm'
+                      }`}
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
+                  {tableSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setTableSearchTerm('')}
+                      className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Items Table */}
               {loading ? (
-                <div className="border rounded-md overflow-hidden">
-                  <div className="max-h-96 overflow-y-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <div className="border-1 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex-1">
+                  <div className="h-full overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                         <tr>
-
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            Select
+                          </th>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PR No
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             COQ CODE
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             COQ POST DATE
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             CANVASS BY
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             ITEM CODE | DESCRIPTION
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             UNIT COST (CURRENCY) / U OF M
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PURCHASE TYPE
                           </th>
                         </tr>
                       </thead>
-                      <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                        {Array(7).fill().map((_, index) => (
-                          <tr key={index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-4" />
+                      <tbody className={`${darkMode ? 'bg-gray-800/50 divide-gray-700' : 'bg-white divide-gray-100'}`}>
+                        {Array(6).fill().map((_, index) => (
+                          <tr key={index} className={`${darkMode ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50'}`}>
+                            <td className="px-4 py-4">
+                              <SkeletonLoader height="h-5" width="w-5" />
                             </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-12" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-20" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-20" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <SkeletonLoader height="h-4" width="w-24" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="space-y-1">
-                                <SkeletonLoader height="h-4" width="w-32" />
-                                <SkeletonLoader height="h-3" width="w-24" />
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-4">
                               <SkeletonLoader height="h-4" width="w-16" />
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <SkeletonLoader height="h-4" width="w-28" />
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <SkeletonLoader height="h-4" width="w-20" />
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <SkeletonLoader height="h-4" width="w-20" />
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <SkeletonLoader height="h-4" width="w-24" />
+                                <SkeletonLoader height="h-3" width="w-16" />
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <SkeletonLoader height="h-4" width="w-20" />
+                            </td>
+                            <td className="px-4 py-4">
                               <SkeletonLoader height="h-4" width="w-12" />
                             </td>
                           </tr>
@@ -321,104 +366,120 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                   </div>
                 </div>
               ) : availableItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
-                  </svg>
-                  <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    No canvassing items available for purchase order
+                <div className={`text-center py-10 rounded-xl ${darkMode ? 'bg-gray-700/20 border border-gray-700/50' : 'bg-gray-50 border-1 border-gray-200'}`}>
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
+                    </svg>
+                  </div>
+                  <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    No canvassing items available
+                  </p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Try adjusting your filters or check back later
                   </p>
                 </div>
               ) : (
-                <div className="border rounded-md overflow-hidden">
-                  <div className="max-h-96 overflow-y-auto overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <div className="border-1 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex-1">
+                  <div className="h-full overflow-y-auto overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                         <tr>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             Select
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PR No
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             COQ Code
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             COQ POST DATE
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             CANVASS BY
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             ITEM CODE | DESCRIPTION
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             UNIT COST (CURRENCY) / U OF M
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                             PURCHASE TYPE
                           </th>
                         </tr>
                       </thead>
-                      <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-                        {filteredAvailableItems.map((item, index) => (
-                          <tr
-                            key={item.uniqueId}
-                            onClick={() => handleItemSelect(item, !currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId))}
-                            className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                            <td className="px-2 sm:px-4 py-3">
-                              <input
-                                type="checkbox"
-                                checked={currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId)}
-                                onChange={(e) => handleItemSelect(item, e.target.checked)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="rounded"
-                              />
-                            </td>
-                            <td className="px-2 sm:px-4 py-3">
-                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.prCode}
-                              </div>
-                            </td>
-                            <td className="px-2 sm:px-4 py-3">
-                              <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.pqCode}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.canvassDate ? new Date(item.canvassDate).toISOString().split('T')[0] : '-'}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.canvassedBy || '-'}
-                              </div>
-                            </td>
-                            <td className="px-2 sm:px-4 py-3">
-                              <div>
-                                <div className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {item.itemNumber}
+                      <tbody className={`${darkMode ? 'bg-gray-800/50 divide-gray-700' : 'bg-white divide-gray-100'}`}>
+                        {filteredAvailableItems.map((item, index) => {
+                          const isSelected = currentSelectedItems.some(selected => selected.uniqueId === item.uniqueId);
+                          return (
+                            <tr
+                              key={item.uniqueId}
+                              onClick={() => handleItemSelect(item, !isSelected)}
+                              className={`cursor-pointer transition-all duration-200 ${isSelected
+                                ? (darkMode ? 'bg-blue-900/30 border-l-4 border-l-blue-500' : 'bg-blue-50 border-l-4 border-l-blue-500')
+                                : (darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50')
+                                }`}>
+                              <td className="px-2 sm:px-4 py-2">
+                                <div className="relative">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="sr-only peer"
+                                  />
+                                  <div className={`w-4 h-4 rounded-md border-2 transition-all duration-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 pointer-events-none ${darkMode ? 'border-gray-600' : 'border-gray-300'} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}></div>
+                                  <svg className={`absolute top-0.5 left-0.5 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
                                 </div>
-                                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
-                                  {item.itemDescription}
+                              </td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {item.prCode}
                                 </div>
-                              </div>
-                            </td>
-
-                            <td className="px-2 sm:px-4 py-3">
-                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {currencyDisplay(item.currency)}{item.remaining} ({item.currency}) / {item.uofm}
-                              </span>
-                            </td>
-                            <td className="px-2 sm:px-4 py-3">
-                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.purchaseType || '-'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <div className={`text-[10px] sm:text-xs font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {item.pqCode}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  {item.canvassDate ? new Date(item.canvassDate).toISOString().split('T')[0] : '-'}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  {item.canvassedBy || '-'}
+                                </div>
+                              </td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <div>
+                                  <div className={`text-[10px] sm:text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {item.itemNumber}
+                                  </div>
+                                  <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    {item.itemDescription}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {currencyDisplay(item.currency)}{item.remaining} ({item.currency}) / {item.uofm}
+                                </span>
+                              </td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <span className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {item.purchaseType || '-'}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -427,20 +488,23 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
             </div>
 
             {/* Footer */}
-            <div className={`px-6 py-4 border-t flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
+            <div className={`px-2 sm:px-4 py-2 sm:py-3 border-t flex-shrink-0 ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-                <div className="text-sm text-gray-500 text-center sm:text-left">
+                <div className={`text-sm text-center sm:text-left ${darkMode ? 'text-gray-400' : 'text-white/70'}`}>
                   {currentSelectedItems.length > 0 && (
-                    <span>{currentSelectedItems.length} item{currentSelectedItems.length !== 1 ? 's' : ''} selected</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                      {currentSelectedItems.length} item{currentSelectedItems.length !== 1 ? 's' : ''} selected
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 order-2 sm:order-1 ${darkMode
-                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    className={`px-4 py-2 border rounded-lg text-sm font-medium transition-all duration-200 order-2 sm:order-1 ${darkMode
+                      ? 'border-white/20 text-white/80 hover:bg-white/10 hover:text-white'
+                      : 'border-white/30 text-white/90 hover:bg-white/20 hover:text-white'
                       }`}
                   >
                     Cancel
@@ -449,7 +513,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                   <button
                     type="button"
                     onClick={handleConfirmSelection}
-                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 order-1 sm:order-2"
+                    className="px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm font-medium text-white hover:bg-white/30 transition-all duration-200 order-1 sm:order-2"
                   >
                     Confirm Selection
                   </button>

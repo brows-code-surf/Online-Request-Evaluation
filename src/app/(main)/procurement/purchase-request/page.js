@@ -460,6 +460,24 @@ function PurchaseRequestContent() {
     ),
   });
 
+  // Real-time updates from canvass-approval page
+  useSocketMultiple("canvass-approval-broadcast", {
+    "canvass-approved": useCallback(
+      (data) => {
+        console.log("Canvass approved event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+    "canvass-rejected": useCallback(
+      (data) => {
+        console.log("Canvass rejected event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+  });
+
   if (loading) {
     return (
       <div className={`flex flex-col h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>

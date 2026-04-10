@@ -15,3 +15,9 @@ export function joinRoom(room) {
   const socket = initSocket();
   socket.emit("join", room);
 }
+
+export function emitEvent(event, data, room = "canvass-approval-broadcast") {
+  const socket = initSocket();
+  joinRoom(room);
+  socket.emit(event, data);
+}

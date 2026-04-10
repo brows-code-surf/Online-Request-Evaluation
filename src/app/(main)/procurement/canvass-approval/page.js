@@ -310,11 +310,25 @@ function CanvassApprovalContent() {
     currentPage * itemsPerPage
   );
 
-  // Real-time updates from canvassing page
-  useSocketMultiple("canvassing-posted", {
-    "canvassing-posted": useCallback(
+  // Real-time updates from canvassing page and approval actions
+  useSocketMultiple("canvass-approval-broadcast", {
+    "canvass-posted": useCallback(
       (data) => {
-        console.log("Canvassing posted event received in approval page:", data);
+        console.log("Canvass posted event received:", data);
+        reloadCanvassingItemsData();
+      },
+      []
+    ),
+    "canvass-approved": useCallback(
+      (data) => {
+        console.log("Canvass approved event received:", data);
+        reloadCanvassingItemsData();
+      },
+      []
+    ),
+    "canvass-rejected": useCallback(
+      (data) => {
+        console.log("Canvass rejected event received:", data);
         reloadCanvassingItemsData();
       },
       []

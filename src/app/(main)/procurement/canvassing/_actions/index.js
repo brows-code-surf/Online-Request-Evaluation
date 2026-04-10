@@ -3,7 +3,6 @@
 import Canvassing from '@/models/Canvassing.js';
 import Budget from '@/models/Budget.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
-import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 export async function getAllCanvassingRequests(filters = {}, user = null, isAdmin = false) {
   try {
@@ -81,16 +80,6 @@ export async function updateCanvassingRequest(pqCode, headerData, detailsData, u
 export async function postCanvassingRequest(pqCode, posterName) {
   try {
     const result = await Canvassing.postCanvassingRequest(pqCode, posterName);
-
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-posted", {
-        pqCode: pqCode,
-        posterName: posterName,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     return result;
   } catch (error) {
     console.error('Error posting canvassing request:', error);
@@ -112,15 +101,6 @@ export async function deleteCanvassingRequest(pqCode, deleterName) {
 
     // Delete from database (implement in Canvassing model)
     const result = await Canvassing.deleteCanvassingRequest(pqCode, deleterName);
-
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-deleted", {
-        pqCode: pqCode,
-        deleterName: deleterName,
-        timestamp: new Date().toISOString()
-      });
-    }
 
     return result;
   } catch (error) {

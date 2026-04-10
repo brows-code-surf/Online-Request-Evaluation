@@ -104,6 +104,28 @@ export default function PurchaseRequestDetails({
     ),
   });
 
+  // Real-time updates from canvass-approval page
+  useSocketMultiple("canvass-approval-broadcast", {
+    "canvass-approved": useCallback(
+      (data) => {
+        console.log("Canvass approved event received in purchase request details:", data);
+        setTimeout(() => {
+          onDataRefresh && onDataRefresh();
+        }, 1000);
+      },
+      [onDataRefresh]
+    ),
+    "canvass-rejected": useCallback(
+      (data) => {
+        console.log("Canvass rejected event received in purchase request details:", data);
+        setTimeout(() => {
+          onDataRefresh && onDataRefresh();
+        }, 1000);
+      },
+      [onDataRefresh]
+    ),
+  });
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {

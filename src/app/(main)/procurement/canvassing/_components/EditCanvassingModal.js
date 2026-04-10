@@ -671,7 +671,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                               >
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative" onClick={(e) => { e.stopPropagation(); handleItemSelect(item, !isSelected); }}>
                                       <input
                                         type="checkbox"
                                         checked={isSelected}
@@ -776,7 +776,7 @@ function EditCanvassingModal({ isOpen, onClose, darkMode, user, canvassingData, 
                                       }`}
                                     onClick={() => handleItemSelect(item, !isSelected)}
                                   >
-                                    <td className="px-2 sm:px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-2 sm:px-4 py-2" onClick={(e) => { e.stopPropagation(); handleItemSelect(item, !isSelected); }}>
                                       <div className="relative">
                                         <input
                                           type="checkbox"

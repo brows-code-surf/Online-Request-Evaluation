@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../../../utils/authContext';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import ProtectedRoute from '@/utils/protectedRoute';
 import HeaderNavBar from '@/app/_components/headerNavBar';
 import SuccessModal from '@/app/(main)/_components/successModal';
@@ -118,6 +119,24 @@ function CanvassingContent() {
       return { success: false };
     }
   };
+
+  // Real-time updates from canvass-approval page
+  useSocketMultiple("canvass-approval-broadcast", {
+    "canvass-approved": useCallback(
+      (data) => {
+        console.log("Canvass approved event received:", data);
+        reloadCanvassingRequestsData();
+      },
+      [user?.empName]
+    ),
+    "canvass-rejected": useCallback(
+      (data) => {
+        console.log("Canvass rejected event received:", data);
+        reloadCanvassingRequestsData();
+      },
+      [user?.empName]
+    ),
+  });
 
   useEffect(() => {
     const loadCanvassingRequests = async () => {

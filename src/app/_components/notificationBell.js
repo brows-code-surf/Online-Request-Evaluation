@@ -151,31 +151,30 @@ export const NotificationBell = forwardRef((props, ref) => {
                 left-0
                 sm:left-auto
                 sm:top-full
-                sm:mt-2
+                sm:mt-3
                 w-full
                 sm:w-96
                 md:w-80
                 max-h-[70vh]
-                sm:max-h-96
-                sm:rounded-lg
+                sm:max-h-[28rem]
+                sm:rounded-xl
                 rounded-t-lg
-                sm:shadow-xl
                 shadow-2xl
                 sm:border
                 border-t
                 sm:border-t
                 overflow-hidden
-                ${darkMode ? 'bg-gray-800' : 'bg-white'}
+                ${darkMode ? 'bg-gray-900' : 'bg-white'}
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
                 z-[9999]
               `}
     >
 
-      <div className={`p-3 sm:p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <h3 className={`text-base sm:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Notifications</h3>
+      <div className={`px-4 py-3.5 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
+        <h3 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Notifications</h3>
       </div>
 
-      <div className="max-h-[calc(70vh-80px)] sm:max-h-[calc(24rem-64px)] md:max-h-[calc(24rem-64px)] overflow-y-auto">
+      <div className="max-h-[calc(70vh-80px)] sm:max-h-[calc(28rem-64px)] md:max-h-[calc(28rem-64px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(3)].map((_, index) => (
@@ -194,27 +193,27 @@ export const NotificationBell = forwardRef((props, ref) => {
             <div
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
-              className={`px-3 sm:px-4 py-2 sm:py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} cursor-pointer transition ${!notification.isRead ? (darkMode ? "bg-blue-900/50" : "bg-blue-50") : ""
+              className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} ${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} cursor-pointer transition duration-150 ease-in-out ${!notification.isRead ? (darkMode ? "bg-blue-900/30" : "bg-blue-50/70") : ""
                 }`}
             >
-              <div className="flex items-start gap-2 sm:gap-3">
+                <div className="flex items-start gap-3">
                 <div
-                  className={`w-2 h-2 rounded-full mt-1.5 sm:mt-2 flex-shrink-0 ${!notification.isRead ? "bg-blue-600" : (darkMode ? "bg-gray-600" : "bg-gray-300")
+                  className={`w-2.5 h-2.5 rounded-full mt-2 flex-shrink-0 ${!notification.isRead ? "bg-blue-500 ring-2 ring-blue-500/30" : (darkMode ? "bg-gray-500" : "bg-gray-400")
                     }`}
                 ></div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-800'} font-medium truncate`}>
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'} font-semibold`}>
                     {notification.title}
                   </p>
 
-                  <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mt-0.5 sm:mt-1 line-clamp-2`}>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
                     {notification.description}
                   </p>
 
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5 sm:mt-1`}>
+                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-1.5`}>
                     {timeAgo(new Date(notification.dateCreated))}
-                    {notification.createdBy && ` • by ${notification.createdBy}`}
+                    {notification.createdBy && <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}> • by {notification.createdBy}</span>}
                   </p>
                 </div>
               </div>

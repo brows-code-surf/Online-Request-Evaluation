@@ -385,13 +385,28 @@ class Canvassing {
 
             console.log('Activity log inserted');
 
-            // COMMIT TRANSACTION - All operations succeeded
+// Commit transaction - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
 
+            // Emit socket event for real-time update (only for Save & Post)
+            if (shouldPost) {
+              try {
+                if (global.io) {
+                  global.io.to('canvass-approval-broadcast').emit('canvass-posted', {
+                    pqCode,
+                    postedBy: creatorName,
+                    date: new Date().toISOString()
+                  });
+                }
+              } catch (socketError) {
+                console.error('Error emitting socket event:', socketError);
+              }
+            }
+
             return {
-                pqCode,
-                success: true
+              pqCode,
+              success: true
             };
 
         } catch (error) {
@@ -618,13 +633,26 @@ class Canvassing {
 
             console.log('Activity log inserted');
 
-            // COMMIT TRANSACTION - All operations succeeded
+// COMMIT TRANSACTION - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
 
+            // Emit socket event for real-time update
+            try {
+              if (global.io) {
+                global.io.to('canvass-approval-broadcast').emit('canvass-posted', {
+                  pqCode,
+                  postedBy: posterName,
+                  date: new Date().toISOString()
+                });
+              }
+            } catch (socketError) {
+              console.error('Error emitting socket event:', socketError);
+            }
+
             return {
-                success: true,
-                message: 'Canvassing request posted successfully'
+              success: true,
+              message: 'Canvassing request posted successfully'
             };
         } catch (error) {
             console.error('Error posting canvassing request:', error);

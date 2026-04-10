@@ -68,6 +68,10 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [isDeliveryMode, setIsDeliveryMode] = useState(true); // true = Delivery, false = Pick-up
   const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
   const [showSaveAndPostConfirmModal, setShowSaveAndPostConfirmModal] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [docTypeSearch, setDocTypeSearch] = useState('');
+  const [reviewBySearch, setReviewBySearch] = useState('');
+  const [approvalBySearch, setApprovalBySearch] = useState('');
 
   // Load suppliers, payment terms, PO number, and dropdown data
   useEffect(() => {
@@ -289,6 +293,10 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedPaymentTerm('');
         setContactPersons([]);
         setIsDeliveryMode(true);
+        setLocationSearch('');
+        setDocTypeSearch('');
+        setReviewBySearch('');
+        setApprovalBySearch('');
         setPoData({
           poNumber: '',
           remarks: '',
@@ -412,6 +420,10 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         setSelectedPaymentTerm('');
         setContactPersons([]);
         setIsDeliveryMode(true);
+        setLocationSearch('');
+        setDocTypeSearch('');
+        setReviewBySearch('');
+        setApprovalBySearch('');
         setPoData({
           poNumber: '',
           remarks: '',
@@ -453,6 +465,10 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       setShowPaymentTermDropdown(false);
       setContactPersons([]);
       setIsDeliveryMode(true);
+      setLocationSearch('');
+      setDocTypeSearch('');
+      setReviewBySearch('');
+      setApprovalBySearch('');
       setPoData({
         poNumber: '',
         remarks: '',
@@ -845,8 +861,9 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                       <div className="relative">
                         <input
                           type="text"
-                          value={poData.deliveryTo}
+                          value={locationSearch}
                           onChange={(e) => {
+                            setLocationSearch(e.target.value);
                             setPoData(prev => ({ ...prev, deliveryTo: e.target.value }));
                           }}
                           onFocus={() => setShowDeliveryToDropdown(true)}
@@ -868,28 +885,31 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         {showDeliveryToDropdown && (
                           <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                             }`}>
-                            {deliveryLocations.map((location) => (
-                              <div
-                                key={location.id}
-                                onClick={() => {
-                                  setPoData(prev => ({ ...prev, deliveryTo: location.name }));
-                                  setShowDeliveryToDropdown(false);
-                                }}
-                                className={`px-3 py-2 cursor-pointer ${darkMode
-                                  ? 'text-white hover:bg-gray-600'
-                                  : 'text-gray-900 hover:bg-gray-100'
-                                  }`}
-                              >
-                                {location.name}
-                              </div>
-                            ))}
+                            {deliveryLocations
+                              .filter(location => location.name.toLowerCase().includes(locationSearch.toLowerCase()))
+                              .map((location) => (
+                                <div
+                                  key={location.id}
+                                  onClick={() => {
+                                    setPoData(prev => ({ ...prev, deliveryTo: location.name }));
+                                    setLocationSearch(location.name);
+                                    setShowDeliveryToDropdown(false);
+                                  }}
+                                  className={`px-3 py-2 cursor-pointer ${darkMode
+                                    ? 'text-white hover:bg-gray-600'
+                                    : 'text-gray-900 hover:bg-gray-100'
+                                    }`}
+                                >
+                                  {location.name}
+                                </div>
+                              ))}
                           </div>
                         )}
                       </div>
                     ) : (
                       <input
                         type="text"
-                        value={poData.deliveryTo}
+                        value={poData.deliveryTo || ''}
                         onChange={(e) => {
                           setPoData(prev => ({ ...prev, deliveryTo: e.target.value }));
                         }}
@@ -908,8 +928,11 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     <div className="relative">
                       <input
                         type="text"
-                        value={poData.docType}
-                        onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
+                        value={docTypeSearch}
+                        onChange={(e) => {
+                          setDocTypeSearch(e.target.value);
+                          setPoData(prev => ({ ...prev, docType: e.target.value }));
+                        }}
                         onFocus={() => setShowDocTypeDropdown(true)}
                         onBlur={() => setTimeout(() => setShowDocTypeDropdown(false), 200)}
                         className={`w-full px-3 py-2.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}
@@ -927,18 +950,21 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                       </button>
                       {showDocTypeDropdown && (
                         <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
-                          {DOC_TYPE_OPTIONS.map((docType) => (
-                            <div
-                              key={docType}
-                              onClick={() => {
-                                setPoData(prev => ({ ...prev, docType: docType }));
-                                setShowDocTypeDropdown(false);
-                              }}
-                              className={`px-3 py-2 cursor-pointer ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
-                            >
-                              {docType}
-                            </div>
-                          ))}
+                          {DOC_TYPE_OPTIONS
+                            .filter(docType => docType.toLowerCase().includes(docTypeSearch.toLowerCase()))
+                            .map((docType) => (
+                              <div
+                                key={docType}
+                                onClick={() => {
+                                  setPoData(prev => ({ ...prev, docType: docType }));
+                                  setDocTypeSearch(docType);
+                                  setShowDocTypeDropdown(false);
+                                }}
+                                className={`px-3 py-2 cursor-pointer ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
+                              >
+                                {docType}
+                              </div>
+                            ))}
                         </div>
                       )}
                     </div>
@@ -977,6 +1003,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                           ))}
                           <input
                             type="text"
+                            value={reviewBySearch}
+                            onChange={(e) => setReviewBySearch(e.target.value)}
                             onFocus={() => setShowConfirmedByDropdown(true)}
                             onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
                             className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
@@ -997,7 +1025,11 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     {showConfirmedByDropdown && (
                       <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
                         {confirmedByOptions
-                          .filter(option => !poData.confirmedBy.includes(option.name) && poData.confirmedBy.length < 2)
+                          .filter(option => 
+                            !poData.confirmedBy.includes(option.name) && 
+                            poData.confirmedBy.length < 2 &&
+                            option.name.toLowerCase().includes(reviewBySearch.toLowerCase())
+                          )
                           .map((option) => (
                             <div
                               key={option.id}
@@ -1006,6 +1038,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                                   ...prev,
                                   confirmedBy: [...prev.confirmedBy, option.name]
                                 }));
+                                setReviewBySearch('');
                                 setShowConfirmedByDropdown(false);
                               }}
                               className={`px-3 py-2 cursor-pointer ${darkMode
@@ -1026,10 +1059,8 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     <div className="relative">
                       <input
                         type="text"
-                        value={poData.approvedBy}
-                        onChange={(e) => {
-                          setPoData(prev => ({ ...prev, approvedBy: e.target.value }));
-                        }}
+                        value={approvalBySearch}
+                        onChange={(e) => setApprovalBySearch(e.target.value)}
                         onFocus={() => setShowApprovedByDropdown(true)}
                         onBlur={() => setTimeout(() => setShowApprovedByDropdown(false), 200)}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
@@ -1050,21 +1081,24 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                     {showApprovedByDropdown && (
                       <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                         }`}>
-                        {approvedByOptions.map((option) => (
-                          <div
-                            key={option.id}
-                            onClick={() => {
-                              setPoData(prev => ({ ...prev, approvedBy: option.name }));
-                              setShowApprovedByDropdown(false);
-                            }}
-                            className={`px-3 py-2 cursor-pointer ${darkMode
-                              ? 'text-white hover:bg-gray-600'
-                              : 'text-gray-900 hover:bg-gray-100'
-                              }`}
-                          >
-                            {option.name}
-                          </div>
-                        ))}
+                        {approvedByOptions
+                          .filter(option => option.name.toLowerCase().includes(approvalBySearch.toLowerCase()))
+                          .map((option) => (
+                            <div
+                              key={option.id}
+                              onClick={() => {
+                                setPoData(prev => ({ ...prev, approvedBy: option.name }));
+                                setApprovalBySearch(option.name);
+                                setShowApprovedByDropdown(false);
+                              }}
+                              className={`px-3 py-2 cursor-pointer ${darkMode
+                                ? 'text-white hover:bg-gray-600'
+                                : 'text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                              {option.name}
+                            </div>
+                          ))}
                       </div>
                     )}
                   </div>

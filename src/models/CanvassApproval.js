@@ -190,6 +190,21 @@ class CanvassApproval {
                 .input('approverName', approverName)
                 .query(activityQuery);
 
+            // Emit socket event for real-time update
+            try {
+                if (global.io) {
+                    global.io.to('canvass-approval-broadcast').emit('canvass-approved', {
+                        itemId,
+                        approvedBy: approverName,
+                        prCode,
+                        rid,
+                        date: new Date().toISOString()
+                    });
+                }
+            } catch (socketError) {
+                console.error('Error emitting socket event:', socketError);
+            }
+
             return {
                 success: true,
                 message: 'Item approved successfully'
@@ -235,6 +250,20 @@ class CanvassApproval {
                 .input('activity', `Canvassing item ${itemId} rejected by ${rejectorName}${rejectReason ? ': ' + rejectReason : ''}`)
                 .input('rejectorName', rejectorName)
                 .query(activityQuery);
+
+            // Emit socket event for real-time update
+            try {
+                if (global.io) {
+                    global.io.to('canvass-approval-broadcast').emit('canvass-rejected', {
+                        itemId,
+                        rejectedBy: rejectorName,
+                        rejectReason,
+                        date: new Date().toISOString()
+                    });
+                }
+            } catch (socketError) {
+                console.error('Error emitting socket event:', socketError);
+            }
 
             return {
                 success: true,

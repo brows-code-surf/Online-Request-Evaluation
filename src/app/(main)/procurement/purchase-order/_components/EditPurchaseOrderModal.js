@@ -64,6 +64,10 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
   const [showContactPersonDropdown, setShowContactPersonDropdown] = useState(false);
   const [showDocTypeDropdown, setShowDocTypeDropdown] = useState(false);
   const [isDeliveryMode, setIsDeliveryMode] = useState(true); // true = Delivery, false = Pick-up
+  const [locationSearch, setLocationSearch] = useState('');
+  const [docTypeSearch, setDocTypeSearch] = useState('');
+  const [reviewBySearch, setReviewBySearch] = useState('');
+  const [approvalBySearch, setApprovalBySearch] = useState('');
 
   // Load initial data when modal opens or purchaseOrder changes
   useEffect(() => {
@@ -112,6 +116,12 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
     setSelectedSupplier(header.vendName || '');
     setSelectedVendorId(header.vendorId || '');
     setSelectedPaymentTerm(header.pymtrmid || '');
+
+    // Initialize search states
+    setLocationSearch(header.deliveryTo || '');
+    setDocTypeSearch(header.refDocType || '');
+    setReviewBySearch('');
+    setApprovalBySearch(header.approvedBy || '');
 
     // Load contact persons for the supplier
     if (header.vendorId) {
@@ -419,6 +429,10 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
       setShowPaymentTermDropdown(false);
       setContactPersons([]);
       setIsDeliveryMode(true);
+      setLocationSearch('');
+      setDocTypeSearch('');
+      setReviewBySearch('');
+      setApprovalBySearch('');
       setPoData({
         poNumber: '',
         remarks: '',
@@ -449,45 +463,58 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
   if (!isOpen || !purchaseOrder) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={handleClose}></div>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="flex items-end sm:items-center justify-center min-h-screen p-0 sm:p-4">
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
 
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl w-full mx-4 sm:mx-auto h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`relative w-full sm:w-full md:w-[90%] lg:w-[85%] xl:w-[80%] max-w-7xl h-[95vh] sm:h-[85vh] md:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
             {/* Header */}
-            <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-              <div className="flex items-center justify-between">
-                <div className="text-left">
-                  <h3 className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                    Edit Purchase Order
-                  </h3>
+            <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-white to-gray-50'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`p-2 rounded-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                    <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className={`text-lg sm:text-xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Edit Purchase Order
+                    </h3>
+                  </div>
                 </div>
-                <div className="flex-1 flex justify-end items-center">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {poData.poNumber && (
-                    <p className={`text-2xl font-bold text-blue-800 mr-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                    <span className={`hidden sm:inline-flex px-3 py-1.5 text-2xl font-bold rounded-full ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                       {poData.poNumber}
-                    </p>
+                    </span>
                   )}
                   <button
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'} disabled:opacity-50`}
+                    className={`p-2 rounded-lg transition-colors ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} disabled:opacity-50`}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
+              {/* PO Number for mobile */}
+              {poData.poNumber && (
+                <div className="sm:hidden mt-2">
+                  <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${darkMode ? 'bg-blue-900/60 text-blue-300' : 'bg-blue-100 text-blue-800'}`}>
+                    {poData.poNumber}
+                  </span>
+                </div>
+              )}
             </div>
             {/* Scrollable Content */}
-            <div className="px-10 overflow-y-auto flex-1">
-              <div className="space-y-6">
-              <h4 className={`text-lg font-medium mb-3 mt-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6">
+              <div className="space-y-5 sm:space-y-6 pb-4">
+              <h4 className={`text-base sm:text-lg font-semibold mb-2 sm:mb-3 mt-3 sm:mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 Purchase Order Header
               </h4>
 
@@ -799,8 +826,9 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                         <div className="relative">
                           <input
                             type="text"
-                            value={poData.deliveryTo}
+                            value={locationSearch}
                             onChange={(e) => {
+                              setLocationSearch(e.target.value);
                               setPoData(prev => ({ ...prev, deliveryTo: e.target.value }));
                             }}
                             onFocus={() => setShowDeliveryToDropdown(true)}
@@ -822,21 +850,24 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                           {showDeliveryToDropdown && (
                             <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                               }`}>
-                              {deliveryLocations.map((location) => (
-                                <div
-                                  key={location.id}
-                                  onClick={() => {
-                                    setPoData(prev => ({ ...prev, deliveryTo: location.name }));
-                                    setShowDeliveryToDropdown(false);
-                                  }}
-                                  className={`px-3 py-2 cursor-pointer ${darkMode
-                                    ? 'text-white hover:bg-gray-600'
-                                    : 'text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                >
-                                  {location.name}
-                                </div>
-                              ))}
+                              {deliveryLocations
+                                .filter(location => location.name.toLowerCase().includes(locationSearch.toLowerCase()))
+                                .map((location) => (
+                                  <div
+                                    key={location.id}
+                                    onClick={() => {
+                                      setPoData(prev => ({ ...prev, deliveryTo: location.name }));
+                                      setLocationSearch(location.name);
+                                      setShowDeliveryToDropdown(false);
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer ${darkMode
+                                      ? 'text-white hover:bg-gray-600'
+                                      : 'text-gray-900 hover:bg-gray-100'
+                                      }`}
+                                  >
+                                    {location.name}
+                                  </div>
+                                ))}
                             </div>
                           )}
                         </div>
@@ -863,11 +894,14 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                       <div className="relative">
                         <input
                           type="text"
-                          value={poData.docType}
-                          onChange={(e) => setPoData(prev => ({ ...prev, docType: e.target.value }))}
+                          value={docTypeSearch}
+                          onChange={(e) => {
+                            setDocTypeSearch(e.target.value);
+                            setPoData(prev => ({ ...prev, docType: e.target.value }));
+                          }}
                           onFocus={() => setShowDocTypeDropdown(true)}
                           onBlur={() => setTimeout(() => setShowDocTypeDropdown(false), 200)}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}
+                          className={`w-full px-3 py-2.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}
                             `}
                           placeholder="Select doc type"
                         />
@@ -887,18 +921,21 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                               if (poData.docType && !allOptions.includes(poData.docType)) {
                                 allOptions.unshift(poData.docType);
                               }
-                              return allOptions.map((docType) => (
-                                <div
-                                  key={docType}
-                                  onClick={() => {
-                                    setPoData(prev => ({ ...prev, docType: docType }));
-                                    setShowDocTypeDropdown(false);
-                                  }}
-                                  className={`px-3 py-2 cursor-pointer ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
-                                >
-                                  {docType}
-                                </div>
-                              ));
+                              return allOptions
+                                .filter(docType => docType.toLowerCase().includes(docTypeSearch.toLowerCase()))
+                                .map((docType) => (
+                                  <div
+                                    key={docType}
+                                    onClick={() => {
+                                      setPoData(prev => ({ ...prev, docType: docType }));
+                                      setDocTypeSearch(docType);
+                                      setShowDocTypeDropdown(false);
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer ${darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-900 hover:bg-gray-100'}`}
+                                  >
+                                    {docType}
+                                  </div>
+                                ));
                             })()}
                           </div>
                         )}
@@ -941,10 +978,12 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                           ))}
                           <input
                             type="text"
+                            value={reviewBySearch}
+                            onChange={(e) => setReviewBySearch(e.target.value)}
                             onFocus={() => setShowConfirmedByDropdown(true)}
                             onBlur={() => setTimeout(() => setShowConfirmedByDropdown(false), 200)}
                             className={`flex-1 min-w-[100px] outline-none ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                            placeholder={poData.confirmedBy.length === 0 ? "Select for review by (max 2)" : poData.confirmedBy.length < 2 ? "Select second reviewer" : ""}
+                            placeholder={poData.confirmedBy.length === 0 ? "Select for confirmation by (max 2)" : poData.confirmedBy.length < 2 ? "Select second confirmer" : ""}
                           />
                         </div>
                       </div>
@@ -961,7 +1000,11 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                     {showConfirmedByDropdown && (
                       <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
                         {confirmedByOptions
-                          .filter(option => !poData.confirmedBy.includes(option.name) && poData.confirmedBy.length < 2)
+                          .filter(option => 
+                            !poData.confirmedBy.includes(option.name) && 
+                            poData.confirmedBy.length < 2 &&
+                            option.name.toLowerCase().includes(reviewBySearch.toLowerCase())
+                          )
                           .map((option) => (
                             <div
                               key={option.id}
@@ -970,6 +1013,7 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                                   ...prev,
                                   confirmedBy: [...prev.confirmedBy, option.name]
                                 }));
+                                setReviewBySearch('');
                                 setShowConfirmedByDropdown(false);
                               }}
                               className={`px-3 py-2 cursor-pointer ${darkMode
@@ -991,10 +1035,8 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                     <div className="relative">
                       <input
                         type="text"
-                        value={poData.approvedBy}
-                        onChange={(e) => {
-                          setPoData(prev => ({ ...prev, approvedBy: e.target.value }));
-                        }}
+                        value={approvalBySearch}
+                        onChange={(e) => setApprovalBySearch(e.target.value)}
                         onFocus={() => setShowApprovedByDropdown(true)}
                         onBlur={() => setTimeout(() => setShowApprovedByDropdown(false), 200)}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
@@ -1015,11 +1057,14 @@ function EditPurchaseOrderModal({ isOpen, onClose, darkMode, user, purchaseOrder
                     {showApprovedByDropdown && (
                       <div className={`absolute z-50 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-y-auto ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                         }`}>
-                        {approvedByOptions.map((option) => (
+                        {approvedByOptions
+                          .filter(option => option.name.toLowerCase().includes(approvalBySearch.toLowerCase()))
+                          .map((option) => (
                           <div
                             key={option.id}
                             onClick={() => {
                               setPoData(prev => ({ ...prev, approvedBy: option.name }));
+                              setApprovalBySearch(option.name);
                               setShowApprovedByDropdown(false);
                             }}
                             className={`px-3 py-2 cursor-pointer ${darkMode
