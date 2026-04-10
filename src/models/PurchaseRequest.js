@@ -161,7 +161,7 @@ class PurchaseRequest {
 
             // Get details
             const detailsQuery = `
-                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS FROM [PURCHASE.REQUESTDETAILS.1]
+                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, QTYCANCEL, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, LINETYPE FROM [PURCHASE.REQUESTDETAILS.1]
                 WHERE REFERENCENO = @referenceNo
                 ORDER BY ROWID
             `;
@@ -205,10 +205,12 @@ class PurchaseRequest {
                     rid: detail.RID,
                     unitOfMeasure: detail.UOFM,
                     quantity: detail.QUANTITY,
+                    qtyCancel: detail.QTYCANCEL,
                     budgetCode: detail.BUDGETCODE,
                     remarks: detail.REMARKS,
                     dateNeeded: detail.DATENEEDED,
-                    itemStatus: detail.ITEMSTATUS
+                    itemStatus: detail.ITEMSTATUS,
+                    lineType: detail.LINETYPE
                 }))
             };
         } catch (error) {
@@ -345,10 +347,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID, LINETYPE
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid, @lineType
                     )
                 `;
 
@@ -365,6 +367,7 @@ class PurchaseRequest {
                     .input('dateNeeded', detail.dateNeeded)
                     .input('itemStatus', detail.itemStatus || '')
                     .input('rid', rid)
+                    .input('lineType', detail.lineType || '')
                     .query(detailInsertQuery);
             }
 
@@ -623,10 +626,10 @@ class PurchaseRequest {
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.REQUESTDETAILS.1] (
                         REFERENCENO, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID
+                        UOFM, QUANTITY, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, RID, LINETYPE
                     ) VALUES (
                         @referenceNo, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid
+                        @unitOfMeasure, @quantity, @budgetCode, @remarks, @dateNeeded, @itemStatus, @rid, @lineType
                     )
                 `;
 
@@ -643,6 +646,7 @@ class PurchaseRequest {
                     .input('dateNeeded', detail.dateNeeded)
                     .input('itemStatus', detail.itemStatus || '')
                     .input('rid', rid)
+                    .input('lineType', detail.lineType || '')
                     .query(detailInsertQuery);
             }
 

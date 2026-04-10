@@ -24,6 +24,12 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
       timeZone: 'UTC'
     });
   };
+  
+  const finalQty = (quantity, qtyCancel) => {
+    const qtyCancelNum = parseFloat(qtyCancel) || 0;
+    const quantityNum = parseFloat(quantity) || 0;
+    return quantityNum - qtyCancelNum;
+  };
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -139,7 +145,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                       <td>${item.itemNumber || '-'}</td>
                       <td>${item.itemDescription || '-'}</td>
                       <td>${item.unitOfMeasure || '-'}</td>
-                      <td class="text-center">${item.quantity || 0}</td>
+                      <td class="text-center">${finalQty(item.quantity, item.qtyCancel)}</td>
                       <td>${item.budgetCode || '-'}</td>
                       <td>${item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}</td>
                       <td>${item.remarks || '-'}</td>
@@ -359,7 +365,7 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.itemNumber || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.itemDescription || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.unitOfMeasure || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-center font-semibold">{item.quantity || 0}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-center font-semibold">{finalQty(item.quantity, item.qtyCancel)}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.budgetCode || '-'}</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm">
                           {item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}

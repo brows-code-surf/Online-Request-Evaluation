@@ -64,7 +64,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
             field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
           )
           : type === 'canvassing-approval'
-            ? [item.pqCode, item.itemNumber, item.itemDescription, item.createdBy, item.vendorName, item.status, item.approvedBy, item.approvalRemarks, item.dateRequested?.toString()].some(field =>
+            ? [item.prCode, item.pqCode, item.itemNumber, item.itemDescription, item.createdBy, item.vendorName, item.status, item.approvedBy, item.approvalRemarks, item.dateRequested?.toString()].some(field =>
               field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
             )
             : [item.requester, item.title, item.id, item.status, item.department, item.location, item.employeeID, item.description, item.isRush, item.requestDate?.toString()].some(field =>
@@ -171,7 +171,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
 
   const getPlaceholder = () => {
     if (type === 'purchase-request') return 'Search by reference, requester, company...';
-    if (type === 'canvassing-approval') return 'Search by PQ code, item, vendor, status...';
+    if (type === 'canvassing-approval') return 'Search by PR reference no, PQ code, item, vendor, status...';
     return 'Search by reference, requester, company...';
   };
 
@@ -207,6 +207,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
   const getTableHeaders = () => {
     if (type === 'canvassing-approval') {
       return [
+        'PR Reference No',
         'PQ Code',
         'Item Description',
         'Vendor',
@@ -260,7 +261,8 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
           onDoubleClick={() => handleRowDoubleClick(item)}
           className={`border-b ${darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} cursor-pointer transition-colors`}
         >
-          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs">{item.pqCode}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs">{item.prCode}</td>
+          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.pqCode}</td>
           <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.itemDescription}</td>
           <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs">{item.vendorName || 'N/A'}</td>
           <td className="px-2 sm:px-4 py-2 sm:py-3">
@@ -408,7 +410,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
                     {filteredItems.map((item, index) => renderTableRow(item, index))}
                     {filteredItems.length === 0 && (
                       <tr>
-                        <td colSpan={type === 'canvassing-approval' ? '6' : '6'} className="text-xs px-4 py-12 text-center">
+                        <td colSpan={type === 'canvassing-approval' ? '7' : '6'} className="text-xs px-4 py-12 text-center">
                           <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             No {type === 'purchase-request' ? 'purchase requests' : type === 'canvassing-approval' ? 'canvassing items' : 'request evaluations'} found
                           </p>

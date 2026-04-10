@@ -17,7 +17,6 @@ import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import {
   getAllPurchaseOrders,
   getPurchaseOrderByPONumber,
-  postPurchaseOrder,
   deletePurchaseOrder
 } from './_actions';
 
@@ -41,24 +40,24 @@ function PurchaseOrderContent() {
   const [editPurchaseOrder, setEditPurchaseOrder] = useState(null);
 
   // Function to reload purchase orders data without page refresh
-  const reloadPurchaseOrdersData = async () => {
+  const reloadPurchaseOrdersData = useCallback(async () => {
     try {
       const filters = {};
       if (filterStatus && filterStatus !== 'all') {
         filters.status = filterStatus;
       }
 
-      const data = await getAllPurchaseOrders(filters, user);
+      const data = await getAllPurchaseOrders(filters, user, isAdmin);
       if (data.success) {
         setPurchaseOrders(data.purchaseOrders);
         const approvalsData = data.purchaseOrders.map(po => ({
           ...po,
           id: po.poNumber,
-          title: po.vendName || 'Unknown Vendor',
+          title: po.vendorId || 'Unknown Vendor',
           requester: po.createdBy,
           status: po.poStatus || 'PENDING',
           requestDate: po.dateCreated,
-          department: po.vendName || 'Unknown Vendor',
+          department: po.vendorId || 'Unknown Vendor',
           isRead: true, // Assuming all are read for now
           isRush: false, // PO doesn't have rush flag
           itemCount: po.itemCount
@@ -70,7 +69,7 @@ function PurchaseOrderContent() {
       console.error('Failed to reload purchase orders:', error);
       return { success: false };
     }
-  };
+  }, [filterStatus, user]);
 
   useEffect(() => {
     const loadPurchaseOrders = async () => {
@@ -104,7 +103,7 @@ function PurchaseOrderContent() {
     };
 
     loadPurchaseOrders();
-  }, [user?.empName]); // Removed selectedPurchaseOrder from dependencies
+  }, [user?.empName, reloadPurchaseOrdersData]); // Removed selectedPurchaseOrder from dependencies
 
   // Handle sidebar open event
   useEffect(() => {
@@ -200,7 +199,7 @@ function PurchaseOrderContent() {
       requester: po.createdBy,
       status: po.poStatus || 'PENDING',
       requestDate: po.dateCreated,
-      department: po.vendName || 'Unknown Vendor',
+      department: po.vendorId || 'Unknown Vendor',
       isRead: true,
       isRush: false,
       itemCount: po.itemCount
@@ -248,25 +247,6 @@ function PurchaseOrderContent() {
     }
   };
 
-  const handlePostPurchaseOrder = async (poNumber) => {
-    try {
-      const result = await postPurchaseOrder(poNumber, user?.empName);
-      if (result.success) {
-        toast.success('Purchase order posted successfully');
-        await reloadPurchaseOrdersData();
-        // Refresh details if it's the current PO
-        if (selectedPurchaseOrder?.poNumber === poNumber) {
-          setDetailsReloadKey(prev => prev + 1);
-        }
-      } else {
-        toast.error('Failed to post purchase order: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error posting purchase order:', error);
-      toast.error('Failed to post purchase order');
-    }
-  };
-
   const handleDeletePurchaseOrder = async (poNumber) => {
     try {
       const result = await deletePurchaseOrder(poNumber, user?.empName);
@@ -293,28 +273,87 @@ function PurchaseOrderContent() {
         return 'bg-green-100 text-green-800 border-green-300';
       case 'FOR P.O. CONFIRMATION':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'FOR P.O. APPROVAL':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'POSTED':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'NOT POSTED':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'P.O. REJECTED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'C.O.Q. REJECTED FROM P.O.':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'P.R. REJECTED FROM P.O.':
+        return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  // Real-time updates
+  // Real-time updates - listen to both purchase-order-broadcast and request-evaluation-broadcast
   useSocketMultiple("purchase-order-broadcast", {
     "purchase-order-created": useCallback(
       (data) => {
         console.log("Purchase order created event received:", data);
         reloadPurchaseOrdersData();
       },
-      []
+      [reloadPurchaseOrdersData]
     ),
     "purchase-order-updated": useCallback(
       (data) => {
         console.log("Purchase order updated event received:", data);
         reloadPurchaseOrdersData();
       },
-      []
+      [reloadPurchaseOrdersData]
+    ),
+    "po-approved": useCallback(
+      (data) => {
+        console.log("Purchase order approved event received:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    ),
+    "po-confirmed": useCallback(
+      (data) => {
+        console.log("Purchase order confirmed event received:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    ),
+    "po-rejected": useCallback(
+      (data) => {
+        console.log("Purchase order rejected event received:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    ),
+  });
+
+  useSocketMultiple("request-evaluation-broadcast", {
+    "po-approved": useCallback(
+      (data) => {
+        console.log("PO approved event from request-evaluation:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    ),
+    "po-confirmed": useCallback(
+      (data) => {
+        console.log("PO confirmed event from request-evaluation:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    ),
+    "po-rejected": useCallback(
+      (data) => {
+        console.log("PO rejected event from request-evaluation:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
     ),
   });
 
@@ -370,10 +409,10 @@ function PurchaseOrderContent() {
                   <PurchaseOrderDetails
                     purchaseOrder={purchaseOrderDetails}
                     onClose={() => setSelectedPurchaseOrder(null)}
-                    onPost={handlePostPurchaseOrder}
                     onDelete={handleDeletePurchaseOrder}
                     onEdit={handleEditPurchaseOrder}
                     onDataRefresh={() => setDetailsReloadKey(prev => prev + 1)}
+                    onRefreshList={reloadPurchaseOrdersData}
                     darkMode={darkMode}
                   />
                 )}

@@ -295,8 +295,8 @@ export async function searchItems(searchTerm) {
     // If no search term is provided, return all items
     const items = await ITEM_MASTERFILE.searchItems(searchTerm || '');
 
-    // Format the results to only include the required fields
-    const formattedItems = items.map(item => ({
+    // Filter out inactive items (ACTIVE = 0) and format the results
+    const formattedItems = items.filter(item => item.ACTIVE === 1 || item.ACTIVE === true).map(item => ({
       ITEMNMBR: item.ITEMNMBR,
       ITEMDESC: item.ITEMDESC,
       UOFM: item.UOMSCHDL || 'EACH'

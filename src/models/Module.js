@@ -478,6 +478,26 @@ export const MODULE = {
             .input('oldLink', currentLink)
             .input('modifiedBy', modifiedBy)
             .query(updateAccessQuery);
+
+          // Update notification URLs if LINK changed
+          let notificationConnection;
+          try {
+            notificationConnection = await connectToDatabase('GDB');
+            const updateNotificationQuery = `
+              UPDATE [dbo].[SYSTEM.NOTIFICATION.1]
+              SET URL = REPLACE(URL, @oldLink, @newLink)
+              WHERE CHARINDEX(@oldLink, URL) > 0
+            `;
+
+            await notificationConnection.request()
+              .input('newLink', moduleData.module)
+              .input('oldLink', currentLink)
+              .query(updateNotificationQuery);
+          } finally {
+            if (notificationConnection) {
+              // Connection will be automatically released back to the pool
+            }
+          }
         }
 
         return { success: true, message: "Module updated successfully" };

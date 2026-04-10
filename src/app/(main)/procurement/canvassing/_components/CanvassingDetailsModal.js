@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { getCanvassingRequestByPQCode } from '../_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 import EditCanvassingModal from './EditCanvassingModal';
+import currencyData from '@/utils/currency.json';
 
 function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
   const [loading, setLoading] = useState(false);
@@ -43,29 +44,122 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
 
   if (!isOpen) return null;
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen pt-4 px-2 sm:px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
+          </div>
+          <div className={`inline-block align-bottom rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-4 sm:align-middle sm:max-w-7xl w-full my-8 h-[85vh] sm:h-[90vh] max-h-[90vh] relative z-10 ring-1 ring-black/5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+            <div className="p-3 sm:p-6">
+              <SkeletonLoader height="h-6" width="w-48" className="mb-4 sm:mb-6" />
+              <div className="overflow-x-auto">
+                <div className={`border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg overflow-hidden`}>
+                  <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} p-3 sm:p-4`}>
+                    <div className="flex gap-2 sm:gap-4">
+                      <SkeletonLoader height="h-4" width="w-16 sm:w-24" />
+                      <SkeletonLoader height="h-4" width="w-20 sm:w-32" />
+                      <SkeletonLoader height="h-4" width="w-16 sm:w-24" className="hidden lg:flex" />
+                      <SkeletonLoader height="h-4" width="w-16 sm:w-24" className="hidden md:flex" />
+                      <SkeletonLoader height="h-4" width="w-12 sm:w-20" />
+                      <SkeletonLoader height="h-4" width="w-16 sm:w-24" />
+                    </div>
+                  </div>
+                  {Array(5).fill().map((_, i) => (
+                    <div key={i} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} p-3 sm:p-4 last:border-b-0`}>
+                      <div className="flex gap-2 sm:gap-4">
+                        <SkeletonLoader height="h-4" width="w-14 sm:w-20" />
+                        <div className="flex-1">
+                          <SkeletonLoader height="h-4" width="w-24 sm:w-32" className="mb-1" />
+                          <SkeletonLoader height="h-3" width="w-16 sm:w-24" />
+                        </div>
+                        <SkeletonLoader height="h-4" width="w-16 sm:w-24" className="hidden lg:block" />
+                        <SkeletonLoader height="h-4" width="w-16 sm:w-24" className="hidden md:block" />
+                        <SkeletonLoader height="h-4" width="w-10 sm:w-16" />
+                        <SkeletonLoader height="h-4" width="w-12 sm:w-20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-2 sm:px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={handleClose}></div>
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={handleClose}></div>
         </div>
-
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-7xl sm:w-full h-[90vh] max-h-[90vh] relative z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`inline-block align-bottom rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-4 sm:align-middle sm:max-w-7xl w-full my-8 h-[85vh] sm:h-[90vh] max-h-[90vh] relative z-10 ring-1 ring-black/5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className={`px-6 py-4 border-b ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
-                Canvassing Request Details - {pqCode}
-              </h3>
-              <div className="flex items-center space-x-2">
+          <div className={`px-3 sm:px-6 py-3 sm:py-5 border-b ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-white via-gray-50 to-gray-100'}`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 relative">
+              <div className='text-left w-full sm:w-auto'>
+                <h3 className={`text-base sm:text-lg lg:text-xl font-semibold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                    <span className="hidden xs:inline">Canvassing Request Details</span>
+                    <span className="xs:hidden">Details</span>
+                  </span>
+                </h3>
+              </div>
+              <div className="absolute left-1/2 top-0 transform -translate-x-1/2 hidden sm:block">
+                {canvassingData && (canvassingData.approvalStatus ? (
+                  <span className={`px-2 sm:px-3 py-1 sm:py-1.5 inline-flex text-xs sm:text-sm leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.approvalStatus === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                    canvassingData.approvalStatus === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      canvassingData.approvalStatus === 'NOT SELECTED' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                        canvassingData.approvalStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}>
+                    {canvassingData.approvalStatus}
+                  </span>
+                ) : (
+                  <span className={`px-2 sm:px-3 py-1 sm:py-1.5 inline-flex text-xs sm:text-sm leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.postStatus === 1 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    }`}>
+                    {canvassingData.postStatus === 1 ? 'POSTED' : 'NOT POSTED'}
+                  </span>
+                ))}
+              </div>
+              <div className='flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-between sm:justify-end'>
+                {/* Mobile status badge */}
+                <div className="sm:hidden">
+                  {canvassingData && (canvassingData.approvalStatus ? (
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.approvalStatus === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      canvassingData.approvalStatus === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        canvassingData.approvalStatus === 'NOT SELECTED' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                          canvassingData.approvalStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}>
+                      {canvassingData.approvalStatus}
+                    </span>
+                  ) : (
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.postStatus === 1 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      }`}>
+                      {canvassingData.postStatus === 1 ? 'POSTED' : 'NOT POSTED'}
+                    </span>
+                  ))}
+                </div>
+                {canvassingData && canvassingData.header.pqCode && (
+                  <span className={`px-2 sm:px-3 py-1 sm:py-1.5 text-2xl sm:text-lg font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                    {canvassingData.header.pqCode}
+                  </span>
+                )}
                 {canvassingData && canvassingData.header.postStatus === 0 && (
                   <button
                     type="button"
                     onClick={() => setShowEditModal(true)}
-                    className={`rounded-md p-2 ${darkMode ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-700' : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'} transition-colors duration-200`}
+                    className={`rounded-lg p-1.5 sm:p-2 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'} transition-all duration-200 hover:scale-110`}
                     title="Edit Request"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
@@ -73,9 +167,9 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                 <button
                   type="button"
                   onClick={handleClose}
-                  className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'}`}
+                  className={`rounded-lg p-1.5 sm:p-2 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} transition-all duration-200 hover:scale-110`}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -84,268 +178,189 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
           </div>
 
           {/* Content */}
-          <div className="px-6 py-4 overflow-y-auto" style={{ height: 'calc(90vh - 140px)' }}>
-            {loading ? (
-              <div className="space-y-6">
-                {/* Request Information Skeleton */}
-                <div>
-                  <SkeletonLoader height="h-5" width="w-40" className="mb-4" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Array(6).fill().map((_, i) => (
-                      <div key={i}>
-                        <SkeletonLoader height="h-4" width="w-20" className="mb-2" />
-                        <SkeletonLoader height="h-5" width="w-24" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Items Details Skeleton */}
-                <div>
-                  <SkeletonLoader height="h-5" width="w-32" className="mb-4" />
-                  <div className="overflow-x-auto">
-                    <div className={`border ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-lg overflow-hidden`}>
-                      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} p-3`}>
-                        <div className="flex gap-4">
-                          <SkeletonLoader height="h-4" width="w-24" />
-                          <SkeletonLoader height="h-4" width="w-20" />
-                          <SkeletonLoader height="h-4" width="w-16" />
-                          <SkeletonLoader height="h-4" width="w-28" />
-                        </div>
-                      </div>
-                      {Array(5).fill().map((_, i) => (
-                        <div key={i} className={`border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} p-3 last:border-b-0`}>
-                          <div className="flex gap-4">
-                            <div className="flex-1">
-                              <SkeletonLoader height="h-4" width="w-32" className="mb-1" />
-                              <SkeletonLoader height="h-3" width="w-40" />
-                            </div>
-                            <SkeletonLoader height="h-4" width="w-12" />
-                            <div className="flex-1">
-                              <SkeletonLoader height="h-4" width="w-16" className="mb-1" />
-                              <SkeletonLoader height="h-4" width="w-14" />
-                            </div>
-                            <div className="flex-1">
-                              <SkeletonLoader height="h-4" width="w-20" className="mb-1" />
-                              <SkeletonLoader height="h-3" width="w-16" />
-                            </div>
-                            <div className="flex-1">
-                              <SkeletonLoader height="h-4" width="w-20" className="mb-1" />
-                              <SkeletonLoader height="h-3" width="w-16" />
-                            </div>
-                            <div className="flex-1">
-                              <SkeletonLoader height="h-4" width="w-20" className="mb-1" />
-                              <SkeletonLoader height="h-3" width="w-16" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : canvassingData ? (
-              <div className="space-y-6">
-                {/* Header Information */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Request Information
+          <div className="px-3 sm:px-6 py-4 sm:py-5 overflow-y-auto" style={{ height: 'calc(85vh - 100px)', maxHeight: 'calc(90vh - 130px)' }}>
+            {canvassingData ? (
+              <>
+                {/* Supplier Info Section */}
+                <div className="mb-4 sm:mb-6">
+                  <h4 className={`text-xs sm:text-sm font-semibold uppercase tracking-wider mb-3 sm:mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Supplier Information
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Reference Number
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Supplier
                       </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.header.referenceNum}
-                      </p>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Created By
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.header.createdBy}
-                      </p>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Status
-                      </label>
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${canvassingData.header.postStatus === 0 ? 'bg-yellow-100 text-yellow-800' :
-                          canvassingData.header.postStatus === 1 ? 'bg-blue-100 text-blue-800' :
-                            canvassingData.header.postStatus === 2 ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                        }`}>
-                        {canvassingData.header.postStatus === 0 ? 'DRAFT' :
-                          canvassingData.header.postStatus === 1 ? 'FOR CANVASSING' :
-                            canvassingData.header.postStatus === 2 ? 'APPROVED' : 'COMPLETED'}
-                      </span>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Supplier Name:
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.details[0].vendorName}
-                      </p>
-                    </div>
-                    {/* <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Created By
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.header.createdBy}
-                      </p>
-                    </div> */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Date Requested
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {new Date(canvassingData.header.dateRequested).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {/* Display Delivery Date if it exists and is not null/blank */}
-                    {canvassingData.details[0]?.deliverySchedule && (
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Delivery Schedule
-                        </label>
-                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {(() => {
-                            try {
-                              const deliveryDate = new Date(canvassingData.details[0].deliverySchedule);
-                              return !isNaN(deliveryDate.getTime()) ? deliveryDate.toLocaleDateString() : canvassingData.details[0].deliverySchedule;
-                            } catch (error) {
-                              return canvassingData.details[0].deliverySchedule;
-                            }
-                          })()}
-                        </p>
+                      <div className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0]?.vendorName || 'N/A'}
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Supplier & Pricing Summary Container */}
-                <div className={`mt-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                  <h5 className={`text-sm font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Supplier & Pricing Summary
-                  </h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Display Brand if it exists and is not null/blank */}
-                    {canvassingData.details[0]?.brand && canvassingData.details[0].brand.trim() && (
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Brand
-                        </label>
-                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {canvassingData.details[0].brand}
-                        </p>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Payment Terms
+                      </label>
+                      <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0]?.paymentTerms || 'N/A'}
                       </div>
-                    )}
-                    {/* Display Origin if it exists and is not null/blank */}
-                    {canvassingData.details[0]?.origin && canvassingData.details[0].origin.trim() && (
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Origin
-                        </label>
-                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {canvassingData.details[0].origin}
-                          {canvassingData.details[0].isImported && (
-                            <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1 rounded">Imported</span>
-                          )}
-                        </p>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border sm:col-span-2 lg:col-span-1 ${darkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Delivery Schedule
+                      </label>
+                      <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0]?.deliverySchedule ? (
+                          <>
+                            {(() => {
+                              try {
+                                const deliveryDate = new Date(canvassingData.details[0].deliverySchedule);
+                                return !isNaN(deliveryDate.getTime()) ? deliveryDate.toLocaleDateString() : canvassingData.details[0].deliverySchedule;
+                              } catch (error) {
+                                return canvassingData.details[0].deliverySchedule;
+                              }
+                            })()}
+                          </>
+                        ) : 'N/A'}
                       </div>
-                    )}
-                    {/* Display Total Supplier Quantity */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Total Supplier Qty
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {canvassingData.details.reduce((total, item) => total + (item.supplierQty || item.quantity || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                    {/* Display Total Offered Price */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Total Offered Price
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        ₱{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                    {/* Display Total Bid Price */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Total Bid Price
-                      </label>
-                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        ₱{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                    {/* Display Total Agreed Price */}
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Total Agreed Price
-                      </label>
-                      <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        ₱{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Approval Status */}
-                {canvassingData.approvals && canvassingData.approvals.length > 0 && (
-                  <div>
-                    <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Approval Status
-                    </h4>
-                    <div className="space-y-2">
-                      {canvassingData.approvals.map((approval, index) => (
-                        <div key={approval.id} className={`p-3 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {approval.approvedBy}
-                              </span>
-                              <span className={`ml-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {new Date(approval.dateApproved).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${approval.isApproved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
-                              {approval.isApproved ? 'Approved' : 'Pending'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Items Details */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Items Details ({canvassingData.details.length} items)
+                {/* Product Details Section */}
+                <div className="mb-4 sm:mb-6">
+                  <h4 className={`text-xs sm:text-sm font-semibold uppercase tracking-wider mb-3 sm:mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Product Details
                   </h4>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Supplier Qty
+                      </label>
+                      <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0]?.supplierQty?.toLocaleString() || 'N/A'}
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Brand
+                      </label>
+                      <div className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0].brand || 'N/A'}
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Origin
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {canvassingData.details[0].origin || 'N/A'}
+                        </span>
+                        {canvassingData.details[0].isImported === 1 && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">Imported</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Purchase Type
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {canvassingData.details[0].purchaseType === 'Local' ? 'Local' : canvassingData.details[0].purchaseType === 'Foreign' ? 'Foreign' : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pricing Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-blue-900/30 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                        Offered Price
+                      </label>
+                      <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.offeredPrice || 0), 0).toLocaleString()}</span>
+                        <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-purple-900/30 border-purple-700' : 'bg-purple-50 border-purple-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                        Bid Price
+                      </label>
+                      <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.bidPrice || 0), 0).toLocaleString()}</span>
+                        <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-emerald-900/30 border-emerald-700' : 'bg-emerald-50 border-emerald-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-emerald-300' : 'text-emerald-600'}`}>
+                        Agreed Price
+                      </label>
+                      <div className={`text-sm sm:text-base font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>
+                        <span className="hidden sm:inline">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{currencyData[canvassingData.details[0]?.currency]?.symbol_native || '₱'}{canvassingData.details.reduce((total, item) => total + (item.finalPrice || 0), 0).toLocaleString()}</span>
+                        <span className="text-xs ml-1 opacity-75">/{canvassingData.details[0].unitOfMeasure || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Currency
+                      </label>
+                      <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.details[0]?.currency && currencyData[canvassingData.details[0].currency]
+                          ? `${currencyData[canvassingData.details[0].currency].name} (${currencyData[canvassingData.details[0].currency].symbol_native})`
+                          : 'PHP'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Personnel Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Canvassed By
+                      </label>
+                      <div className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.header.createdBy}
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Evaluated By
+                      </label>
+                      <div className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {canvassingData.header.evaluatedBy || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Details Table */}
+                <div className="mt-4 sm:mt-6">
+                  <h4 className={`text-xs sm:text-sm font-semibold uppercase tracking-wider mb-3 sm:mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Item Details
+                  </h4>
+                  <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 -mx-3 sm:mx-0">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <tr>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[200px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-3 sm:px-4 py-2.5 sm:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            <span className="hidden sm:inline">Item Ref No.</span>
+                            <span className="sm:hidden">Ref No.</span>
+                          </th>
+                          <th className={`px-3 sm:px-4 py-2.5 sm:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             Item Details
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[100px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`hidden lg:table-cell px-3 sm:px-4 py-2.5 sm:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             Company
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[100px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Quantity
+                          <th className={`px-3 sm:px-4 py-2.5 sm:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            Qty
                           </th>
                           {(canvassingData.header.postStatus >= 2 || canvassingData.details.some(item => item.approvedBy)) && (
-                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider min-w-[150px] ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                            <th className={`px-3 sm:px-4 py-2.5 sm:py-3.5 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                               Status
                             </th>
                           )}
@@ -353,37 +368,39 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                       </thead>
                       <tbody className={`${darkMode ? 'bg-gray-800 divide-gray-700' : 'bg-white divide-gray-200'}`}>
                         {canvassingData.details.map((item, index) => (
-                          <tr key={item.id} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                            <td className="px-4 py-3">
-                              <div>
-                                <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {item.itemNumber}
-                                </div>
-                                <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          <tr key={item.id} className={`${darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} transition-colors duration-150`}>
+                            <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                              <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                                {item.rid || item.RID || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                              <div className="max-w-[150px] sm:max-w-none">
+                                <div className={`text-xs sm:text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                   {item.itemDescription}
                                 </div>
-                                <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  UOM: {item.unitOfMeasure} | Budget: {item.budgetCode}
+                                <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {item.itemNumber ? `Item: ${item.itemNumber}` : 'No item #'}
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <td className={`hidden lg:table-cell px-3 sm:px-4 py-2.5 sm:py-3.5`}>
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 {item.company || 'N/A'}
-                              </div>
+                              </span>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {item.quantity}
-                              </div>
+                            <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                              <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.quantity} <span className="text-xs opacity-70">{item.unitOfMeasure}</span>
+                              </span>
                             </td>
                             {(canvassingData.header.postStatus >= 2 || canvassingData.details.some(item => item.approvedBy)) && (
-                              <td className="px-4 py-3">
-                                <div className="space-y-1">
+                              <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                                <div className="space-y-0.5">
                                   {item.approvedBy && (
-                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                      Approved: {item.approvedBy}
-                                      {item.dateApproved && ` (${new Date(item.dateApproved).toLocaleDateString()})`}
+                                    <div className={`text-xs ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                      <span className="font-medium">✓</span> {item.approvedBy}
+                                      {item.dateApproved && <span className="hidden sm:inline"> ({new Date(item.dateApproved).toLocaleDateString()})</span>}
                                     </div>
                                   )}
                                 </div>
@@ -395,14 +412,16 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                     </table>
                   </div>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="text-center py-12">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1-5.625-2.709M12 4v16m8-8H4" />
-                </svg>
-                <h3 className={`mt-2 text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>No data available</h3>
-                <p className={`mt-1 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              <div className="text-center py-12 sm:py-16">
+                <div className={`mx-auto w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-3 sm:mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1-5.625-2.709M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <h3 className={`text-sm sm:text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>No data available</h3>
+                <p className={`mt-1 text-xs sm:text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                   Unable to load canvassing request details.
                 </p>
               </div>
@@ -410,14 +429,14 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
           </div>
 
           {/* Footer */}
-          <div className={`px-6 py-4 border-t ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
+          <div className={`px-3 sm:px-6 py-3 sm:py-4 border-t ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-r from-gray-50 via-white to-gray-100'}`}>
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleClose}
-                className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${darkMode
-                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full sm:w-auto ${darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 shadow-sm hover:shadow'
                   }`}
               >
                 Close

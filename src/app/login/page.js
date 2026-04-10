@@ -107,7 +107,7 @@ export default function Login() {
                     <div className="flex justify-center mb-6">
                         <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH Logo" className="h-12 w-auto" />
                     </div>
-                    <h3 className="text-gray-800 text-base font-semibold mt-2">Online Requests Evaluation System</h3>
+                    {/* <h3 className="text-gray-800 text-base font-semibold mt-2">Online Requests Evaluation System</h3> */}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

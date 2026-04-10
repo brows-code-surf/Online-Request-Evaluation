@@ -1,9 +1,10 @@
 import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 import Notification from './Notification.js';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 class RequestEvaluation {
-
+    //#region PURCHASE REQUEST
     static async checkTableExists(connection, tableName) {
         try {
             const query = `SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @tableName`;
@@ -40,6 +41,7 @@ class RequestEvaluation {
                             PRD.ITEMDESC,
                             PRD.UOFM,
                             ISNULL(PRD.QUANTITY, 0) as QUANTITY,
+                            ISNULL(PRD.QTYCANCEL, 0) as QTYCANCEL,
                             PRD.BUDGETCODE,
                             PRD.REMARKS as remarks,
                             PRD.DATENEEDED,
@@ -290,31 +292,6 @@ class RequestEvaluation {
                     const approverResult = await transaction.request()
                         .input('referenceNo', referenceNo)
                         .query(approverQuery);
-                } else if (newStatus === 'FOR PURCHASING LEAD TIME') {
-                    // Get the addressed to person from the request
-                    const addressedToQuery = `SELECT ADDRESSEDTO FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-                    const addressedToResult = await transaction.request()
-                        .input('referenceNo', referenceNo)
-                        .query(addressedToQuery);
-
-                    if (addressedToResult.recordset.length > 0 && addressedToResult.recordset[0].ADDRESSEDTO) {
-                        notificationRecipient = addressedToResult.recordset[0].ADDRESSEDTO;
-                        notificationTitle = 'Request Approved - Ready for Purchasing';
-                        notificationDescription = `Request ${referenceNo} has been approved and is now ready for purchasing lead time review.`;
-
-                        // Validate recipient exists
-                        if (!notificationRecipient || notificationRecipient.trim() === '') {
-                            console.warn(`No valid addressed-to person found for request ${referenceNo}`);
-                        } else {
-                            console.log(`Creating notification for addressed-to: ${notificationRecipient}`);
-                            const notification = new Notification(notificationTitle, notificationDescription, notificationRecipient.trim());
-                            const result = await notification.save(approverName);
-                            notificationResults.push({ type: 'addressed-to', recipient: notificationRecipient, result });
-                            console.log(`Addressed-to notification created successfully:`, result);
-                        }
-                    } else {
-                        console.warn(`No addressed-to person found in database for request ${referenceNo}`);
-                    }
                 } else if (newStatus === 'FOR CANVASSING') {
                     // For final approval, notify all participants
                     const participantsQuery = `SELECT REVIEWER, APPROVER, ADDRESSEDTO, REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
@@ -802,6 +779,686 @@ class RequestEvaluation {
             }));
         }
     }
+    //#endregion
+
+    //#region PURCHASE ORDER
+
+    // Helper function to check if user is in comma-separated field (case-insensitive)
+    static isUserInCommaSeparated(fieldValue, userName) {
+        if (!fieldValue || !userName) return false;
+        // Ensure userName is a string
+        if (typeof userName !== 'string') {
+            console.error('isUserInCommaSeparated: userName is not a string:', userName);
+            return false;
+        }
+        const userNameUpper = userName.toUpperCase();
+        const names = fieldValue.split(',').map(n => n.trim().toUpperCase());
+        return names.includes(userNameUpper);
+    }
+
+    // Get purchase orders for left panel that need confirmation/approval
+    static async getPurchaseOrderEvaluationsLeftPanel(userName, statusFilter, isAdmin = false) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            let query = `
+                SELECT
+                    h.ROWID,
+                    h.PONUMBER as id,
+                    'PURCHASE ORDER' as title,
+                    h.PO_STATUS as status,
+                    h.DATECREATED as requestDate,
+                    h.CREATEDBY as requester,
+                    h.VENDORID as department,
+                    h.VENDNAME as vendName,
+                    h.PYMTRMID as paymentTerms,
+                    h.DELIVERY_TO as deliveryTo,
+                    h.DATENEEDED as dateNeeded,
+                    h.CANVASSEDBY as canvassedBy,
+                    h.CONFIRMEDBY_1 as confirmedBy_1,
+                    h.DATECONFIRMED_1 as dateConfirmed_1,
+                    h.CONFIRMEDBY_2 as confirmedBy_2,
+                    h.DATECONFIRMED_2 as dateConfirmed_2,
+                    h.APPROVEDBY as approvedBy,
+                    h.DATEAPPROVED as dateApproved,
+                    h.REMARKS as remarks,
+                    h.POSTSTATUS as postStatus,
+                    COUNT(d.RID) as itemCount,
+                    1 as header,
+                    h.CONFIRMEDBY_1 + CASE WHEN h.CONFIRMEDBY_2 IS NOT NULL AND h.CONFIRMEDBY_2 != '' THEN ' / ' + h.CONFIRMEDBY_2 ELSE '' END as confirmedBy,
+                    CASE WHEN h.DATECONFIRMED_1 IS NOT NULL THEN h.DATECONFIRMED_1 ELSE h.DATECONFIRMED_2 END as dateConfirmed
+                FROM [PURCHASE.ORDERHEADER.1] h
+                LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
+                WHERE (h.PO_STATUS = 'FOR P.O. CONFIRMATION' OR h.PO_STATUS = 'FOR P.O. APPROVAL')
+            `;
+
+            const request = connection.request();
+
+            // Role-based filtering logic
+            if (isAdmin) {
+                // Admin: Return all POs where postatus is either FOR P.O. CONFIRMATION OR FOR P.O. APPROVAL
+                // No additional WHERE conditions needed - already filtered above
+            } else {
+                // Non-admin: Apply role-based filtering
+                // Use case-insensitive matching for user
+                // Both reviewers (confirmedby_1 OR confirmedby_2) can see FOR P.O. CONFIRMATION POs
+                query += ` AND (
+                    -- Either confirmedby_1 OR confirmedby_2 contains current user in FOR P.O. CONFIRMATION status
+                    (UPPER(h.CONFIRMEDBY_1) LIKE @userName AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
+                    OR
+                    (UPPER(h.CONFIRMEDBY_2) LIKE @userName AND h.PO_STATUS = 'FOR P.O. CONFIRMATION')
+                    OR
+                    -- User is approver: APPROVEDBY contains current user AND status is FOR P.O. APPROVAL
+                    (UPPER(h.APPROVEDBY) LIKE @userName AND h.PO_STATUS = 'FOR P.O. APPROVAL')
+                )`;
+
+                // Use LIKE pattern for comma-separated names matching (case-insensitive with UPPER)
+                request.input('userName', `%${userName.toUpperCase()}%`);
+                console.log('Non-admin user filter applied with userName:', userName);
+                console.log('Number of parameters:', Object.keys(request.parameters).length);
+            }
+
+            query += ` GROUP BY h.ROWID, h.PONUMBER, h.PO_STATUS, h.DATECREATED, h.CREATEDBY,
+                      h.VENDORID, h.VENDNAME, h.PYMTRMID, h.DELIVERY_TO, h.DATENEEDED,
+                      h.CANVASSEDBY, h.CONFIRMEDBY_1, h.DATECONFIRMED_1, h.CONFIRMEDBY_2, h.DATECONFIRMED_2, h.APPROVEDBY, h.DATEAPPROVED,
+                      h.REMARKS, h.POSTSTATUS
+                      ORDER BY h.DATECREATED DESC`;
+
+            const result = await request.query(query);
+            console.log('PO query result:', result.recordset.length, 'records');
+            if (result.recordset.length > 0) {
+                const firstPO = result.recordset[0];
+                console.log('First PO record: ', {
+                    id: firstPO.id,
+                    status: firstPO.status,
+                    confirmedBy_1: firstPO.confirmedBy_1,
+                    dateConfirmed_1: firstPO.dateConfirmed_1,
+                    confirmedBy_2: firstPO.confirmedBy_2,
+                    dateConfirmed_2: firstPO.dateConfirmed_2,
+                    approvedBy: firstPO.approvedBy,
+                    dateApproved: firstPO.dateApproved
+                });
+            }
+
+            // For non-admin users, apply additional client-side filtering to ensure exact name matching
+            // (since SQL LIKE with wildcards might match partial names)
+            if (!isAdmin) {
+                const filtered = result.recordset.filter(po => {
+                    // Both reviewers (confirmedby_1 OR confirmedby_2) can see PO in FOR P.O. CONFIRMATION status
+                    // regardless of whether confirmation dates are null
+                    if (po.status === 'FOR P.O. CONFIRMATION') {
+                        if (this.isUserInCommaSeparated(po.confirmedBy_1, userName) ||
+                            this.isUserInCommaSeparated(po.confirmedBy_2, userName)) {
+                            return true;
+                        }
+                    }
+
+                    // User is approver: dateconfirmed_1 IS NOT NULL AND dateconfirmed_2 IS NOT NULL
+                    if (po.status === 'FOR P.O. APPROVAL' && po.dateConfirmed_1 && po.dateConfirmed_2) {
+                        if (this.isUserInCommaSeparated(po.approvedBy, userName)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+
+                console.log('Client-side filter - Input records:', result.recordset.length, 'Output records:', filtered.length);
+                if (filtered.length > 0) {
+                    console.log('First filtered PO:', filtered[0].id, filtered[0].status);
+                }
+                return filtered;
+            }
+
+            return result.recordset;
+        } catch (error) {
+            console.error('Error fetching purchase order evaluations:', error);
+            return [];
+        }
+    }
+
+    // Get purchase order details by PO number
+    static async getPurchaseOrderDetails(poNumber) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Check if table exists
+            const headerExists = await this.checkTableExists(connection, 'PURCHASE.ORDERHEADER.1');
+            const detailsExists = await this.checkTableExists(connection, 'PURCHASE.ORDERDETAILS.1');
+
+            if (!headerExists || !detailsExists) {
+                console.warn('PURCHASE.ORDERHEADER.1 or PURCHASE.ORDERDETAILS.1 table not found.');
+                return null;
+            }
+
+            // Get header
+            const headerQuery = `
+                SELECT ROWID, PO_STATUS, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
+                       PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, APPROVEDBY,
+                       DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                       SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const headerResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(headerQuery);
+
+            if (headerResult.recordset.length === 0) {
+                return null;
+            }
+
+            const header = headerResult.recordset[0];
+
+            // Get details
+            const detailsQuery = `
+                SELECT ROWID, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
+                       QTYALLOCATED, CURRENCY, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO
+                FROM [PURCHASE.ORDERDETAILS.1]
+                WHERE PONUMBER = @poNumber
+                ORDER BY ROWID
+            `;
+            const detailsResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(detailsQuery);
+
+            return {
+                header: {
+                    id: header.ROWID,
+                    poStatus: header.PO_STATUS,
+                    postStatus: header.POSTSTATUS,
+                    poNumber: header.PONUMBER,
+                    dateCreated: header.DATECREATED,
+                    createdBy: header.CREATEDBY,
+                    vendorId: header.VENDORID,
+                    vendName: header.VENDNAME,
+                    pymtrmid: header.PYMTRMID,
+                    refDocType: header.REFDOCTYPE,
+                    deliveryTo: header.DELIVERY_TO,
+                    poDate: header.PODATE,
+                    dateNeeded: header.DATENEEDED,
+                    promisedDate: header.PROMISEDDATE,
+                    promisedShipDate: header.PROMISEDSHIPDATE,
+                    canvassedBy: header.CANVASSEDBY,
+                    confirmedBy_1: header.CONFIRMEDBY_1,
+                    dateConfirmed_1: header.DATECONFIRMED_1,
+                    confirmedBy_2: header.CONFIRMEDBY_2,
+                    dateConfirmed_2: header.DATECONFIRMED_2,
+                    approvedBy: header.APPROVEDBY,
+                    dateApproved: header.DATEAPPROVED,
+                    isBudgetNo: header.IS_BUDGETNO,
+                    isPrNo: header.IS_PRNO,
+                    capex: header.CAPEX,
+                    isPerAdvise: header.IS_PERADVISE,
+                    remarks: header.REMARKS,
+                    subtotal: header.SUBTOTAL,
+                    budgetNoList: header.BUDGETNOLIST,
+                    prList: header.PRLISTS,
+                    contactPerson: header.CONTACTPERSON,
+                    poStatus: header.PO_STATUS || 'PENDING',
+                    confirmedBy: [header.CONFIRMEDBY_1, header.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' / '),
+                    dateConfirmed: header.DATECONFIRMED_1 || header.DATECONFIRMED_2,
+                    currencyCode: detailsResult.recordset[0]?.CURRENCY || 'PHP'
+                },
+                details: detailsResult.recordset.map(detail => ({
+                    id: detail.ROWID,
+                    poNumber: detail.PONUMBER,
+                    rid: detail.RID,
+                    pqCode: detail.PQCODE,
+                    prCode: detail.PRCODE,
+                    ITEMNMBR: detail.ITEMNMBR,
+                    ITEMDESC: detail.ITEMDESC,
+                    UOFM: detail.UOFM,
+                    QUANTITY: detail.QTYORDER,
+                    qtyCancel: detail.QTYCANCEL,
+                    qtyAllocated: detail.QTYALLOCATED,
+                    currency: detail.CURRENCY,
+                    unitPrice: detail.UNITCOST,
+                    extdCost: detail.EXTDCOST,
+                    brand: detail.BRAND,
+                    origin: detail.ORIGIN,
+                    qtyServed: detail.QTYSERVED,
+                    budgetNo: detail.BUDGETNO
+                }))
+            };
+        } catch (error) {
+            console.error('Error fetching purchase order details:', error);
+            return null;
+        }
+    }
+
+    // Confirm purchase order
+    static async confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin = false) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            // Check if PO exists and is in correct status
+            const checkQuery = ` SELECT PO_STATUS, CONFIRMEDBY_1, CONFIRMEDBY_2, DATECONFIRMED_1, DATECONFIRMED_2 FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber `;
+            const checkResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(checkQuery);
+
+            if (checkResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            const currentStatus = checkResult.recordset[0].PO_STATUS;
+            if (currentStatus !== 'FOR P.O. CONFIRMATION') {
+                throw new Error('Purchase order is not in confirmation status');
+            }
+
+            const confirmedBy1 = checkResult.recordset[0].CONFIRMEDBY_1 || '';
+            const confirmedBy2 = checkResult.recordset[0].CONFIRMEDBY_2 || '';
+            const dateConfirmed1 = checkResult.recordset[0].DATECONFIRMED_1;
+            const dateConfirmed2 = checkResult.recordset[0].DATECONFIRMED_2;
+
+            let updateQuery;
+            let newStatus = 'FOR P.O. CONFIRMATION';
+
+            // Helper function to check if a smalldatetime field is empty
+            const isDateEmpty = (dateValue) => {
+                return dateValue === null || dateValue === undefined;
+            };
+
+            // Check if user is in CONFIRMEDBY_1 or CONFIRMEDBY_2
+            const isUserInConfirmedBy1 = this.isUserInCommaSeparated(confirmedBy1, confirmBy);
+            const isUserInConfirmedBy2 = this.isUserInCommaSeparated(confirmedBy2, confirmBy);
+
+            const selectRid = ` SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+            const selectRidResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(selectRid);
+            const ridFromDetails = selectRidResult.recordset[0]?.RID;
+            console.log(`RID from order details for PO ${poNumber}:`, ridFromDetails);
+
+            // Determine which date field to update
+            if (isUserInConfirmedBy1 && isDateEmpty(dateConfirmed1)) {
+                // User matches CONFIRMEDBY_1 and hasn't confirmed yet
+                updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET DATECONFIRMED_1 = GETDATE() WHERE PONUMBER = @poNumber`;
+                // Keep status as 'FOR P.O. CONFIRMATION' for second reviewer
+
+            } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed2)) {
+                // User matches CONFIRMEDBY_2 and hasn't confirmed yet
+                updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET DATECONFIRMED_2 = GETDATE() WHERE PONUMBER = @poNumber `;
+                // Check if both dates are now confirmed before changing status
+                // We'll check after the update
+
+            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && !isAdmin) {
+                throw new Error('You have already confirmed this purchase order');
+            } else if (isUserInConfirmedBy2 && !isDateEmpty(dateConfirmed2) && !isAdmin) {
+                throw new Error('You have already confirmed this purchase order');
+            } else if (isUserInConfirmedBy2 && isDateEmpty(dateConfirmed1) && !isAdmin) {
+                throw new Error('Waiting for first confirmation before you can confirm');
+            } else if (isUserInConfirmedBy1 && !isDateEmpty(dateConfirmed1) && isDateEmpty(dateConfirmed2) && !isAdmin) {
+                throw new Error('You have already confirmed this purchase order');
+            } else {
+                // User doesn't match either CONFIRMEDBY field - treat as admin ascending order
+                if (isDateEmpty(dateConfirmed1)) {
+                    // Update dateConfirmed_1 first
+                    updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET DATECONFIRMED_1 = GETDATE() WHERE PONUMBER = @poNumber`;
+                } else if (isDateEmpty(dateConfirmed2)) {
+                    // Update dateConfirmed_2 second
+                    updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET DATECONFIRMED_2 = GETDATE() WHERE PONUMBER = @poNumber `;
+                } else {
+                    throw new Error('Both reviewers have already confirmed this purchase order');
+                }
+            }
+
+            // Execute the update query
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .input('newStatus', newStatus)
+                .query(updateQuery);
+
+            // Check if both confirmations are done before updating status to FOR P.O. APPROVAL
+            const checkBothQuery = ` SELECT DATECONFIRMED_1, DATECONFIRMED_2 FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber `;
+            const checkBothResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(checkBothQuery);
+
+            const dateConf1 = checkBothResult.recordset[0].DATECONFIRMED_1;
+            const dateConf2 = checkBothResult.recordset[0].DATECONFIRMED_2;
+
+            // Only change status to FOR P.O. APPROVAL if:
+            // 1. Both dates are confirmed (when there are 2 reviewers), OR
+            // 2. First date is confirmed and there's no second reviewer
+            const hasSecondReviewer = confirmedBy2 && confirmedBy2.trim() !== '';
+            const shouldTransitionToApproval = hasSecondReviewer
+                ? (!isDateEmpty(dateConf1) && confirmedBy1 !== '' && !isDateEmpty(dateConf2) && confirmedBy2 !== '')  // Both confirmed with 2 reviewers
+                : (confirmedBy2 === '');  // Single reviewer - just need first confirmation
+
+            if (shouldTransitionToApproval) {
+                const getPrCodesFromDetailsQuery = `SELECT DISTINCT PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE IS NOT NULL AND PRCODE != ''`;
+                const prCodesFromDetailsResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(getPrCodesFromDetailsQuery);
+                const prCodes = prCodesFromDetailsResult.recordset.map(r => r.PRCODE);
+                console.log(`PO ${poNumber} PR codes from details:`, prCodes);
+
+                const statusUpdateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'FOR P.O. APPROVAL' WHERE PONUMBER = @poNumber `;
+                await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(statusUpdateQuery);
+                
+                const itemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE PONUMBER = @poNumber `;
+                await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(itemStatusQuery);
+
+                newStatus = 'FOR P.O. APPROVAL';
+
+                console.log(`PO ${poNumber} PR codes to process:`, prCodes);
+                for (const prCode of prCodes) {
+                    try {
+                        console.log(`Processing PR ${prCode} and RID ${rid} for PO ${poNumber}`);
+
+                        // Get all RID values for this PO from order details
+                        const getRidsQuery = `SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE = @prCode`;
+                        const ridsResult = await transaction.request()
+                            .input('poNumber', poNumber)
+                            .input('prCode', prCode)
+                            .query(getRidsQuery);
+
+                        const rids = ridsResult.recordset.map(r => r.RID);
+                        console.log(`RIDs for PR ${prCode}:`, rids);
+
+                        // Update each RID individually
+                        for (const ridToUpdate of rids) {
+                            console.log(`Updating item with RID ${ridToUpdate} to FOR P.O. APPROVAL`);
+                            const updateItemStatusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE RID = @rid`;
+
+                            const updateResult = await transaction.request()
+                                .input('rid', ridToUpdate)
+                                .query(updateItemStatusQuery);
+                            console.log(`Updated item with RID ${ridToUpdate}, rows affected:`, updateResult.rowsAffected);
+                        }
+
+                        let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
+                        const checkResult = await transaction.request()
+                            .input('poNumber', poNumber)
+                            .query(checkAllItemStatusQuery);
+
+                        const allStatuses = checkResult.recordset.map(record => record.itemStatus);
+                        console.log(`PR ${prCode} item statuses after update:`, allStatuses);
+                        const advancedStatuses = ['P.O. APPROVED', 'P.O. POSTED'];
+
+                        const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+                        console.log(`PR ${prCode} noneHaveAdvancedStatus:`, noneHaveAdvancedStatus);
+
+                        if (noneHaveAdvancedStatus) {
+                            console.log(`Updating PR ${prCode} header status to FOR P.O. APPROVAL`);
+                            const updateRequestStatusQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'FOR P.O. APPROVAL' WHERE REFERENCENO = @prCode`;
+                            await transaction.request()
+                                .input('prCode', prCode)
+                                .query(updateRequestStatusQuery);
+                        } else {
+                            console.log(`Skipping PR ${prCode} header update - has advanced statuses`);
+                        }
+                    } catch (prError) {
+                        console.error(`Error processing PR ${prCode} for PO ${poNumber}:`, prError);
+                        // Continue with other PRs
+                    }
+                }
+
+                console.log(`Completed updating PR statuses for PO ${poNumber}`);
+
+            }
+
+            await transaction.commit();
+
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-confirmed", {
+                poNumber: poNumber,
+                newStatus: newStatus,
+                confirmedBy: confirmBy
+            });
+
+            return {
+                success: true,
+                message: 'Purchase order confirmed successfully',
+                newStatus: newStatus
+            };
+        } catch (error) {
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+            console.error('Error confirming purchase order:', error);
+            throw error;
+        }
+    }
+
+    // Approve purchase order
+    static async approvePurchaseOrder(poNumber, approvedBy) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            // Check if PO exists and is in correct status
+            const checkQuery = ` SELECT PO_STATUS, APPROVEDBY FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber `;
+            const checkResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(checkQuery);
+
+            if (checkResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            const currentStatus = checkResult.recordset[0].PO_STATUS;
+            if (currentStatus !== 'FOR P.O. APPROVAL') {
+                throw new Error('Purchase order is not in approval status');
+            }
+
+            // Get current APPROVEDBY and append new approver
+            let currentApprovedBy = checkResult.recordset[0].APPROVEDBY || '';
+            let newApprovedBy = currentApprovedBy;
+
+            if (currentApprovedBy && !this.isUserInCommaSeparated(currentApprovedBy, approvedBy)) {
+                newApprovedBy = currentApprovedBy + ', ' + approvedBy;
+            } else if (!currentApprovedBy) {
+                newApprovedBy = approvedBy;
+            }
+
+            // Update the PO
+            const updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET DATEAPPROVED = GETDATE(), PO_STATUS = 'P.O. APPROVED' WHERE PONUMBER = @poNumber `;
+
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .query(updateQuery);
+
+            const updateItemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'P.O. APPROVED' WHERE poNumber = @poNumber `;
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .query(updateItemStatusQuery);
+
+            // Get PR codes from ORDERDETAILS
+            const getPrCodesQuery = `SELECT DISTINCT PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE IS NOT NULL AND PRCODE != ''`;
+            const prCodesResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(getPrCodesQuery);
+
+            const prCodes = prCodesResult.recordset.map(r => r.PRCODE);
+
+            for (const prCode of prCodes) {
+                // Get all RID values for this PO from order details
+                const getRidsQuery = `SELECT RID FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE = @prCode`;
+                const ridsResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .input('prCode', prCode)
+                    .query(getRidsQuery);
+
+                const rids = ridsResult.recordset.map(r => r.RID);
+                console.log(`RIDs for PR ${prCode}:`, rids);
+
+                // Update each RID individually
+                for (const ridToUpdate of rids) {
+                    console.log(`Updating item with RID ${ridToUpdate} to P.O. APPROVED`);
+                    const updateItemStatusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. APPROVED' WHERE RID = @rid`;
+
+                    const updateResult = await transaction.request()
+                        .input('rid', ridToUpdate)
+                        .query(updateItemStatusQuery);
+                    console.log(`Updated item with RID ${ridToUpdate}, rows affected:`, updateResult.rowsAffected);
+                }
+
+                let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
+
+                const checkStatus = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(checkAllItemStatusQuery);
+
+                const allStatuses = checkStatus.recordset.map(record => record.itemStatus);
+                const advancedStatuses = ['P.O. POSTED'];
+
+                const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+                if (noneHaveAdvancedStatus) {
+                    const updateRequestStatusQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'P.O. APPROVED' WHERE REFERENCENO = @prCode`;
+                    await transaction.request()
+                        .input('prCode', prCode)
+                        .query(updateRequestStatusQuery);
+                }
+            }
+
+            await transaction.commit();
+
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-approved", {
+                poNumber: poNumber,
+                newStatus: 'P.O. APPROVED',
+                approvedBy: approvedBy
+            });
+
+            return {
+                success: true,
+                message: 'Purchase order approved successfully',
+                newStatus: 'P.O. APPROVED'
+            };
+        } catch (error) {
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+            console.error('Error approving purchase order:', error);
+            throw error;
+        }
+    }
+
+    // Reject purchase order
+    static async rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType = 'PO') {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            let newStatus = 'P.O. REJECTED';
+
+            // Handle different rejection types
+            switch (rejectionType) {
+                case 'PR':
+                    newStatus = 'P.R. REJECTED FROM P.O.';
+                    break;
+                case 'PO':
+                default:
+                    newStatus = 'P.O. REJECTED';
+                    break;
+            }
+
+            // Update the PO status to rejected
+            const updateQuery = ` UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = @newStatus,
+                                  REJECTREMARKS = @reason, DATEMODIFIED = GETDATE(), MODIFIEDBY = @rejectedBy
+                                  WHERE PONUMBER = @poNumber `;
+
+            const result = await transaction.request()
+                .input('poNumber', poNumber)
+                .input('reason', reason)
+                .input('rejectedBy', rejectedBy)
+                .input('newStatus', newStatus)
+                .query(updateQuery);
+
+            // Update each item's QTYCANCEL to its own QTYORDER value
+            const updateItemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYCANCEL = QTYORDER WHERE PONUMBER = @poNumber `;
+            await transaction.request()
+                .input('poNumber', poNumber)
+                .input('newStatus', newStatus)
+                .query(updateItemStatusQuery);
+
+            // Get PO details for related updates
+            const getDetailsQuery = `SELECT PQCODE, RID, QTYORDER FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+            const detailsResult = await transaction.request()
+                .input('poNumber', poNumber)
+                .query(getDetailsQuery);
+
+            if (detailsResult.recordset.length > 0) {
+                switch (rejectionType) {
+                    case 'PR':
+                        // Update each request detail item with its corresponding QTYORDER
+                        for (const detail of detailsResult.recordset) {
+                            if (detail.RID) {
+                                const updatePrQuery = ` UPDATE [PURCHASE.REQUESTDETAILS.1] 
+                                                        SET ITEMSTATUS = @newStatus, 
+                                                            QTYCANCEL = @itemQtyCancel 
+                                                        WHERE RID = @rid `;
+                                const ridRequest = transaction.request();
+                                ridRequest.input('newStatus', newStatus);
+                                ridRequest.input('itemQtyCancel', detail.QTYORDER || 0);
+                                ridRequest.input('rid', detail.RID);
+                                await ridRequest.query(updatePrQuery);
+                            }
+                        }
+                        break;
+                }
+            }
+            await transaction.commit();
+
+            // Broadcast the update for real-time UI
+            broadcastRequestEvaluationUpdate("po-rejected", {
+                poNumber: poNumber,
+                newStatus: newStatus,
+                rejectedBy: rejectedBy,
+                reason: reason
+            });
+
+            return {
+                success: result.rowsAffected[0] > 0,
+                message: 'Purchase order rejected successfully'
+            };
+        } catch (error) {
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+            console.error('Error rejecting purchase order:', error);
+            throw error;
+        }
+    }
+    //#endregion
 }
 
 export default RequestEvaluation;

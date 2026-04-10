@@ -44,10 +44,26 @@ export default function HeaderNavBar() {
   const profileRef = useRef(null);
   const userSetupRef = useRef(null);
   const systemUtilitiesRef = useRef(null);
+  const navRef = useRef(null);
   const notifButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
   const userSetupButtonRef = useRef(null);
   const systemUtilitiesButtonRef = useRef(null);
+  
+  // Store refs for dynamic dropdown buttons
+  const dynamicDropdownButtonRefs = useRef({});
+
+  // Click outside handler for dynamic navigation dropdowns
+  useClickOutside(navRef, (event) => {
+    // Check if click is outside all dynamic dropdown buttons
+    const isOutsideAllButtons = Object.values(dynamicDropdownButtonRefs.current).every(
+      buttonRef => !buttonRef?.contains(event.target)
+    );
+    
+    if (isOutsideAllButtons && Object.keys(dynamicDropdowns).length > 0) {
+      setDynamicDropdowns({});
+    }
+  });
   useClickOutside(notifRef, (event) => {
     if (!notifButtonRef.current || !notifButtonRef.current.contains(event.target)) {
       setIsNotificationOpen(false);
@@ -245,7 +261,7 @@ export default function HeaderNavBar() {
           </button>
 
           {/* Navigation - Desktop */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav ref={navRef} className="hidden md:flex items-center gap-6">
             {/* Loading Skeleton */}
             {modulesLoading ? (
               <>
@@ -284,6 +300,7 @@ export default function HeaderNavBar() {
               return (
                 <div key={dropdown.name} className="relative">
                   <button
+                    ref={(el) => (dynamicDropdownButtonRefs.current[dropdown.name] = el)}
                     onClick={() => {
                       const newState = !dynamicDropdowns[dropdown.name];
                       // Close all other dropdowns first

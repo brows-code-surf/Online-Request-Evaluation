@@ -418,8 +418,16 @@ function PurchaseRequestContent() {
         return 'bg-sky-100 text-sky-800 border-sky-300';
       case 'PARTIALLY SERVED':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300';
-      case 'PROCESSING':
+      case 'FOR P.O.':
         return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
+      case 'P.O. PROCESSING':
+        return 'bg-blue-200 text-blue-900 border-blue-400';
+      case 'FOR P.O. CONFIRMATION':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'FOR P.O. APPROVAL':
+        return 'bg-yellow-200 text-yellow-900 border-yellow-400';
+      case 'P.O. APPROVED':
+        return 'bg-green-100 text-green-800 border-green-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -446,6 +454,24 @@ function PurchaseRequestContent() {
     "request-changed": useCallback(
       (data) => {
         console.log("Request changed event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+  });
+
+  // Real-time updates from canvass-approval page
+  useSocketMultiple("canvass-approval-broadcast", {
+    "canvass-approved": useCallback(
+      (data) => {
+        console.log("Canvass approved event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+    "canvass-rejected": useCallback(
+      (data) => {
+        console.log("Canvass rejected event received in purchase requests:", data);
         reloadPurchaseRequestsData();
       },
       []

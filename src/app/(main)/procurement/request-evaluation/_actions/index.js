@@ -7,6 +7,7 @@ import { ActivityLogs } from '@/models/ActivityLogs';
 import { sendEmailWithTemplate } from '@/utils/emailService';
 import { broadcastRequestEvaluationUpdate, broadcastDashboardUpdate } from '@/lib/socketBroadcast';
 
+//#region PURCHASE REQUEST ACTIONS
 export async function fetchEvaluationLeftPanel(requesterName, requestStatus, filters = {}, isAdmin = false) {
     try {
         const requests = await RequestEvaluation.getEvaluationsLeftPanel(requesterName, requestStatus, filters, isAdmin);
@@ -108,7 +109,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                 greeting: 'Dear',
                                 body: body,
                                 buttonText: 'View Request',
-                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?ref=${referenceNo}`,
                                 companyEmail: 'j.valencia@santehfeeds.com',
                                 companyPhone: '+63 2 8584 4572',
                                 unsubscribeUrl: '#',
@@ -127,7 +128,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                 notificationTitle,
                                 notificationDescription,
                                 recipientName,
-                                `/request-evaluation?id=${referenceNo}`
+                                `/procurement/request-evaluation?id=${referenceNo}`
                             );
 
                             await notification.save(approverName);
@@ -163,7 +164,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
 
                             if (reviewerEmail) {
                                 const subject = 'Request Now Processing';
-                                const body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been received and is now processing.`;
+                                const body = `The request <strong style="font-size:20px;color:#2563eb;">${referenceNo}</strong> has been received by purchasing and is now processing.`;
 
                                 const emailData = {
                                     email: reviewerEmail,
@@ -173,7 +174,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                     greeting: 'Dear',
                                     body: body,
                                     buttonText: 'View Request',
-                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?ref=${referenceNo}`,
                                     companyEmail: 'noreply@santehfeeds.com',
                                     companyPhone: '+63 (02) 8-XXX-XXXX',
                                     unsubscribeUrl: '#',
@@ -189,7 +190,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                         'Request Now Processing',
                                         `Request ${referenceNo} has been received and is now processing.`,
                                         reviewerName,
-                                        `/request-evaluation?id=${referenceNo}`
+                                        `/procurement/request-evaluation?id=${referenceNo}`
                                     );
                                     await notification.save(approverName);
                                     console.log('Notification created for reviewer:', reviewerName);
@@ -220,7 +221,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                     greeting: 'Dear',
                                     body: body,
                                     buttonText: 'View Request',
-                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?ref=${referenceNo}`,
                                     companyEmail: 'noreply@santehfeeds.com',
                                     companyPhone: '+63 (02) 8-XXX-XXXX',
                                     unsubscribeUrl: '#',
@@ -236,7 +237,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                         'Request Now Processing',
                                         `Request ${referenceNo} has been received and is now processing.`,
                                         approverName,
-                                        `/request-evaluation?id=${referenceNo}`
+                                        `/procurement/request-evaluation?id=${referenceNo}`
                                     );
                                     await notification.save(approverName);
                                     console.log('Notification created for approver:', approverName);
@@ -268,7 +269,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                     greeting: 'Dear',
                                     body: body,
                                     buttonText: 'View Request',
-                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?ref=${referenceNo}`,
                                     companyEmail: 'noreply@santehfeeds.com',
                                     companyPhone: '+63 (02) 8-XXX-XXXX',
                                     unsubscribeUrl: '#',
@@ -284,7 +285,7 @@ export async function approveEvaluation(referenceNo, approverName, currentStatus
                                         'Your Request is Now Processing',
                                         `Your request ${referenceNo} has been received and is now processing.`,
                                         requesterName,
-                                        `/request-evaluation?id=${referenceNo}`
+                                        `/procurement/request-evaluation?id=${referenceNo}`
                                     );
                                     await notification.save(approverName);
                                     console.log('Notification created for requester:', requesterName);
@@ -435,7 +436,7 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
                                 greeting: 'Dear',
                                 body: body,
                                 buttonText: 'View Request',
-                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/request-evaluation?ref=${referenceNo}`,
+                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?ref=${referenceNo}`,
                                 companyEmail: 'noreply@santehfeeds.com',
                                 companyPhone: '+63 (02) 8-XXX-XXXX',
                                 unsubscribeUrl: '#',
@@ -454,7 +455,7 @@ export async function rejectEvaluation(referenceNo, approverName, rejectionReaso
                                 'Request Rejected',
                                 `Your request ${referenceNo} has been rejected by ${approverName}. Reason: ${rejectionReason}.`,
                                 requesterName,
-                                `/request-evaluation?id=${referenceNo}`
+                                `/procurement/request-evaluation?id=${referenceNo}`
                             );
 
                             await notification.save(approverName);
@@ -520,3 +521,57 @@ export async function markAsRead(referenceNo, userName) {
         throw error;
     }
 }
+//#endregion
+
+//#region PURCHASE ORDER APPROVAL ACTIONS
+
+export async function fetchPurchaseOrderEvaluationsLeftPanel(userName, statusFilter, isAdmin = false) {
+    try {
+        const evaluations = await RequestEvaluation.getPurchaseOrderEvaluationsLeftPanel(userName, statusFilter, isAdmin);
+        return evaluations;
+    } catch (error) {
+        console.error('Error fetching purchase order evaluations:', error);
+        throw error;
+    }
+}
+
+export async function fetchPurchaseOrderDetails(poNumber) {
+    try {
+        const details = await RequestEvaluation.getPurchaseOrderDetails(poNumber);
+        return details;
+    } catch (error) {
+        console.error('Error fetching purchase order details:', error);
+        throw error;
+    }
+}
+
+export async function confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin = false) {
+    try {
+        const result = await RequestEvaluation.confirmPurchaseOrder(poNumber, rid, confirmBy, isAdmin);
+        return result;
+    } catch (error) {
+        console.error('Error confirming purchase order:', error);
+        throw error;
+    }
+}
+
+export async function approvePurchaseOrder(poNumber, approvedBy) {
+    try {
+        const result = await RequestEvaluation.approvePurchaseOrder(poNumber, approvedBy);
+        return result;
+    } catch (error) {
+        console.error('Error approving purchase order:', error);
+        throw error;
+    }
+}
+
+export async function rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType = null) {
+    try {
+        const result = await RequestEvaluation.rejectPurchaseOrder(poNumber, rejectedBy, reason, rejectionType);
+        return result;
+    } catch (error) {
+        console.error('Error rejecting purchase order:', error);
+        throw error;
+    }
+}
+//#endregion

@@ -3,7 +3,6 @@
 import Canvassing from '@/models/Canvassing.js';
 import Budget from '@/models/Budget.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
-import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 export async function getAllCanvassingRequests(filters = {}, user = null, isAdmin = false) {
   try {
@@ -25,7 +24,7 @@ export async function getCanvassingRequestByPQCode(pqCode, user = null, isAdmin 
   }
 }
 
-export async function createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
+export async function createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '', shouldPost = false) {
   try {
     // Validate required fields
     if (!headerData.referenceNum || !headerData.referenceNum.trim()) {
@@ -55,12 +54,12 @@ export async function createCanvassingRequest(headerData, detailsData, creatorNa
       }
     }
 
-    const result = await Canvassing.createCanvassingRequest(headerData, detailsData, creatorName, supplierName);
+    const result = await Canvassing.createCanvassingRequest(headerData, detailsData, creatorName, supplierName, shouldPost);
 
     return {
       success: true,
       pqCode: result.pqCode,
-      message: 'Canvassing request created successfully'
+      message: shouldPost ? 'Canvassing request saved and posted successfully' : 'Canvassing request created successfully'
     };
   } catch (error) {
     console.error('Error creating canvassing request:', error);
@@ -78,39 +77,9 @@ export async function updateCanvassingRequest(pqCode, headerData, detailsData, u
   }
 }
 
-export async function approveCanvassingRequest(pqCode, approverName) {
-  try {
-    const result = await Canvassing.approveCanvassingRequest(pqCode, approverName);
-
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-approved", {
-        pqCode: pqCode,
-        approverName: approverName,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return result;
-  } catch (error) {
-    console.error('Error approving canvassing request:', error);
-    return { success: false, message: 'Failed to approve canvassing request' };
-  }
-}
-
 export async function postCanvassingRequest(pqCode, posterName) {
   try {
     const result = await Canvassing.postCanvassingRequest(pqCode, posterName);
-
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-posted", {
-        pqCode: pqCode,
-        posterName: posterName,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     return result;
   } catch (error) {
     console.error('Error posting canvassing request:', error);
@@ -133,15 +102,6 @@ export async function deleteCanvassingRequest(pqCode, deleterName) {
     // Delete from database (implement in Canvassing model)
     const result = await Canvassing.deleteCanvassingRequest(pqCode, deleterName);
 
-    if (result.success) {
-      // Emit real-time event
-      broadcastRequestEvaluationUpdate("canvassing-deleted", {
-        pqCode: pqCode,
-        deleterName: deleterName,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     return result;
   } catch (error) {
     console.error('Error deleting canvassing request:', error);
@@ -149,9 +109,9 @@ export async function deleteCanvassingRequest(pqCode, deleterName) {
   }
 }
 
-export async function getCanvassingStats(user = null) {
+export async function getCanvassingStats(user = null, isAdmin = false ) {
   try {
-    const stats = await Canvassing.getCanvassingStats(user);
+    const stats = await Canvassing.getCanvassingStats(user, isAdmin);
     return { success: true, stats };
   } catch (error) {
     console.error('Error getting canvassing stats:', error);

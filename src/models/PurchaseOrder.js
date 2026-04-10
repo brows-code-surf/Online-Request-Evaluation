@@ -3,6 +3,10 @@
 import 'server-only';
 import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
+import { Notification } from './Notification.js';
+import { sendEmailWithTemplate } from '@/utils/emailService.js';
+import UserProfile from './UserProfile.js';
+import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
 
 class PurchaseOrder {
     // Get all purchase orders with filtering and role-based access
@@ -29,7 +33,8 @@ class PurchaseOrder {
                     h.PROMISEDDATE,
                     h.PROMISEDSHIPDATE,
                     h.CANVASSEDBY,
-                    h.CONFIRMEDBY,
+                    h.CONFIRMEDBY_1,
+                    h.CONFIRMEDBY_2,
                     h.APPROVEDBY,
                     h.IS_BUDGETNO,
                     h.IS_PRNO,
@@ -56,6 +61,9 @@ class PurchaseOrder {
                 paramIndex++;
             }
 
+            if (isAdmin) {
+
+            }
             // Apply filters
             if (filters.status) {
                 if (filters.status === 'POSTED') {
@@ -87,7 +95,7 @@ class PurchaseOrder {
             query += `
                 GROUP BY h.ROWID, h.POSTSTATUS, h.PO_STATUS, h.PONUMBER, h.DATECREATED, h.CREATEDBY, h.VENDORID, h.VENDNAME,
                          h.PYMTRMID, h.REFDOCTYPE, h.DELIVERY_TO, h.PODATE, h.DATENEEDED, h.PROMISEDDATE,
-                         h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY, h.APPROVEDBY, h.IS_BUDGETNO,
+                         h.PROMISEDSHIPDATE, h.CANVASSEDBY, h.CONFIRMEDBY_1, h.CONFIRMEDBY_2, h.APPROVEDBY, h.IS_BUDGETNO,
                          h.IS_PRNO, h.CAPEX, h.IS_PERADVISE, h.REMARKS, h.SUBTOTAL, h.BUDGETNOLIST, h.PRLISTS
                 ORDER BY h.DATECREATED DESC, h.PONUMBER DESC
             `;
@@ -113,7 +121,8 @@ class PurchaseOrder {
                 promisedDate: record.PROMISEDDATE,
                 promisedShipDate: record.PROMISEDSHIPDATE,
                 canvassedBy: record.CANVASSEDBY,
-                confirmedBy: record.CONFIRMEDBY,
+                confirmedBy_1: record.CONFIRMEDBY_1,
+                confirmedBy_2: record.CONFIRMEDBY_2,
                 approvedBy: record.APPROVEDBY,
                 isBudgetNo: record.IS_BUDGETNO,
                 isPrNo: record.IS_PRNO,
@@ -123,7 +132,9 @@ class PurchaseOrder {
                 subtotal: record.SUBTOTAL,
                 budgetNoList: record.BUDGETNOLIST,
                 prList: record.PRLISTS,
-                itemCount: record.itemCount
+                itemCount: record.itemCount,
+                confirmedBy: [record.CONFIRMEDBY_1, record.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' , '),
+                dateConfirmed: record.DATECONFIRMED_1 || record.DATECONFIRMED_2
             }));
         } catch (error) {
             console.error('Error fetching purchase orders:', error);
@@ -158,7 +169,7 @@ class PurchaseOrder {
             const headerQuery = `
                 SELECT ROWID, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
                        PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
-                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY, DATECONFIRMED, APPROVEDBY,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, APPROVEDBY,
                        DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
                        SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
                 FROM [PURCHASE.ORDERHEADER.1]
@@ -176,8 +187,8 @@ class PurchaseOrder {
 
             // Get details
             const detailsQuery = `
-                SELECT ROWID, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
-                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO
+                SELECT ROWID, ITEMSTATUS, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
+                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO, PURCHASETYPE, CURRENCY
                 FROM [PURCHASE.ORDERDETAILS.1]
                 WHERE PONUMBER = @poNumber
                 ORDER BY ROWID
@@ -203,8 +214,10 @@ class PurchaseOrder {
                     promisedDate: header.PROMISEDDATE,
                     promisedShipDate: header.PROMISEDSHIPDATE,
                     canvassedBy: header.CANVASSEDBY,
-                    confirmedBy: header.CONFIRMEDBY,
-                    dateConfirmed: header.DATECONFIRMED,
+                    confirmedBy_1: header.CONFIRMEDBY_1,
+                    dateConfirmed_1: header.DATECONFIRMED_1,
+                    confirmedBy_2: header.CONFIRMEDBY_2,
+                    dateConfirmed_2: header.DATECONFIRMED_2,
                     approvedBy: header.APPROVEDBY,
                     dateApproved: header.DATEAPPROVED,
                     isBudgetNo: header.IS_BUDGETNO,
@@ -216,7 +229,9 @@ class PurchaseOrder {
                     budgetNoList: header.BUDGETNOLIST,
                     prList: header.PRLISTS,
                     contactPerson: header.CONTACTPERSON,
-                    poStatus: header.PO_STATUS || 'PENDING'
+                    poStatus: header.PO_STATUS || 'PENDING',
+                    confirmedBy: [header.CONFIRMEDBY_1, header.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' , '),
+                    dateConfirmed: header.DATECONFIRMED_1 || header.DATECONFIRMED_2
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,
@@ -235,8 +250,10 @@ class PurchaseOrder {
                     brand: detail.BRAND,
                     origin: detail.ORIGIN,
                     qtyServed: detail.QTYSERVED,
-                    // itemStatus: detail.ITEMSTATUS,
-                    budgetNo: detail.BUDGETNO
+                    itemStatus: detail.ITEMSTATUS,
+                    budgetNo: detail.BUDGETNO,
+                    purchaseType: detail.PURCHASETYPE,
+                    currency: detail.CURRENCY
                 }))
             };
         } catch (error) {
@@ -268,10 +285,7 @@ class PurchaseOrder {
             }
 
             // Check if PO number is already taken
-            const checkRefQuery = `
-                SELECT COUNT(*) as count FROM [PURCHASE.ORDERHEADER.1]
-                WHERE PONUMBER = @poNumber
-            `;
+            const checkRefQuery = `SELECT COUNT(*) as count FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
 
             const refCheckResult = await transaction.request()
                 .input('poNumber', poNumber)
@@ -287,12 +301,12 @@ class PurchaseOrder {
                 INSERT INTO [PURCHASE.ORDERHEADER.1] (
                     PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME, PYMTRMID,
                     REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE, PROMISEDSHIPDATE,
-                    CANVASSEDBY, CONFIRMEDBY, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                    CANVASSEDBY, CONFIRMEDBY_1, CONFIRMEDBY_2, APPROVEDBY, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
                     SUBTOTAL, BUDGETNOLIST, PRLISTS, POSTSTATUS, PO_STATUS
                 ) VALUES (
                     @poNumber, GETDATE(), @createdBy, @vendorId, @vendName, @pymtrmid,
                     @refDocType, @deliveryTo, GETDATE(), @dateNeeded, @promisedDate, @promisedShipDate,
-                    @canvassedBy, @confirmedBy, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
+                    @canvassedBy, @confirmedBy_1, @confirmedBy_2, @approvedBy, @isBudgetNo, @isPrNo, @capex, @isPerAdvise, @remarks,
                     @subtotal, @budgetNoList, @prList, @postStatus, @poStatus
                 )
             `;
@@ -305,11 +319,12 @@ class PurchaseOrder {
                 .input('pymtrmid', headerData.pymtrmid || '')
                 .input('refDocType', headerData.refDocType || '')
                 .input('deliveryTo', headerData.deliveryTo || '')
-                .input('dateNeeded', headerData.dateNeeded || null)
-                .input('promisedDate', headerData.promisedDate || null)
-                .input('promisedShipDate', headerData.promisedShipDate || null)
+                .input('dateNeeded', headerData.dateNeeded ? new Date(headerData.dateNeeded) : new Date())
+                .input('promisedDate', headerData.promisedDate ? new Date(headerData.promisedDate) : null)
+                .input('promisedShipDate', headerData.promisedShipDate ? new Date(headerData.promisedShipDate) : null)
                 .input('canvassedBy', headerData.canvassedBy || creatorName)
-                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('confirmedBy_1', headerData.confirmedBy_1 || '')
+                .input('confirmedBy_2', headerData.confirmedBy_2 || '')
                 .input('approvedBy', headerData.approvedBy || '')
                 .input('isBudgetNo', headerData.isBudgetNo || 0)
                 .input('isPrNo', headerData.isPrNo || 0)
@@ -320,7 +335,7 @@ class PurchaseOrder {
                 .input('budgetNoList', headerData.budgetNoList || '')
                 .input('prList', headerData.prList || '')
                 .input('postStatus', 0) // NOT POSTED
-                .input('poStatus', 'PENDING')
+                .input('poStatus', headerData.poStatus || 'PENDING')
                 .query(headerQuery);
 
             console.log('Purchase order header inserted');
@@ -334,11 +349,11 @@ class PurchaseOrder {
                     INSERT INTO [PURCHASE.ORDERDETAILS.1] (
                         PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER,
                         QTYCANCEL, QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN,
-                        QTYSERVED, ITEMSTATUS, BUDGETNO
+                        QTYSERVED, ITEMSTATUS, BUDGETNO, PURCHASETYPE, CURRENCY
                     ) VALUES (
                         @poNumber, @rid, @pqCode, @prCode, @itemNmbr, @itemDesc, @uofm, @qtyOrder,
                         @qtyCancel, @qtyAllocated, @unitCost, @extdCost, @brand, @origin,
-                        @qtyServed, @itemStatus, @budgetNo
+                        @qtyServed, @itemStatus, @budgetNo, @purchaseType, @currency
                     )
                 `;
 
@@ -360,10 +375,49 @@ class PurchaseOrder {
                     .input('qtyServed', detail.qtyServed || 0)
                     .input('itemStatus', detail.itemStatus || 'PENDING')
                     .input('budgetNo', detail.budgetNo || '')
+                    .input('purchaseType', detail.purchaseType || '')
+                    .input('currency', detail.currency || '')
                     .query(detailInsertQuery);
             }
 
             console.log(`${detailsData.length} purchase order details inserted`);
+
+            const prCode = detailsData.length > 0 ? detailsData[0].prCode : null;
+
+            if (!prCode) {
+                await transaction.rollback();
+                throw new Error('PR code is required for purchase order creation');
+            }
+
+            // Check only items that will be linked to this new PO (by their RID)
+            let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd WHERE rd.RID IN (${detailsData.map((_, index) => `@rid${index}`).join(',')})`;
+
+            const checkRequest = transaction.request();
+            detailsData.forEach((pr, index) => {
+                checkRequest.input(`rid${index}`, pr.rid);
+            });
+            const checkResult = await checkRequest.query(checkAllItemStatusQuery);
+
+            const allStatuses = checkResult.recordset.map(record => record.itemStatus);
+            const advancedStatuses = ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
+
+            const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+
+            // Update purchase request item status to P.O. PROCESSING (created but not yet submitted)
+            const updatePurchaseRequestQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'P.O. PROCESSING' WHERE RID IN (${detailsData.map((_, index) => `@rid${index}`).join(',')})`;
+
+            const updateRequest = transaction.request();
+            detailsData.forEach((pr, index) => {
+                updateRequest.input(`rid${index}`, pr.rid);
+            });
+            await updateRequest.query(updatePurchaseRequestQuery);
+
+            if (noneHaveAdvancedStatus) {
+                const updatePRHQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'P.O. PROCESSING' WHERE REFERENCENO = @prCode`;
+                await transaction.request()
+                    .input('prCode', prCode)
+                    .query(updatePRHQuery);
+            }
 
             // Insert audit/history log
             const activityQuery = `
@@ -380,6 +434,12 @@ class PurchaseOrder {
             // COMMIT TRANSACTION - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
+
+            // Broadcast real-time update for request evaluation page
+            broadcastRequestEvaluationUpdate("po-created", {
+                poNumber: poNumber,
+                poStatus: 'PENDING'
+            });
 
             return {
                 poNumber: poNumber,
@@ -451,7 +511,8 @@ class PurchaseOrder {
                     PROMISEDDATE = @promisedDate,
                     PROMISEDSHIPDATE = @promisedShipDate,
                     CANVASSEDBY = @canvassedBy,
-                    CONFIRMEDBY = @confirmedBy,
+                    CONFIRMEDBY_1 = @confirmedBy_1,
+                    CONFIRMEDBY_2 = @confirmedBy_2,
                     APPROVEDBY = @approvedBy,
                     IS_BUDGETNO = @isBudgetNo,
                     IS_PRNO = @isPrNo,
@@ -462,6 +523,7 @@ class PurchaseOrder {
                     BUDGETNOLIST = @budgetNoList,
                     PRLISTS = @prList,
                     CONTACTPERSON = @contactPerson,
+                    PO_STATUS = @poStatus,
                     DATEMODIFIED = GETDATE(),
                     MODIFIEDBY = @modifiedBy
                 WHERE PONUMBER = @poNumber
@@ -474,11 +536,12 @@ class PurchaseOrder {
                 .input('pymtrmid', headerData.pymtrmid || '')
                 .input('refDocType', headerData.refDocType || '')
                 .input('deliveryTo', headerData.deliveryTo || '')
-                .input('dateNeeded', headerData.dateNeeded || null)
-                .input('promisedDate', headerData.promisedDate || null)
-                .input('promisedShipDate', headerData.promisedShipDate || null)
+                .input('dateNeeded', headerData.dateNeeded ? new Date(headerData.dateNeeded) : new Date())
+                .input('promisedDate', headerData.promisedDate ? new Date(headerData.promisedDate) : null)
+                .input('promisedShipDate', headerData.promisedShipDate ? new Date(headerData.promisedShipDate) : null)
                 .input('canvassedBy', headerData.canvassedBy || updaterName)
-                .input('confirmedBy', headerData.confirmedBy || '')
+                .input('confirmedBy_1', headerData.confirmedBy_1 || '')
+                .input('confirmedBy_2', headerData.confirmedBy_2 || '')
                 .input('approvedBy', headerData.approvedBy || '')
                 .input('isBudgetNo', headerData.isBudgetNo || 0)
                 .input('isPrNo', headerData.isPrNo || 0)
@@ -489,6 +552,7 @@ class PurchaseOrder {
                 .input('budgetNoList', headerData.budgetNoList || '')
                 .input('prList', headerData.prList || '')
                 .input('contactPerson', headerData.contactPerson || '')
+                .input('poStatus', headerData.poStatus || 'PENDING')
                 .input('modifiedBy', updaterName)
                 .query(headerUpdateQuery);
 
@@ -578,168 +642,6 @@ class PurchaseOrder {
             }
 
             throw new Error('Failed to update purchase order: ' + error.message);
-        } finally {
-            // Connection will be automatically released back to the pool
-            // No need to explicitly close it
-        }
-    }
-
-    // Post purchase order (set POSTSTATUS = 1)
-    static async postPurchaseOrder(poNumber, posterName) {
-        let connection = null;
-        let transaction = null;
-
-        try {
-            // Get connection from pool
-            const pool = await connectToDatabase(process.env.DB_SFC);
-            connection = await pool.connect();
-
-            // BEGIN TRANSACTION
-            transaction = new sql.Transaction(connection);
-            await transaction.begin();
-
-            console.log('Transaction started for purchase order posting');
-
-            // Check if PO exists and get RIDs
-            const checkQuery = `
-                SELECT h.POSTSTATUS, d.RID
-                FROM [PURCHASE.ORDERHEADER.1] h
-                LEFT JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
-                WHERE h.PONUMBER = @poNumber
-            `;
-            const checkResult = await transaction.request()
-                .input('poNumber', poNumber)
-                .query(checkQuery);
-
-            if (checkResult.recordset.length === 0) {
-                throw new Error('Purchase order not found');
-            }
-
-            if (checkResult.recordset[0].POSTSTATUS === 1) {
-                throw new Error('Purchase order is already posted');
-            }
-
-            // Get unique RIDs from PO details
-            const rids = [...new Set(checkResult.recordset.map(row => row.RID).filter(rid => rid))];
-
-            // Update POSTSTATUS to 1
-            const updatePOQuery = `
-                UPDATE [PURCHASE.ORDERHEADER.1]
-                SET POSTSTATUS = 1,
-                    MODIFIEDBY = @modifiedBy,
-                    DATEMODIFIED = GETDATE()
-                WHERE PONUMBER = @poNumber
-            `;
-
-            const poResult = await transaction.request()
-                .input('poNumber', poNumber)
-                .input('modifiedBy', posterName)
-                .query(updatePOQuery);
-
-            if (poResult.rowsAffected[0] === 0) {
-                throw new Error('Purchase order not found or already posted');
-            }
-
-            // Update request item statuses to "P.O. POSTED" where RID matches
-            let affectedPrCodes = [];
-            if (rids.length > 0) {
-                // First, get the REFERENCENOs (PRCODEs) for the RIDs being updated
-                const getPrCodesQuery = `
-                    SELECT DISTINCT REFERENCENO
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE RID IN (${rids.map((rid, index) => `@rid${index}`).join(',')})
-                `;
-
-                const prCodeRequest = transaction.request();
-                rids.forEach((rid, index) => {
-                    prCodeRequest.input(`rid${index}`, rid);
-                });
-
-                const prCodeResult = await prCodeRequest.query(getPrCodesQuery);
-                affectedPrCodes = prCodeResult.recordset.map(row => row.REFERENCENO);
-
-                // Update request item statuses to "P.O. POSTED" where RID matches
-                const ridParameters = rids.map((rid, index) => `@rid${index}`).join(',');
-                const updateRequestQuery = `
-                    UPDATE [PURCHASE.REQUESTDETAILS.1]
-                    SET ITEMSTATUS = 'P.O. POSTED'
-                    WHERE RID IN (${ridParameters})
-                `;
-
-                const request = transaction.request();
-                rids.forEach((rid, index) => {
-                    request.input(`rid${index}`, rid);
-                });
-
-                await request.query(updateRequestQuery);
-                console.log(`Updated ${rids.length} request items to "P.O. POSTED" status`);
-            }
-
-            // Check and update request header status if all items are P.O. POSTED
-            for (const prCode of affectedPrCodes) {
-                // Check if all items for this REFERENCENO are P.O. POSTED
-                const checkAllPostedQuery = `
-                    SELECT
-                        COUNT(*) as totalItems,
-                        COUNT(CASE WHEN ITEMSTATUS = 'P.O. POSTED' THEN 1 END) as postedItems
-                    FROM [PURCHASE.REQUESTDETAILS.1]
-                    WHERE REFERENCENO = @prCode
-                `;
-
-                const checkResult = await transaction.request()
-                    .input('prCode', prCode)
-                    .query(checkAllPostedQuery);
-
-                const { totalItems, postedItems } = checkResult.recordset[0];
-
-                // If all items are P.O. POSTED, update the request header status
-                if (totalItems > 0 && totalItems === postedItems) {
-                    const updateHeaderQuery = `
-                        UPDATE [PURCHASE.REQUESTHEADER.1]
-                        SET REQUESTSTATUS = 'P.O. POSTED'
-                        WHERE REFERENCENO = @prCode
-                    `;
-
-                    await transaction.request()
-                        .input('prCode', prCode)
-                        .query(updateHeaderQuery);
-
-                    console.log(`Updated request ${prCode} header status to "P.O. POSTED"`);
-                }
-            }
-
-            // Log activity for posted order
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @modifiedBy, GETDATE())
-            `;
-            await transaction.request()
-                .input('activity', `Purchase Order ${poNumber} posted by ${posterName}`)
-                .input('modifiedBy', posterName)
-                .query(activityQuery);
-
-            // COMMIT TRANSACTION - All operations succeeded
-            await transaction.commit();
-            console.log('Transaction committed successfully for PO posting');
-
-            return {
-                success: true,
-                message: 'Purchase order posted successfully'
-            };
-        } catch (error) {
-            console.error('Error posting purchase order:', error);
-
-            // ROLLBACK TRANSACTION - Any failure triggers rollback
-            if (transaction) {
-                try {
-                    await transaction.rollback();
-                    console.log('Transaction rolled back due to error');
-                } catch (rollbackError) {
-                    console.error('Error during transaction rollback:', rollbackError);
-                }
-            }
-
-            throw new Error('Failed to post purchase order: ' + error.message);
         } finally {
             // Connection will be automatically released back to the pool
             // No need to explicitly close it
@@ -866,15 +768,121 @@ class PurchaseOrder {
                 throw new Error('Failed to update purchase order status');
             }
 
+            const updatePOdetailsQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'FOR P.O. CONFIRMATION' WHERE PONUMBER = @poNumber`;
+            await connection.request()
+                .input('poNumber', poNumber)
+                .query(updatePOdetailsQuery);
+            
+            // Update purchase request item status to FOR P.O. CONFIRMATION
+            const updateItemStatusQuery = `UPDATE rd SET rd.ITEMSTATUS = 'FOR P.O. CONFIRMATION' FROM [PURCHASE.REQUESTDETAILS.1] rd
+                                           INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
+            await connection.request()
+                .input('poNumber', poNumber)
+                .query(updateItemStatusQuery);
+
+            // Get all distinct PR codes from order details
+            const getPrCodeQuery = `SELECT DISTINCT PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber AND PRCODE IS NOT NULL AND PRCODE != ''`;
+            const prCodeResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(getPrCodeQuery);
+            
+            const prCodes = prCodeResult.recordset.map(row => row.PRCODE);
+            
+            if (prCodes.length === 0) {
+                throw new Error('PR code is required for purchase order submission');
+            }
+
+            // Update each PR code's status
+            for (const prCode of prCodes) {
+                let checkAllItemStatusQuery = `SELECT rd.ITEMSTATUS as itemStatus FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.RID = od.RID WHERE od.PONUMBER = @poNumber`;
+                const checkStatus = await connection.request()
+                    .input('poNumber', poNumber)
+                    .query(checkAllItemStatusQuery);
+
+                const allStatuses = checkStatus.recordset.map(record => record.itemStatus);
+                const advancedStatuses = ['FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
+
+                const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
+
+                if (noneHaveAdvancedStatus) {
+                    const updatePRHQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'FOR P.O. CONFIRMATION' WHERE REFERENCENO = @prCode`;
+                    await connection.request()
+                        .input('prCode', prCode)
+                        .query(updatePRHQuery);
+                }
+            }
+
+            // Get confirmedBy for notifications
+            const getConfirmedByQuery = `SELECT CONFIRMEDBY_1, CONFIRMEDBY_2 FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
+            const confirmedByResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(getConfirmedByQuery);
+
+            const confirmedBy_1 = confirmedByResult.recordset[0]?.CONFIRMEDBY_1 || '';
+            const confirmedBy_2 = confirmedByResult.recordset[0]?.CONFIRMEDBY_2 || '';
+            const confirmedBy = [confirmedBy_1, confirmedBy_2].filter(Boolean).join(', ');
+
             // Log activity
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @submitterName, GETDATE())
-            `;
+            const activityQuery = ` INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED) 
+                                    VALUES (@activity, @submitterName, GETDATE())`;
             await connection.request()
                 .input('activity', `Purchase Order ${poNumber} submitted for processing by ${submitterName}`)
                 .input('submitterName', submitterName)
                 .query(activityQuery);
+
+            // Send notifications and emails to confirmers
+            if (confirmedBy && confirmedBy.trim()) {
+                const confirmerNames = confirmedBy.split(', ').filter(name => name.trim());
+
+                for (const confirmerName of confirmerNames) {
+                    try {
+                        // Get email for confirmer
+                        const confirmerEmail = await UserProfile.getEmailByEmployeeName(confirmerName.trim());
+                        if (confirmerEmail) {
+                            // Send email notification
+                            const emailData = {
+                                email: confirmerEmail,
+                                name: confirmerName.trim(),
+                                subject: 'Purchase Order Submitted for Confirmation',
+                                companyName: 'SANTEH',
+                                greeting: 'Dear',
+                                body: `A purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been submitted and is waiting for your confirmation. Please review and confirm the purchase order at your earliest convenience.`,
+                                buttonText: 'View Purchase Order',
+                                buttonUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/procurement/request-evaluation?id=${poNumber}`,
+                                companyEmail: 'j.valencia@santehfeeds.com',
+                                companyPhone: '+63 2 8584 4572',
+                                unsubscribeUrl: '#',
+                                preferencesUrl: '#'
+                            };
+
+                            await sendEmailWithTemplate(emailData);
+                            console.log('Email sent to confirmer:', confirmerName.trim());
+
+                            // Create notification
+                            const notification = new Notification(
+                                'Purchase Order Submitted for Confirmation',
+                                `Purchase order ${poNumber} has been submitted and is waiting for your confirmation.`,
+                                confirmerName.trim(),
+                                `/procurement/request-evaluation?id=${poNumber}`
+                            );
+
+                            await notification.save(submitterName);
+                            console.log('Notification created for confirmer:', confirmerName.trim());
+                        } else {
+                            console.log('No email found for confirmer:', confirmerName.trim());
+                        }
+                    } catch (error) {
+                        console.error('Error sending notification to confirmer:', confirmerName.trim(), error);
+                        // Don't throw error to avoid failing the submission process
+                    }
+                }
+            }
+
+            // Broadcast real-time update for request evaluation page
+            broadcastRequestEvaluationUpdate("po-submitted", {
+                poNumber: poNumber,
+                poStatus: 'FOR P.O. CONFIRMATION'
+            });
 
             return {
                 success: true,
@@ -892,41 +900,25 @@ class PurchaseOrder {
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            let query = `
-                SELECT
-                    pqas.PQROWID,
-                    pqh.PQCODE,
-                    pqh.REFERENCENUM,
-                    pqd.VENDORID,
-                    s.VENDNAME as SUPPLIER_NAME,
-                    pqd.PYMTRMID as PAYMENT_TERMS,
-                    pqd.DELIVERYSCHEDULE,
-                    pqd.BRAND,
-                    pqd.ORIGIN,
-                    pqd.IS_IMPORTED,
-                    pqd.RID,
-                    pqd.PRCODE,
-                    pqd.ITEMNMBR as ITEM_NUMBER,
-                    pqd.ITEMDESC as ITEM_DESCRIPTION,
-                    pqd.UOFM,
-                    pqd.QUANTITY,
-                    pqd.BUDGETCODE as BUDGET_CODE,
-                    pqd.OFFEREDPRICE as OFFERED_PRICE,
-                    pqd.BIDPRICE as BID_PRICE,
-                    pqd.FINALPRICE as FINAL_PRICE,
-                    pqd.REMARKS,
-                    pr.COMPANY,
-                    pr.ADDRESSEDTO,
-                    ISNULL(SUM(pod.QTYORDER), 0) as TOTAL_QTY_ORDERED
-                FROM [PURCHASE.QUOTATIONAPPROVALSTATUS.1] pqas
-                INNER JOIN [PURCHASE.QUOTATIONDETAILS.1] pqd ON pqas.PQROWID = pqd.ROWID
-                INNER JOIN [PURCHASE.QUOTATIONHEADER.1] pqh ON pqd.PQCODE = pqh.PQCODE
-                LEFT JOIN [SUPPLIER.1] s ON pqd.VENDORID = s.VENDORID
-                INNER JOIN [PURCHASE.REQUESTHEADER.1] pr ON pqd.PRCODE = pr.REFERENCENO
-                LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON pqd.RID = pod.RID
-                WHERE pqas.IS_APPROVED = 1
-                AND pqh.POSTSTATUS = 1
-                AND pqd.IS_SERVED = 0
+            let query = `SELECT pqd.ROWID as PQROWID, pqh.PQCODE, pqh.REFERENCENUM,
+                pqd.VENDORID, s.VENDNAME as SUPPLIER_NAME, pqd.PYMTRMID as PAYMENT_TERMS,
+                pqh.DATEMODIFIED, pqh.CREATEDBY, pqd.DELIVERYSCHEDULE,
+                pqd.BRAND, pqd.ORIGIN, pqd.PURCHASETYPE,
+                pqd.CURRENCY, pqd.IS_IMPORTED, pqd.RID,
+                pqd.PRCODE, pqd.ITEMNMBR as ITEM_NUMBER, pqd.ITEMDESC as ITEM_DESCRIPTION,
+                pqd.UOFM, pqd.QUANTITY, pqd.BUDGETCODE as BUDGET_CODE,
+                pqd.OFFEREDPRICE as OFFERED_PRICE, pqd.BIDPRICE as BID_PRICE, pqd.FINALPRICE as FINAL_PRICE,
+                pqd.REMARKS, pr.COMPANY, pr.ADDRESSEDTO,
+                ISNULL(SUM(pod.QTYORDER), 0) as TOTAL_QTY_ORDERED
+            FROM [PURCHASE.QUOTATIONDETAILS.1] pqd 
+            INNER JOIN [PURCHASE.QUOTATIONHEADER.1] pqh ON pqd.PQCODE = pqh.PQCODE
+            LEFT JOIN [SUPPLIER.1] s ON pqd.VENDORID = s.VENDORID
+            INNER JOIN [PURCHASE.REQUESTHEADER.1] pr ON pqd.PRCODE = pr.REFERENCENO
+            LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON pqd.RID = pod.RID AND pod.ITEMSTATUS NOT IN ('P.O. REJECTED')
+            LEFT JOIN [PURCHASE.ORDERHEADER.1] poh ON pod.PONUMBER = poh.PONUMBER AND poh.PO_STATUS NOT IN ('P.O. REJECTED')
+
+            WHERE 
+                pqd.APPROVALSTATUS = 'SELECTED' AND pqh.POSTSTATUS = 1 AND pqd.IS_SERVED = 0
             `;
 
             const params = [];
@@ -940,15 +932,28 @@ class PurchaseOrder {
                 paramIndex++;
             }
 
-            query += `
-                GROUP BY pqas.PQROWID, pqh.PQCODE, pqh.REFERENCENUM, pqh.DATEREQUESTED, pqd.VENDORID, s.VENDNAME,
-                         pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, pqd.BRAND, pqd.ORIGIN, pqd.IS_IMPORTED,
-                         pqd.RID, pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, pqd.UOFM, pqd.QUANTITY,
-                         pqd.BUDGETCODE, pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, pqd.REMARKS,
-                         pr.COMPANY, pr.ADDRESSEDTO
-                HAVING pqd.QUANTITY - ISNULL(SUM(pod.QTYORDER), 0) != 0
-                ORDER BY pqh.DATEREQUESTED DESC, pqd.RID
-            `;
+            query += `GROUP BY 
+                        pqd.ROWID, pqh.PQCODE, pqh.REFERENCENUM, 
+                        pqh.DATEMODIFIED, pqh.CREATEDBY, pqd.VENDORID, 
+                        s.VENDNAME, pqd.PYMTRMID, pqd.DELIVERYSCHEDULE, 
+                        pqd.BRAND, pqd.ORIGIN, pqd.PURCHASETYPE,
+                        pqd.CURRENCY, pqd.IS_IMPORTED, pqd.RID, 
+                        pqd.PRCODE, pqd.ITEMNMBR, pqd.ITEMDESC, 
+                        pqd.UOFM, pqd.QUANTITY,pqd.BUDGETCODE,
+                        pqd.OFFEREDPRICE, pqd.BIDPRICE, pqd.FINALPRICE, 
+                        pqd.REMARKS, pr.COMPANY, pr.ADDRESSEDTO
+
+                    HAVING 
+                        pqd.QUANTITY - ISNULL(SUM(
+                            CASE 
+                                WHEN poh.PONUMBER IS NOT NULL THEN pod.QTYORDER
+                                ELSE 0
+                            END
+                        ), 0) > 0
+
+                    ORDER BY 
+                        pqh.DATEMODIFIED DESC, 
+                        pqd.RID ASC`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -961,9 +966,13 @@ class PurchaseOrder {
                 supplierName: record.SUPPLIER_NAME,
                 vendorId: record.VENDORID,
                 paymentTerms: record.PAYMENT_TERMS,
+                canvassDate: record.DATEMODIFIED,
+                canvassedBy: record.CREATEDBY,
                 deliverySchedule: record.DELIVERYSCHEDULE,
                 brand: record.BRAND,
                 origin: record.ORIGIN,
+                purchaseType: record.PURCHASETYPE,
+                currency: record.CURRENCY,
                 isImported: record.IS_IMPORTED,
                 rid: record.RID,
                 prCode: record.PRCODE,

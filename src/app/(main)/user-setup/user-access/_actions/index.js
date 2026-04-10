@@ -208,3 +208,97 @@ export async function getAvailableModules() {
     };
   }
 }
+
+// User Management Actions
+export async function addUserToConfirmBy(locationCode, confirmName, isActive = 1) {
+  try {
+    console.log('Server action: addUserToConfirmBy called with:', { locationCode, confirmName, isActive });
+    const result = await USERACCESS.addUserToConfirmBy(locationCode, confirmName, isActive);
+    console.log('Server action: addUserToConfirmBy result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error adding user:', error);
+    return {
+      success: false,
+      message: 'Failed to add user: ' + error.message
+    };
+  }
+}
+
+export async function getConfirmByUsersForUser(confirmName) {
+  try {
+    console.log('Server action: getConfirmByUsersForUser called with:', confirmName);
+    const users = await USERACCESS.getConfirmByUsersForUser(confirmName);
+    console.log('Server action: getConfirmByUsersForUser result from model:', users);
+    return {
+      success: true,
+      data: users
+    };
+  } catch (error) {
+    console.error('Error fetching confirm by users for user:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch users: ' + error.message
+    };
+  }
+}
+
+export async function updateUserStatus(recordId, isActive) {
+  try {
+    const result = await USERACCESS.updateUserStatus(recordId, isActive);
+    return result;
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return {
+      success: false,
+      message: 'Failed to update user status: ' + error.message
+    };
+  }
+}
+
+// PO Approver Actions
+export async function addUserToApproveBy(locnCode, approveName, active = 1) {
+  try {
+    console.log('Server action: addUserToApproveBy called with:', { locnCode, approveName, active });
+    const result = await USERACCESS.addUserToApproveBy(locnCode, approveName, active);
+    console.log('Server action: addUserToApproveBy result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error adding user to approve by:', error);
+    return {
+      success: false,
+      message: 'Failed to add user: ' + error.message
+    };
+  }
+}
+
+export async function getApproveByUsersForUser(approveName) {
+  try {
+    console.log('Server action: getApproveByUsersForUser called with:', approveName);
+    const users = await USERACCESS.getApproveByUsersForUser(approveName);
+    console.log('Server action: getApproveByUsersForUser result from model:', users);
+    return {
+      success: true,
+      data: users
+    };
+  } catch (error) {
+    console.error('Error fetching approve by users for user:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch users: ' + error.message
+    };
+  }
+}
+
+export async function updateApproveByUserStatus(recordId, isActive) {
+  try {
+    const result = await USERACCESS.updateApproveByUserStatus(recordId, isActive);
+    return result;
+  } catch (error) {
+    console.error('Error updating approve by user status:', error);
+    return {
+      success: false,
+      message: 'Failed to update user status: ' + error.message
+    };
+  }
+}

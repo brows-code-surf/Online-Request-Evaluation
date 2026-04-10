@@ -245,6 +245,244 @@ export const USERACCESS = {
     }
   },
 
+  // Add new user to the system
+  async addUserToConfirmBy(locnCode, confirmName, active = 1) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Check if user already exists
+      const checkQuery = `
+        SELECT ROWID, LOCNCODE, CONFIRMNAME, ACTIVE
+        FROM [SETTINGS.CONFIRMBY.1]
+        WHERE LOCNCODE = @locnCode AND CONFIRMNAME = @confirmName
+      `;
+
+      const checkResult = await connection.request()
+        .input('locnCode', locnCode)
+        .input('confirmName', confirmName)
+        .query(checkQuery);
+
+      if (checkResult.recordset.length > 0) {
+        const existingUser = checkResult.recordset[0];
+        // If user exists but is inactive, activate them
+        if (existingUser.ACTIVE === 0 || existingUser.ACTIVE === '0') {
+          const activateQuery = `
+            UPDATE [SETTINGS.CONFIRMBY.1]
+            SET ACTIVE = @active
+            WHERE ROWID = @rowId
+          `;
+
+          const activateResult = await connection.request()
+            .input('active', active)
+            .input('rowId', existingUser.ROWID)
+            .query(activateQuery);
+
+          if (activateResult.rowsAffected[0] > 0) {
+            return { success: true, message: "User activated successfully" };
+          } else {
+            return { success: false, message: "Failed to activate user" };
+          }
+        } else {
+          // User already exists and is active
+          return { success: true, message: "User is already active as a Purchase Order Confirmation Officer" };
+        }
+      }
+
+      // Insert new user
+      const insertQuery = `
+        INSERT INTO [SETTINGS.CONFIRMBY.1]
+        (LOCNCODE, CONFIRMNAME, ACTIVE)
+        VALUES
+        (@locnCode, @confirmName, @active)
+      `;
+
+      const result = await connection.request()
+        .input('locnCode', locnCode)
+        .input('confirmName', confirmName)
+        .input('active', active)
+        .query(insertQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User added successfully" };
+      } else {
+        return { success: false, message: "Failed to add user" };
+      }
+    } catch (error) {
+      console.error("Add user error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Get confirm by users for a specific user
+  async getConfirmByUsersForUser(confirmName) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT ROWID, LOCNCODE, CONFIRMNAME, ACTIVE
+        FROM [SETTINGS.CONFIRMBY.1]
+        WHERE CONFIRMNAME = @confirmName
+        ORDER BY CONFIRMNAME
+      `;
+
+      const result = await connection.request()
+        .input('confirmName', confirmName)
+        .query(query);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get confirm by users for user error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Update user status
+  async updateUserStatus(rowId, active) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        UPDATE [SETTINGS.CONFIRMBY.1]
+        SET ACTIVE = @active
+        WHERE ROWID = @rowId
+      `;
+
+      const result = await connection.request()
+        .input('rowId', rowId)
+        .input('active', active)
+        .query(query);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User status updated successfully" };
+      } else {
+        return { success: false, message: "No user found to update" };
+      }
+    } catch (error) {
+      console.error("Update user status error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Add new user to the APPROVEBY table
+  async addUserToApproveBy(locnCode, approveName, active = 1) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Check if user already exists
+      const checkQuery = `
+        SELECT ROWID
+        FROM [SETTINGS.APPROVEBY.1]
+        WHERE LOCNCODE = @locnCode AND APPROVENAME = @approveName
+      `;
+
+      const checkResult = await connection.request()
+        .input('locnCode', locnCode)
+        .input('approveName', approveName)
+        .query(checkQuery);
+
+      if (checkResult.recordset.length > 0) {
+        return { success: false, message: "User already exists with this location code and name" };
+      }
+
+      // Insert new user
+      const insertQuery = `
+        INSERT INTO [SETTINGS.APPROVEBY.1]
+        (LOCNCODE, APPROVENAME, ACTIVE)
+        VALUES
+        (@locnCode, @approveName, @active)
+      `;
+
+      const result = await connection.request()
+        .input('locnCode', locnCode)
+        .input('approveName', approveName)
+        .input('active', active)
+        .query(insertQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User added successfully" };
+      } else {
+        return { success: false, message: "Failed to add user" };
+      }
+    } catch (error) {
+      console.error("Add user to approve by error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Get all users from APPROVEBY table
+  async getAllApproveByUsers() {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT ROWID, LOCNCODE, APPROVENAME, ACTIVE
+        FROM [SETTINGS.APPROVEBY.1]
+        ORDER BY APPROVENAME
+      `;
+
+      const result = await connection.request().query(query);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get all approve by users error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Get users from APPROVEBY table for a specific user
+  async getApproveByUsersForUser(approveName) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT ROWID, LOCNCODE, APPROVENAME, ACTIVE
+        FROM [SETTINGS.APPROVEBY.1]
+        WHERE APPROVENAME = @approveName
+        ORDER BY LOCNCODE
+      `;
+
+      const result = await connection.request()
+        .input('approveName', approveName)
+        .query(query);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get approve by users for user error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Update user status in APPROVEBY table
+  async updateApproveByUserStatus(rowId, active) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        UPDATE [SETTINGS.APPROVEBY.1]
+        SET ACTIVE = @active
+        WHERE ROWID = @rowId
+      `;
+
+      const result = await connection.request()
+        .input('rowId', rowId)
+        .input('active', active)
+        .query(query);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User status updated successfully" };
+      } else {
+        return { success: false, message: "No user found to update" };
+      }
+    } catch (error) {
+      console.error("Update approve by user status error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
   // Get accessible modules with child module information
   async getAccessibleModulesWithChildren(employeeId) {
     let connection;

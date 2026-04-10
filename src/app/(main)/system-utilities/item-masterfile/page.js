@@ -260,84 +260,84 @@ function ItemMasterfileContent() {
                 <HeaderNavBar />
                 <div className="flex flex-1 pt-16">
                     <div className="flex-1 flex flex-col">
-                        <div className="flex-1 p-8">
-                            <div className="max-w-7xl mx-auto space-y-8">
+                        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                            <div className="max-w-7xl mx-auto w-full space-y-8">
                                 {/* Header Section Skeleton */}
-                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-8 shadow-xl`}>
-                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-4 sm:p-6 lg:p-8 shadow-xl`}>
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-4 mb-4">
-                                                <SkeletonLoader height="h-12" width="w-12" className="rounded-xl" />
+                                            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                                                <SkeletonLoader height="h-10 sm:h-12" width="w-10 sm:w-12" className="rounded-xl" />
                                                 <div>
-                                                    <SkeletonLoader height="h-8" width="w-48" className="mb-2" />
-                                                    <SkeletonLoader height="h-3" width="w-32" />
+                                                    <SkeletonLoader height="h-6 sm:h-8" width="w-32 sm:w-48" className="mb-2" />
+                                                    <SkeletonLoader height="h-2 sm:h-3" width="w-24 sm:w-32" />
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
-                                            <SkeletonLoader height="h-16" width="w-24" className="rounded-xl" />
-                                            <SkeletonLoader height="h-12" width="w-32" className="rounded-xl" />
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                            <SkeletonLoader height="h-12 sm:h-16" width="w-20 sm:w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-12 sm:h-16" width="w-20 sm:w-24" className="rounded-xl" />
+                                            <SkeletonLoader height="h-10 sm:h-12" width="w-28 sm:w-32" className="rounded-xl" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Search and Filters Skeleton */}
-                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-6 shadow-lg`}>
-                                    <div className="flex flex-col lg:flex-row gap-6">
-                                        <SkeletonLoader height="h-12" width="w-full" className="rounded-xl" />
-                                        <SkeletonLoader height="h-12" width="w-48" className="rounded-xl" />
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-4 sm:p-6 shadow-lg`}>
+                                    <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+                                        <SkeletonLoader height="h-10 sm:h-12" width="w-full" className="rounded-xl" />
+                                        <SkeletonLoader height="h-10 sm:h-12" width="w-32 sm:w-48" className="rounded-xl" />
                                     </div>
                                 </div>
 
                                 {/* Items Table Skeleton */}
                                 <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full">
+                                        <table className="w-full min-w-[600px]">
                                             <thead className={`${darkMode ? 'bg-gray-800/60' : 'bg-gray-50/60'} backdrop-blur-sm`}>
                                                 <tr>
-                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    <th className={`px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-2 sm:h-3" width="w-20 sm:w-24" />
                                                     </th>
-                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    <th className={`px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-2 sm:h-3" width="w-20 sm:w-24" />
                                                     </th>
-                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        <SkeletonLoader height="h-3" width="w-24" />
+                                                    <th className={`px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-2 sm:h-3" width="w-20 sm:w-24" />
                                                     </th>
-                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    <th className={`px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-2 sm:h-3" width="w-14 sm:w-16" />
                                                     </th>
-                                                    <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        <SkeletonLoader height="h-3" width="w-16" />
+                                                    <th className={`px-4 sm:px-6 py-3 sm:py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        <SkeletonLoader height="h-2 sm:h-3" width="w-14 sm:w-16" />
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm`}>
                                                 {Array(5).fill().map((_, index) => (
                                                     <tr key={index} className={`group ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')} hover:${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/50'} transition-all duration-200 border-b ${darkMode ? 'border-gray-700/30' : 'border-gray-200/30'} backdrop-blur-sm`}>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                        <td className={`px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                                             <div className="flex items-center">
-                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg mr-3" />
-                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                                <SkeletonLoader height="h-6 sm:h-8" width="w-6 sm:w-8" className="rounded-lg mr-2 sm:mr-3" />
+                                                                <SkeletonLoader height="h-3 sm:h-4" width="w-20 sm:w-24" />
                                                             </div>
                                                         </td>
-                                                        <td className={`px-6 py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
-                                                            <SkeletonLoader height="h-4" width="w-32" />
+                                                        <td className={`px-4 sm:px-6 py-4 sm:py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
+                                                            <SkeletonLoader height="h-3 sm:h-4" width="w-24 sm:w-32" />
                                                         </td>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                        <td className={`px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                                             <div className="flex items-center">
-                                                                <SkeletonLoader height="h-4" width="w-4" className="mr-2" />
-                                                                <SkeletonLoader height="h-4" width="w-24" />
+                                                                <SkeletonLoader height="h-3 sm:h-4" width="w-3 sm:w-4" className="mr-2" />
+                                                                <SkeletonLoader height="h-3 sm:h-4" width="w-20 sm:w-24" />
                                                             </div>
                                                         </td>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                            <SkeletonLoader height="h-6" width="w-16" className="rounded-full" />
+                                                        <td className={`px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                            <SkeletonLoader height="h-5 sm:h-6" width="w-14 sm:w-16" className="rounded-full" />
                                                         </td>
-                                                        <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                                        <td className="px-4 sm:px-6 py-4 sm:py-5 whitespace-nowrap text-right text-sm font-medium">
                                                             <div className="flex justify-end gap-1">
-                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
-                                                                <SkeletonLoader height="h-8" width="w-8" className="rounded-lg" />
+                                                                <SkeletonLoader height="h-6 sm:h-8" width="w-6 sm:w-8" className="rounded-lg" />
+                                                                <SkeletonLoader height="h-6 sm:h-8" width="w-6 sm:w-8" className="rounded-lg" />
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -360,8 +360,8 @@ function ItemMasterfileContent() {
                 <HeaderNavBar />
                 <div className="flex flex-1 pt-16">
                     <div className="flex-1 flex flex-col">
-                        <div className="flex-1 p-8">
-                            <div className="max-w-7xl mx-auto space-y-8">
+                        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                            <div className="max-w-7xl mx-auto w-full space-y-8">
                                 {/* Header Section Skeleton */}
                                 <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-8 shadow-xl`}>
                                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -460,8 +460,8 @@ function ItemMasterfileContent() {
 
             <div className="flex flex-1 pt-16">
                 <div className="flex-1 flex flex-col">
-                    <div className="flex-1 p-8">
-                        <div className="max-w-7xl mx-auto space-y-8">
+                    <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                        <div className="max-w-7xl mx-auto w-full space-y-8">
 
                             {/* Header Section */}
                             <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} p-8 shadow-xl`}>
@@ -574,127 +574,251 @@ function ItemMasterfileContent() {
                                 </div>
                             </div>
 
-                            {/* Items Table */}
-                            <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className={`${darkMode ? 'bg-gray-800/60' : 'bg-gray-50/60'} backdrop-blur-sm`}>
-                                            <tr>
-                                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    Item Number
-                                                </th>
-                                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    Description
-                                                </th>
-                                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    Location Code
-                                                </th>
-                                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    Status
-                                                </th>
-                                                <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm`}>
-                                            {paginatedItems.length === 0 ? (
+                            {/* Items Table - Desktop View */}
+                            <div className="hidden sm:block">
+                                <div className={`${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className={`${darkMode ? 'bg-gray-800/60' : 'bg-gray-50/60'} backdrop-blur-sm`}>
                                                 <tr>
-                                                    <td colSpan="5" className={`px-6 py-16 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                                        <div className="flex flex-col items-center">
-                                                            <div className={`p-4 rounded-full ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} mb-4`}>
-                                                                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-5.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                                                </svg>
-                                                            </div>
-                                                            <h3 className="text-lg font-semibold mb-2">No items found</h3>
-                                                            <p className="text-sm max-w-sm">Get started by adding your first item to the masterfile. All items will appear here once created.</p>
-                                                        </div>
-                                                    </td>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        Item Number
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        Description
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        Location Code
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        Status
+                                                    </th>
+                                                    <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        Actions
+                                                    </th>
                                                 </tr>
-                                            ) : (
-                                                paginatedItems.map((item, index) => (
-                                                    <tr key={item.ITEMNMBR} className={`group ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')} hover:${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/50'} transition-all duration-200 border-b ${darkMode ? 'border-gray-700/30' : 'border-gray-200/30'} backdrop-blur-sm`}>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                            <div className="flex items-center">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold mr-3 ${darkMode ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
-                                                                    {item.ITEMNMBR.charAt(0).toUpperCase()}
-                                                                </div>
-                                                                {item.ITEMNMBR}
-                                                            </div>
-                                                        </td>
-                                                        <td className={`px-6 py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
-                                                            <div className="flex items-center">
-                                                                <span className="truncate" title={item.ITEMDESC || 'No description'}>
-                                                                    {item.ITEMDESC || 'No description'}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                            <div className="flex items-center">
-                                                                <svg className={`w-4 h-4 mr-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                </svg>
-                                                                {item.LOCNCODE || 'No location'}
-                                                            </div>
-                                                        </td>
-                                                        <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                            <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${item.ACTIVE
-                                                                    ? (darkMode ? 'bg-green-900/60 text-green-300 border border-green-700/50' : 'bg-green-100 text-green-800 border border-green-200')
-                                                                    : (darkMode ? 'bg-red-900/60 text-red-300 border border-red-700/50' : 'bg-red-100 text-red-800 border border-red-200')
-                                                                }`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${item.ACTIVE ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                                                {item.ACTIVE ? 'Active' : 'Inactive'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
-                                                            <div className="flex justify-end gap-1">
-                                                                <button
-                                                                    onClick={() => openEditModal(item)}
-                                                                    className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-blue-600/20 text-blue-400 hover:text-blue-300' : 'hover:bg-blue-100 text-blue-600 hover:text-blue-700'} group-hover:opacity-100`}
-                                                                    title="Edit Item"
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </thead>
+                                            <tbody className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm`}>
+                                                {paginatedItems.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="5" className={`px-6 py-16 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                            <div className="flex flex-col items-center">
+                                                                <div className={`p-4 rounded-full ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} mb-4`}>
+                                                                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-5.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                                                     </svg>
-                                                                </button>
-                                                                {item.ACTIVE ? (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedItem(item);
-                                                                            setShowDeactivateModal(true);
-                                                                        }}
-                                                                        className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-orange-600/20 text-orange-400 hover:text-orange-300' : 'hover:bg-orange-100 text-orange-600 hover:text-orange-700'} group-hover:opacity-100`}
-                                                                        title="Deactivate Item"
-                                                                        disabled={formLoading}
-                                                                    >
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                                                                        </svg>
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedItem(item);
-                                                                            setShowActivateModal(true);
-                                                                        }}
-                                                                        className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-green-600/20 text-green-400 hover:text-green-300' : 'hover:bg-green-100 text-green-600 hover:text-green-700'} group-hover:opacity-100`}
-                                                                        title="Activate Item"
-                                                                        disabled={formLoading}
-                                                                    >
-                                                                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                        </svg>
-                                                                    </button>
-                                                                )}
+                                                                </div>
+                                                                <h3 className="text-lg font-semibold mb-2">No items found</h3>
+                                                                <p className="text-sm max-w-sm">Get started by adding your first item to the masterfile. All items will appear here once created.</p>
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
+                                                ) : (
+                                                    paginatedItems.map((item, index) => (
+                                                        <tr key={item.ITEMNMBR} className={`group ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')} hover:${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/50'} transition-all duration-200 border-b ${darkMode ? 'border-gray-700/30' : 'border-gray-200/30'} backdrop-blur-sm`}>
+                                                            <td className={`px-6 py-5 whitespace-nowrap text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                <div className="flex items-center">
+                                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold mr-3 ${darkMode ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                                                                        {item.ITEMNMBR.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                    {item.ITEMNMBR}
+                                                                </div>
+                                                            </td>
+                                                            <td className={`px-6 py-5 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} max-w-xs truncate`}>
+                                                                <div className="flex items-center">
+                                                                    <span className="truncate" title={item.ITEMDESC || 'No description'}>
+                                                                        {item.ITEMDESC || 'No description'}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                                <div className="flex items-center">
+                                                                    <svg className={`w-4 h-4 mr-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                    </svg>
+                                                                    {item.LOCNCODE || 'No location'}
+                                                                </div>
+                                                            </td>
+                                                            <td className={`px-6 py-5 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                                <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${item.ACTIVE
+                                                                        ? (darkMode ? 'bg-green-900/60 text-green-300 border border-green-700/50' : 'bg-green-100 text-green-800 border border-green-200')
+                                                                        : (darkMode ? 'bg-red-900/60 text-red-300 border border-red-700/50' : 'bg-red-100 text-red-800 border border-red-200')
+                                                                    }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full mr-2 ${item.ACTIVE ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                                    {item.ACTIVE ? 'Active' : 'Inactive'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                                                <div className="flex justify-end gap-1">
+                                                                    <button
+                                                                        onClick={() => openEditModal(item)}
+                                                                        className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-blue-600/20 text-blue-400 hover:text-blue-300' : 'hover:bg-blue-100 text-blue-600 hover:text-blue-700'} group-hover:opacity-100`}
+                                                                        title="Edit Item"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                    {item.ACTIVE ? (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setSelectedItem(item);
+                                                                                setShowDeactivateModal(true);
+                                                                            }}
+                                                                            className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-orange-600/20 text-orange-400 hover:text-orange-300' : 'hover:bg-orange-100 text-orange-600 hover:text-orange-700'} group-hover:opacity-100`}
+                                                                            title="Deactivate Item"
+                                                                            disabled={formLoading}
+                                                                        >
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setSelectedItem(item);
+                                                                                setShowActivateModal(true);
+                                                                            }}
+                                                                            className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-green-600/20 text-green-400 hover:text-green-300' : 'hover:bg-green-100 text-green-600 hover:text-green-700'} group-hover:opacity-100`}
+                                                                            title="Activate Item"
+                                                                            disabled={formLoading}
+                                                                        >
+                                                                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Items Cards - Mobile View */}
+                            <div className="sm:hidden">
+                                <div className={`mx-auto max-w-sm w-full ${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'} overflow-hidden shadow-lg`}>
+                                    {paginatedItems.length === 0 ? (
+                                        <div className={`px-4 py-16 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            <div className="flex flex-col items-center">
+                                                <div className={`p-4 rounded-full ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'} mb-4`}>
+                                                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-5.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                                    </svg>
+                                                </div>
+                                                <h3 className="text-lg font-semibold mb-2">No items found</h3>
+                                                <p className="text-sm max-w-sm mx-auto">Get started by adding your first item to the masterfile. All items will appear here once created.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                                            {paginatedItems.map((item, index) => (
+                                                <div key={item.ITEMNMBR} className={`p-3 ${index % 2 === 0 ? (darkMode ? 'bg-gray-800/20' : 'bg-white/40') : (darkMode ? 'bg-gray-700/10' : 'bg-gray-50/30')}`}>
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${darkMode ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                                                                    {item.ITEMNMBR.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                        {item.ITEMNMBR}
+                                                                    </div>
+                                                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                                        Item Number
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex-shrink-0 ml-2">
+                                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 ${item.ACTIVE
+                                                                        ? (darkMode ? 'bg-green-900/60 text-green-300 border border-green-700/50' : 'bg-green-100 text-green-800 border border-green-200')
+                                                                        : (darkMode ? 'bg-red-900/60 text-red-300 border border-red-700/50' : 'bg-red-100 text-red-800 border border-red-200')
+                                                                    }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1 ${item.ACTIVE ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                                    {item.ACTIVE ? 'Active' : 'Inactive'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-start gap-2">
+                                                            <svg className={`w-4 h-4 flex-shrink-0 mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                                            </svg>
+                                                            <div className="min-w-0">
+                                                                <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} truncate`}>
+                                                                    {item.ITEMDESC || 'No description'}
+                                                                </div>
+                                                                <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                                                                    Description
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-start gap-2">
+                                                            <svg className={`w-4 h-4 flex-shrink-0 mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            </svg>
+                                                            <div className="min-w-0">
+                                                                <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} truncate`}>
+                                                                    {item.LOCNCODE || 'No location'}
+                                                                </div>
+                                                                <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                                                                    Location Code
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex justify-end gap-2 mt-1">
+                                                            <button
+                                                                onClick={() => openEditModal(item)}
+                                                                className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-blue-600/20 text-blue-400 hover:text-blue-300' : 'hover:bg-blue-100 text-blue-600 hover:text-blue-700'}`}
+                                                                title="Edit Item"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                </svg>
+                                                            </button>
+                                                            {item.ACTIVE ? (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedItem(item);
+                                                                        setShowDeactivateModal(true);
+                                                                    }}
+                                                                    className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-orange-600/20 text-orange-400 hover:text-orange-300' : 'hover:bg-orange-100 text-orange-600 hover:text-orange-700'}`}
+                                                                    title="Deactivate Item"
+                                                                    disabled={formLoading}
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                                                    </svg>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedItem(item);
+                                                                        setShowActivateModal(true);
+                                                                    }}
+                                                                    className={`p-2 rounded-lg transition-all duration-200 ${darkMode ? 'hover:bg-green-600/20 text-green-400 hover:text-green-300' : 'hover:bg-green-100 text-green-600 hover:text-green-700'}`}
+                                                                    title="Activate Item"
+                                                                    disabled={formLoading}
+                                                                >
+                                                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

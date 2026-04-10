@@ -6,11 +6,12 @@ import connectToDatabase from '@/lib/db.js';
 
 class Canvassing {
     // Get all canvassing requests with filtering and role-based access
-    static async getAllCanvassingRequests(filters = {}, user = null, isAdmin = false) {
+    static async getAllCanvassingRequests(filters = {}, user = null, isAdmin = true) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            // Join with details and PR tables to get all required fields
             let query = `
                 SELECT DISTINCT
                     PQH.ROWID,
@@ -21,8 +22,19 @@ class Canvassing {
                     PQH.PQREMARKS,
                     PQH.CREATEDBY,
                     PQH.DATEMODIFIED,
-                    PQH.MODIFIEDBY
+                    PQH.MODIFIEDBY,
+                    -- Fields from details table
+                    PQD.PRCODE as prId,
+                    PQD.ITEMDESC as itemDescription,
+                    PQD.CANVASSED_BY as canvassedBy,
+                    PQD.APPROVALSTATUS as approvalStatus,
+                    PQD.APPROVEDBY as approvedBy,
+                    -- Fields from PR header
+                    PRH.REQUESTEDBY as prBy,
+                    PRH.DATEAPPROVED as prApprovalDate
                 FROM [PURCHASE.QUOTATIONHEADER.1] PQH
+                LEFT JOIN [PURCHASE.QUOTATIONDETAILS.1] PQD ON PQH.PQCODE = PQD.PQCODE
+                LEFT JOIN [PURCHASE.REQUESTHEADER.1] PRH ON PQD.PRCODE = PRH.REFERENCENO
                 WHERE 1=1
             `;
 
@@ -45,6 +57,13 @@ class Canvassing {
                 paramIndex++;
             }
 
+            // Filter by status only if explicitly provided (for admins)
+            if (user && isAdmin && filters.status !== undefined && filters.status !== null) {
+                query += ` AND PQH.POSTSTATUS = @status${paramIndex}`;
+                params.push({ name: `status${paramIndex}`, value: filters.status });
+                paramIndex++;
+            }
+
             // Company filter removed since company is now per-item in details
 
             if (filters.pqCode) {
@@ -53,20 +72,31 @@ class Canvassing {
                 paramIndex++;
             }
 
+            // Add ORDER BY at the end after all filters
+            query += ` ORDER BY PQH.DATEREQUESTED DESC`;
+
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
 
             const result = await request.query(query);
             return result.recordset.map(record => ({
                 id: record.ROWID,
-                referenceNum: `QUO-${record.REFERENCENUM}`,
+                referenceNum: `COQ-${record.REFERENCENUM}`,
                 pqCode: record.PQCODE,
                 dateRequested: record.DATEREQUESTED,
                 postStatus: record.POSTSTATUS,
                 pqRemarks: record.PQREMARKS,
                 createdBy: record.CREATEDBY,
                 dateModified: record.DATEMODIFIED,
-                modifiedBy: record.MODIFIEDBY
+                modifiedBy: record.MODIFIEDBY,
+                approvalStatus: record.approvalStatus,
+                approvedBy: record.approvedBy,
+                // New fields from joined tables
+                prId: record.prId,
+                prBy: record.prBy,
+                itemDescription: record.itemDescription,
+                canvassedBy: record.canvassedBy,
+                prApprovalDate: record.prApprovalDate
             }));
         } catch (error) {
             console.error('Error fetching canvassing requests:', error);
@@ -114,9 +144,10 @@ class Canvassing {
 
             // Get details with supplier information and company
             const detailsQuery = `
-                SELECT PQD.*, S.VENDNAME as vendorName
+                SELECT PQD.*, S.VENDNAME as vendorName, rh.REQUESTEDBY as requester, rh.DATEAPPROVED as dateApproved
                 FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
                 LEFT JOIN [SUPPLIER.1] S ON PQD.VENDORID = S.VENDORID
+                LEFT JOIN [PURCHASE.REQUESTHEADER.1] rh ON PQD.PRCODE = rh.REFERENCENO
                 WHERE PQD.PQCODE = @pqCode
                 ORDER BY PQD.ROWID
             `;
@@ -124,19 +155,52 @@ class Canvassing {
                 .input('pqCode', pqCode)
                 .query(detailsQuery);
 
-            // Get approval status
+            // Get approval status from QUOTATIONDETAILS
             const approvalQuery = `
-                SELECT * FROM [PURCHASE.QUOTATIONAPPROVALSTATUS.1]
-                WHERE PQROWID = @pqRowId
+                SELECT ROWID, APPROVALSTATUS, APPROVEDBY, REJECTREMARKS, DATECREATED 
+                FROM [PURCHASE.QUOTATIONDETAILS.1]
+                WHERE ROWID = @pqRowId
             `;
             const approvalResult = await connection.request()
                 .input('pqRowId', header.ROWID)
                 .query(approvalQuery);
 
+            // Get the overall approval status from details (use the first detail's approval status as the overall status)
+            const approvalStatusResult = await connection.request()
+                .input('pqCode', pqCode)
+                .query(`
+                    SELECT DISTINCT APPROVALSTATUS 
+                    FROM [PURCHASE.QUOTATIONDETAILS.1] 
+                    WHERE PQCODE = @pqCode
+                `);
+            
+            // Determine overall approval status: prioritize PENDING > SELECTED > NOT SELECTED > REJECTED
+            let overallApprovalStatus = null;
+            const approvalStatuses = approvalStatusResult.recordset.map(r => r.APPROVALSTATUS);
+            if (approvalStatuses.includes('PENDING')) {
+                overallApprovalStatus = 'PENDING';
+            } else if (approvalStatuses.includes('SELECTED')) {
+                overallApprovalStatus = 'SELECTED';
+            } else if (approvalStatuses.includes('NOT SELECTED')) {
+                overallApprovalStatus = 'NOT SELECTED';
+            } else if (approvalStatuses.includes('REJECTED')) {
+                overallApprovalStatus = 'REJECTED';
+            }
+
             return {
+                id: header.ROWID,
+                referenceNum: `COQ-${header.REFERENCENUM}`,
+                pqCode: header.PQCODE,
+                dateRequested: header.DATEREQUESTED,
+                postStatus: header.POSTSTATUS,
+                pqRemarks: header.PQREMARKS,
+                createdBy: header.CREATEDBY,
+                dateModified: header.DATEMODIFIED,
+                modifiedBy: header.MODIFIEDBY,
+                approvalStatus: overallApprovalStatus,
                 header: {
                     id: header.ROWID,
-                    referenceNum: `QUO-${header.REFERENCENUM}`,
+                    referenceNum: `COQ-${header.REFERENCENUM}`,
                     pqCode: header.PQCODE,
                     dateRequested: header.DATEREQUESTED,
                     postStatus: header.POSTSTATUS,
@@ -151,8 +215,10 @@ class Canvassing {
                     prCode: detail.PRCODE,
                     rid: detail.RID,
                     pqdPostStatus: detail.PQDPOSTSTATUS,
+                    approvalStatus: detail.APPROVALSTATUS,
                     approvedBy: detail.APPROVEDBY,
-                    dateApproved: detail.DATEAPPROVED,
+                    rejectRemarks: detail.REJECTREMARKS,
+                    dateApproved: detail.dateApproved,
                     itemNumber: detail.ITEMNMBR,
                     itemDescription: detail.ITEMDESC,
                     unitOfMeasure: detail.UOFM,
@@ -162,7 +228,9 @@ class Canvassing {
                     vendorName: detail.vendorName,
                     brand: detail.BRAND,
                     origin: detail.ORIGIN,
+                    currency: detail.CURRENCY,
                     isImported: detail.IS_IMPORTED,
+                    purchaseType: detail.PURCHASETYPE,
                     offeredPrice: detail.OFFEREDPRICE,
                     bidPrice: detail.BIDPRICE,
                     finalPrice: detail.FINALPRICE,
@@ -177,14 +245,16 @@ class Canvassing {
                     dateCreated: detail.DATECREATED,
                     modifiedBy: detail.MODIFIEDBY,
                     modifiedDate: detail.MODIFIEDDATE,
-                    isServed: detail.IS_SERVED
+                    isServed: detail.IS_SERVED,
+                    requester: detail.requester
                 })),
                 approvals: approvalResult.recordset.map(approval => ({
                     id: approval.ROWID,
-                    pqRowId: approval.PQROWID,
-                    isApproved: approval.IS_APPROVED,
+                    pqRowId: approval.ROWID,
+                    approvalStatus: approval.APPROVALSTATUS,
                     approvedBy: approval.APPROVEDBY,
-                    dateApproved: approval.DATEAPPROVED
+                    rejectRemarks: approval.REJECTREMARKS,
+                    dateApproved: approval.DATECREATED
                 }))
             };
         } catch (error) {
@@ -194,7 +264,7 @@ class Canvassing {
     }
 
     // Create new canvassing request with transaction safety
-    static async createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '') {
+    static async createCanvassingRequest(headerData, detailsData, creatorName, supplierName = '', shouldPost = false) {
         let connection = null;
         let transaction = null;
 
@@ -212,11 +282,14 @@ class Canvassing {
             // Use reference number as PQ code
             const pqCode = headerData.referenceNum;
 
-            // Extract number from referenceNum (remove 'QUO-' prefix)
-            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+            // Extract number from referenceNum (remove 'COQ-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('COQ-', ''));
 
             // Leave PQREMARKS as blank
             let remarks = '';
+
+            // Determine post status based on shouldPost flag
+            const postStatus = shouldPost ? 1 : 0;
 
             // Insert canvassing header
             const headerQuery = `
@@ -224,7 +297,7 @@ class Canvassing {
                     REFERENCENUM, PQCODE, DATEREQUESTED, POSTSTATUS,
                     PQREMARKS, CREATEDBY, DATEMODIFIED, MODIFIEDBY
                 ) VALUES (
-                    @referenceNum, @pqCode, GETDATE(), 0,
+                    @referenceNum, @pqCode, GETDATE(), @postStatus,
                     @pqRemarks, @createdBy, GETDATE(), @createdBy
                 )
             `;
@@ -232,6 +305,7 @@ class Canvassing {
             const headerResult = await transaction.request()
                 .input('referenceNum', referenceNumOnly)
                 .input('pqCode', pqCode)
+                .input('postStatus', postStatus)
                 .input('pqRemarks', remarks)
                 .input('createdBy', creatorName)
                 .query(headerQuery);
@@ -250,6 +324,10 @@ class Canvassing {
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
 
+                // Determine post status and approval status based on shouldPost flag
+                const pqdPostStatus = shouldPost ? 1 : 0;
+                const approvalStatus = shouldPost ? 'PENDING' : null;
+
                 await transaction.request()
                     .input('pqCode', pqCode)
                     .input('prCode', detail.prCode || '')
@@ -261,8 +339,9 @@ class Canvassing {
                     .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
+                    .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
-                    .input('isImported', detail.isImported || 0)
+                    .input('purchaseType', detail.purchaseType || '')
                     .input('offeredPrice', detail.offeredPrice || 0)
                     .input('bidPrice', detail.bidPrice || 0)
                     .input('finalPrice', detail.finalPrice || 0)
@@ -275,18 +354,20 @@ class Canvassing {
                     .input('canvassedBy', detail.canvassedBy || creatorName)
                     .input('budgetCode', detail.budgetCode)
                     .input('isServed', detail.isServed || 0)
+                    .input('pqdPostStatus', pqdPostStatus)
+                    .input('approvalStatus', approvalStatus)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, PURCHASETYPE,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
-                        BUDGETCODE, DATECREATED, IS_SERVED
+                        BUDGETCODE, DATECREATED, IS_SERVED, APPROVALSTATUS
                     ) VALUES (
-                        @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
+                        @pqCode, @prCode, @rid, @pqdPostStatus, @itemNumber, @itemDescription,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @purchaseType,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
-                        @budgetCode, GETDATE(), @isServed
+                        @budgetCode, GETDATE(), @isServed, @approvalStatus
                     )`);
             }
 
@@ -304,13 +385,28 @@ class Canvassing {
 
             console.log('Activity log inserted');
 
-            // COMMIT TRANSACTION - All operations succeeded
+// Commit transaction - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
 
+            // Emit socket event for real-time update (only for Save & Post)
+            if (shouldPost) {
+              try {
+                if (global.io) {
+                  global.io.to('canvass-approval-broadcast').emit('canvass-posted', {
+                    pqCode,
+                    postedBy: creatorName,
+                    date: new Date().toISOString()
+                  });
+                }
+              } catch (socketError) {
+                console.error('Error emitting socket event:', socketError);
+              }
+            }
+
             return {
-                pqCode,
-                success: true
+              pqCode,
+              success: true
             };
 
         } catch (error) {
@@ -350,8 +446,8 @@ class Canvassing {
 
             const pqCode = headerData.pqCode;
 
-            // Extract number from referenceNum (remove 'QUO-' prefix)
-            const referenceNumOnly = parseInt(headerData.referenceNum.replace('QUO-', ''));
+            // Extract number from referenceNum (remove 'COQ-' prefix)
+            const referenceNumOnly = parseInt(headerData.referenceNum.replace('COQ-', ''));
 
             // Update header
             const updateHeaderQuery = `
@@ -403,8 +499,9 @@ class Canvassing {
                     .input('company', detail.company || headerData.company || '')
                     .input('vendorId', detail.vendorId || '')
                     .input('brand', detail.brand || '')
+                    .input('currency', detail.currency || '')
                     .input('origin', detail.origin || '')
-                    .input('isImported', detail.isImported || 0)
+                    .input('purchaseType', detail.purchaseType || '')
                     .input('offeredPrice', detail.offeredPrice || 0)
                     .input('bidPrice', detail.bidPrice || 0)
                     .input('finalPrice', detail.finalPrice || 0)
@@ -420,13 +517,13 @@ class Canvassing {
                     .input('isServed', detail.isServed || 0)
                     .query(`INSERT INTO [PURCHASE.QUOTATIONDETAILS.1] (
                         PQCODE, PRCODE, RID, PQDPOSTSTATUS, ITEMNMBR, ITEMDESC,
-                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, IS_IMPORTED,
+                        UOFM, QUANTITY, COMPANY, VENDORID, BRAND, ORIGIN, CURRENCY, PURCHASETYPE,
                         OFFEREDPRICE, BIDPRICE, FINALPRICE, PYMTRMID, SUPPLIERQTY,
                         LEGEND, DELIVERYSCHEDULE, PONUMBER, REMARKS, CANVASSED_BY,
                         BUDGETCODE, DATECREATED, MODIFIEDBY, MODIFIEDDATE, IS_SERVED
                     ) VALUES (
                         @pqCode, @prCode, @rid, 0, @itemNumber, @itemDescription,
-                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @isImported,
+                        @unitOfMeasure, @quantity, @company, @vendorId, @brand, @origin, @currency, @purchaseType,
                         @offeredPrice, @bidPrice, @finalPrice, @paymentTerms, @supplierQty,
                         @legend, @deliverySchedule, @poNumber, @remarks, @canvassedBy,
                         @budgetCode, GETDATE(), @modifiedBy, GETDATE(), @isServed
@@ -510,6 +607,7 @@ class Canvassing {
                 UPDATE [PURCHASE.QUOTATIONDETAILS.1]
                 SET PQDPOSTSTATUS = 1,
                     MODIFIEDDATE = GETDATE(),
+                    APPROVALSTATUS = 'PENDING',
                     MODIFIEDBY = @posterName
                 WHERE PQCODE = @pqCode
             `;
@@ -535,13 +633,26 @@ class Canvassing {
 
             console.log('Activity log inserted');
 
-            // COMMIT TRANSACTION - All operations succeeded
+// COMMIT TRANSACTION - All operations succeeded
             await transaction.commit();
             console.log('Transaction committed successfully');
 
+            // Emit socket event for real-time update
+            try {
+              if (global.io) {
+                global.io.to('canvass-approval-broadcast').emit('canvass-posted', {
+                  pqCode,
+                  postedBy: posterName,
+                  date: new Date().toISOString()
+                });
+              }
+            } catch (socketError) {
+              console.error('Error emitting socket event:', socketError);
+            }
+
             return {
-                success: true,
-                message: 'Canvassing request posted successfully'
+              success: true,
+              message: 'Canvassing request posted successfully'
             };
         } catch (error) {
             console.error('Error posting canvassing request:', error);
@@ -697,7 +808,7 @@ class Canvassing {
                 nextNumber = lastNumber + 1;
             }
 
-            return `QUO-${nextNumber}`;
+            return `COQ-${nextNumber}`;
         } catch (error) {
             console.error('Error getting next reference number:', error);
             throw new Error('Failed to generate reference number: ' + error.message);
@@ -757,11 +868,12 @@ class Canvassing {
                   rh.REQUESTEDBY as requester,
                   rh.ADDRESSEDTO as addressedTo,
                   rh.DATEREQUESTED as dateRequested,
+                  rh.DATEAPPROVED as dateApproved,
                   rh.LOCNCODE as location,
                   rh.REFERENCENO as requestId
                 FROM [PURCHASE.REQUESTDETAILS.1] rd
                 INNER JOIN [PURCHASE.REQUESTHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
-                WHERE rh.REQUESTSTATUS = 'FOR CANVASSING'
+                WHERE rd.ITEMSTATUS = 'FOR CANVASSING' 
             `;
 
             const params = [];
@@ -774,7 +886,7 @@ class Canvassing {
                 paramIndex++;
             }
 
-            query += ` ORDER BY rh.DATECREATED DESC, rd.ROWID`;
+            query += ` ORDER BY rh.DATECREATED, rd.RID`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
@@ -792,6 +904,7 @@ class Canvassing {
                 budgetCode: record.BUDGETCODE,
                 remarks: record.REMARKS,
                 dateNeeded: record.DATENEEDED,
+                dateApproved: record.dateApproved,
                 requestId: record.requestId,
                 requestType: record.REQUESTTYPE,
                 company: record.COMPANY,
@@ -815,13 +928,14 @@ class Canvassing {
         }
     }
 
-    // Get canvassing statistics
-    static async getCanvassingStats(user = null) {
+    // Get canvassing statistics (both postStatus and approvalStatus)
+    static async getCanvassingStats(user = null, isAdmin = false) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            let query = `
+            // Query for postStatus counts
+            let postStatusQuery = `
                 SELECT
                     POSTSTATUS,
                     COUNT(*) as count
@@ -829,27 +943,54 @@ class Canvassing {
                 WHERE 1=1
             `;
 
+            // Query for approvalStatus counts
+            let approvalStatusQuery = `
+                SELECT
+                    PQD.APPROVALSTATUS,
+                    COUNT(*) as count
+                FROM [PURCHASE.QUOTATIONDETAILS.1] PQD
+                INNER JOIN [PURCHASE.QUOTATIONHEADER.1] PQH ON PQD.PQCODE = PQH.PQCODE
+                WHERE 1=1
+            `;
+
             const params = [];
             let paramIndex = 1;
 
             // Filter by created by (only show stats for canvassing requests created by the user)
-            if (user) {
+            if (user && !isAdmin) {
                 const userName = user.empName;
-                query += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
+                postStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
+                approvalStatusQuery += ` AND UPPER(CREATEDBY) = UPPER(@userName${paramIndex})`;
                 params.push({ name: `userName${paramIndex}`, value: userName });
                 paramIndex++;
             }
 
-            query += ` GROUP BY POSTSTATUS`;
+            postStatusQuery += ` GROUP BY POSTSTATUS`;
+            approvalStatusQuery += ` GROUP BY APPROVALSTATUS`;
 
             const request = connection.request();
             params.forEach(param => request.input(param.name, param.value));
 
-            const result = await request.query(query);
+            // Execute both queries
+            const postStatusResult = await request.query(postStatusQuery);
+            const approvalStatusResult = await request.query(approvalStatusQuery);
 
-            const stats = {};
-            result.recordset.forEach(record => {
-                stats[record.POSTSTATUS] = record.count;
+            // Process postStatus results
+            const stats = {
+                postStatus: {},
+                approvalStatus: {},
+                total: 0
+            };
+
+            postStatusResult.recordset.forEach(record => {
+                stats.postStatus[record.POSTSTATUS] = record.count;
+                stats.total += record.count;
+            });
+
+            approvalStatusResult.recordset.forEach(record => {
+                if (record.APPROVALSTATUS) {
+                    stats.approvalStatus[record.APPROVALSTATUS.trim()] = record.count;
+                }
             });
 
             return stats;
@@ -926,3 +1067,4 @@ class Canvassing {
 }
 
 export default Canvassing;
+

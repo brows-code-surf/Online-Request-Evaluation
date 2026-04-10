@@ -14,15 +14,30 @@ export default function RejectRequestModal({
     placeholder = "Enter reason for rejection...",
     confirmButtonText = "Confirm Reject",
     confirmButtonColor = "red",
-    iconPath = "M6 18L18 6M6 6l12 12"
+    iconPath = "M6 18L18 6M6 6l12 12",
+    rejectionType = null
 }) {
     const { darkMode } = useAuth();
     if (!isOpen) return null;
+
+    const rejectionTypeLabels = {
+        'PO': 'Purchase Order (P.O.)',
+        'COQ': 'Canvassed Order Quotation (C.O.Q.)',
+        'PR': 'Purchase Request (P.R.)'
+    };
 
     return (
         <div className={`fixed inset-0 ${darkMode ? 'bg-gray-900/50' : 'bg-gray-600/30'} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
                 <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{title}</h2>
+
+                {rejectionType && (
+                    <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-red-900/20 border border-red-600' : 'bg-red-50 border border-red-200'}`}>
+                        <p className={`text-sm ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                            <span className="font-semibold">Rejecting:</span> {rejectionTypeLabels[rejectionType] || rejectionType}
+                        </p>
+                    </div>
+                )}
 
                 <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
                     {message}
