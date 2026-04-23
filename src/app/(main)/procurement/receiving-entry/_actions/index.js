@@ -109,6 +109,20 @@ export async function getApprovedPurchaseOrdersForReceiving(user = null, isAdmin
   }
 }
 
+export async function getPurchaseOrderForReceiving(poNumber, user = null, isAdmin = false) {
+  try {
+    const purchaseOrder = await ReceivingEntry.getPurchaseOrderForReceiving(poNumber, user, isAdmin);
+    if (purchaseOrder) {
+      return { success: true, purchaseOrder };
+    } else {
+      return { success: false, message: 'Purchase order not found' };
+    }
+  } catch (error) {
+    console.error('Error fetching purchase order for receiving:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 export async function getNextReceivingNumber() {
   try {
     const receivingEntry = new ReceivingEntry();

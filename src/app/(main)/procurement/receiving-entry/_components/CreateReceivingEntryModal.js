@@ -207,6 +207,7 @@ function CreateReceivingEntryModal({ isOpen, onClose, darkMode, user, onSuccess 
           poNumber: selectedPO.poNumber,
           vendorId: receivingData.vendorId,
           vendName: receivingData.vendName,
+          pymtTermId: selectedPO.pymtTermId,
           receivedBy: receivingData.receivedBy,
           dateReceived: receivingData.dateReceived,
           vndDocNm: receivingData.vndDocNm,

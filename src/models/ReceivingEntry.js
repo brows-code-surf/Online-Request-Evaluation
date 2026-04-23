@@ -124,7 +124,7 @@ class ReceivingEntry {
             }
 
             const headerQuery = `
-                SELECT ROWID, REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, VNDDOCNM, PYMTRMID, INVENTORYDESCRIPTION, HREMARKS, POSTSTATUS, DATECREATED, 
+                SELECT ROWID, REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, VNDDOCNM, PYMTRMID, INVENTORYDESCRIPTION, HREMARKS, POSTSTATUS, DATECREATED,
                        CREATEDBY, DATEMODIFIED, MODIFIEDBY
                 FROM [PURCHASE.RECEIVEHEADER.1]
                 WHERE REFERENCENO = @referenceNo
@@ -237,7 +237,7 @@ class ReceivingEntry {
                 .input('referenceId', headerData.referenceId || '')
                 .input('locnCode', headerData.locnCode || '')
                 .input('receiptType', headerData.receiptType || 'RECEIVED')
-                .input('dateReceived', headerData.dateReceived ? new Date(headerData.dateReceived) : new Date())
+                .input('dateReceived', headerData.dateReceived)
                 .input('poNumber', headerData.poNumber || '')
                 .input('vendorId', headerData.vendorId || '')
                 .input('vendName', headerData.vendName || '')
@@ -251,12 +251,21 @@ class ReceivingEntry {
 
             console.log('Receiving entry header inserted');
 
+            // Generate RRID components
+            const rrNumber = referenceNo.replace('RR-', '').replace(/^0+/, ''); // Remove RR- prefix and leading zeros
+            const now = new Date();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const year = now.getFullYear().toString();
+            const datePart = `${month}${day}${year}`;
+
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
+                const rrid = `RR-${rrNumber}-${datePart}-${i + 1}`;
 
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.RECEIVEDETAILS.1] (
-                        REFERENCENO, RID, RRID, ITEMNMBR, ITEMDESC, UOFM, INVENTORYQUANTITY, 
+                        REFERENCENO, RID, RRID, ITEMNMBR, ITEMDESC, UOFM, INVENTORYQUANTITY,
                         QUANTITY, UNITCOST, UCOSTNETOFVAT, VATUNITCOST
                     ) VALUES (
                         @referenceNo, @rid, @rrid, @itemNmbr, @itemDesc, @uofm, @inventoryQuantity,
@@ -267,7 +276,7 @@ class ReceivingEntry {
                 await transaction.request()
                     .input('referenceNo', referenceNo)
                     .input('rid', detail.rid || '')
-                    .input('rrid', detail.rrid || '')
+                    .input('rrid', rrid)
                     .input('itemNmbr', detail.itemNmbr || '')
                     .input('itemDesc', detail.itemDesc || '')
                     .input('uofm', detail.uofm || '')
@@ -387,7 +396,7 @@ class ReceivingEntry {
                 .input('referenceId', headerData.referenceId || '')
                 .input('locnCode', headerData.locnCode || '')
                 .input('receiptType', headerData.receiptType || 'RECEIVED')
-                .input('dateReceived', headerData.dateReceived ? new Date(headerData.dateReceived) : new Date())
+                .input('dateReceived', headerData.dateReceived)
                 .input('poNumber', headerData.poNumber || '')
                 .input('vendorId', headerData.vendorId || '')
                 .input('vendName', headerData.vendName || '')
@@ -408,12 +417,21 @@ class ReceivingEntry {
                 .input('referenceNo', referenceNo)
                 .query(deleteDetailsQuery);
 
+            // Generate RRID components for updated details
+            const rrNumber = referenceNo.replace('RR-', '').replace(/^0+/, ''); // Remove RR- prefix and leading zeros
+            const now = new Date();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const year = now.getFullYear().toString();
+            const datePart = `${month}${day}${year}`;
+
             for (let i = 0; i < detailsData.length; i++) {
                 const detail = detailsData[i];
+                const rrid = `RR-${rrNumber}-${datePart}-${i + 1}`;
 
                 const detailInsertQuery = `
                     INSERT INTO [PURCHASE.RECEIVEDETAILS.1] (
-                        REFERENCENO, RID, RRID, ITEMNMBR, ITEMDESC, UOFM, INVENTORYQUANTITY, 
+                        REFERENCENO, RID, RRID, ITEMNMBR, ITEMDESC, UOFM, INVENTORYQUANTITY,
                         QUANTITY, UNITCOST, UCOSTNETOFVAT, VATUNITCOST
                     ) VALUES (
                         @referenceNo, @rid, @rrid, @itemNmbr, @itemDesc, @uofm, @inventoryQuantity,
@@ -424,7 +442,7 @@ class ReceivingEntry {
                 await transaction.request()
                     .input('referenceNo', referenceNo)
                     .input('rid', detail.rid || '')
-                    .input('rrid', detail.rrid || '')
+                    .input('rrid', rrid)
                     .input('itemNmbr', detail.itemNmbr || '')
                     .input('itemDesc', detail.itemDesc || '')
                     .input('uofm', detail.uofm || '')
@@ -439,28 +457,17 @@ class ReceivingEntry {
             console.log(`${detailsData.length} receiving entry details updated`);
 
             if (headerData.poNumber) {
-                const getOldDetailsQuery = `SELECT RID, QUANTITY FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
-                const oldDetailsResult = await transaction.request()
-                    .input('referenceNo', referenceNo)
-                    .query(getOldDetailsQuery);
+                console.log('Updating QTYSERVED for PO:', headerData.poNumber);
 
-                for (const oldDetail of oldDetailsResult.recordset) {
-                    if (oldDetail.RID && headerData.poNumber) {
-                        await transaction.request()
-                            .input('poNumber', headerData.poNumber)
-                            .input('rid', oldDetail.RID)
-                            .input('qtyServed', oldDetail.QUANTITY || 0)
-                            .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = QTYSERVED - @qtyServed WHERE PONUMBER = @poNumber AND RID = @rid`);
-                    }
-                }
-
+                console.log('New details:', detailsData);
                 for (const detail of detailsData) {
                     if (detail.rid && headerData.poNumber) {
+                        console.log(`Setting QTYSERVED to ${detail.quantity} for RID ${detail.rid}`);
                         await transaction.request()
                             .input('poNumber', headerData.poNumber)
                             .input('rid', detail.rid)
                             .input('qtyServed', detail.quantity || 0)
-                            .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = QTYSERVED + @qtyServed WHERE PONUMBER = @poNumber AND RID = @rid`);
+                            .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = @qtyServed WHERE PONUMBER = @poNumber AND RID = @rid`);
                     }
                 }
             }
@@ -633,7 +640,7 @@ class ReceivingEntry {
 
             let query = `
                 SELECT 
-                    h.PONUMBER, h.VENDORID, h.VENDNAME, h.DATECREATED, h.CREATEDBY,
+                    h.PONUMBER, h.VENDORID, h.VENDNAME, h.PYMTRMID, h.DATECREATED, h.CREATEDBY,
                     h.DATENEEDED, h.PROMISEDDATE, h.DELIVERY_TO, h.PO_STATUS, h.POSTSTATUS,
                     d.ROWID as DETAIL_ROWID, d.RID, d.ITEMNMBR, d.ITEMDESC, d.UOFM, 
                     d.QTYORDER, d.QTYSERVED, d.UNITCOST, d.EXTDCOST, d.BRAND, d.ORIGIN,
@@ -665,6 +672,7 @@ class ReceivingEntry {
                 poNumber: record.PONUMBER,
                 vendorId: record.VENDORID,
                 vendName: record.VENDNAME,
+                pymtTermId: record.PYMTRMID,
                 dateCreated: record.DATECREATED,
                 createdBy: record.CREATEDBY,
                 dateNeeded: record.DATENEEDED,
@@ -710,17 +718,122 @@ class ReceivingEntry {
             const result = await connection.request().query(query);
 
             let nextNumber = 1;
-
             if (result.recordset.length > 0) {
                 const lastRR = result.recordset[0].REFERENCENO;
                 const lastNumber = parseInt(lastRR.replace('RR-', ''));
                 nextNumber = isNaN(lastNumber) ? 1 : lastNumber + 1;
             }
 
-            return `RR-${nextNumber}`;
+            // Format as RR-00000001 (8 digits with leading zeros)
+            return `RR-${nextNumber.toString().padStart(8, '0')}`;
         } catch (error) {
             console.error('Error generating receiving number:', error);
             throw error;
+        }
+    }
+
+    // Get purchase order by PO number for receiving entry operations (no creator access check - receiving entry access already validated)
+    static async getPurchaseOrderForReceiving(poNumber, user = null, isAdmin = false) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // No access check - user already has access to the receiving entry that references this PO
+
+            // Get header
+            const headerQuery = `
+                SELECT ROWID, POSTSTATUS, PONUMBER, DATECREATED, CREATEDBY, VENDORID, VENDNAME,
+                       PYMTRMID, REFDOCTYPE, DELIVERY_TO, PODATE, DATENEEDED, PROMISEDDATE,
+                       PROMISEDSHIPDATE, CANVASSEDBY, CONFIRMEDBY_1, DATECONFIRMED_1, CONFIRMEDBY_2, DATECONFIRMED_2, APPROVEDBY,
+                       DATEAPPROVED, IS_BUDGETNO, IS_PRNO, CAPEX, IS_PERADVISE, REMARKS,
+                       SUBTOTAL, BUDGETNOLIST, PRLISTS, PO_STATUS, CONTACTPERSON
+                FROM [PURCHASE.ORDERHEADER.1]
+                WHERE PONUMBER = @poNumber
+            `;
+            const headerResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(headerQuery);
+
+            if (headerResult.recordset.length === 0) {
+                throw new Error('Purchase order not found');
+            }
+
+            const header = headerResult.recordset[0];
+
+            // Get details
+            const detailsQuery = `
+                SELECT ROWID, ITEMSTATUS, PONUMBER, RID, PQCODE, PRCODE, ITEMNMBR, ITEMDESC, UOFM, QTYORDER, QTYCANCEL,
+                       QTYALLOCATED, UNITCOST, EXTDCOST, BRAND, ORIGIN, QTYSERVED, BUDGETNO, PURCHASETYPE, CURRENCY
+                FROM [PURCHASE.ORDERDETAILS.1]
+                WHERE PONUMBER = @poNumber
+                ORDER BY ROWID
+            `;
+            const detailsResult = await connection.request()
+                .input('poNumber', poNumber)
+                .query(detailsQuery);
+
+            return {
+                header: {
+                    id: header.ROWID,
+                    postStatus: header.POSTSTATUS,
+                    poNumber: header.PONUMBER,
+                    dateCreated: header.DATECREATED,
+                    createdBy: header.CREATEDBY,
+                    vendorId: header.VENDORID,
+                    vendName: header.VENDNAME,
+                    pymtrmid: header.PYMTRMID,
+                    refDocType: header.REFDOCTYPE,
+                    deliveryTo: header.DELIVERY_TO,
+                    poDate: header.PODATE,
+                    dateNeeded: header.DATENEEDED,
+                    promisedDate: header.PROMISEDDATE,
+                    promisedShipDate: header.PROMISEDSHIPDATE,
+                    canvassedBy: header.CANVASSEDBY,
+                    confirmedBy_1: header.CONFIRMEDBY_1,
+                    dateConfirmed_1: header.DATECONFIRMED_1,
+                    confirmedBy_2: header.CONFIRMEDBY_2,
+                    dateConfirmed_2: header.DATECONFIRMED_2,
+                    approvedBy: header.APPROVEDBY,
+                    dateApproved: header.DATEAPPROVED,
+                    isBudgetNo: header.IS_BUDGETNO,
+                    isPrNo: header.IS_PRNO,
+                    capex: header.CAPEX,
+                    isPerAdvise: header.IS_PERADVISE,
+                    remarks: header.REMARKS,
+                    subtotal: header.SUBTOTAL,
+                    budgetNoList: header.BUDGETNOLIST,
+                    prList: header.PRLISTS,
+                    contactPerson: header.CONTACTPERSON,
+                    poStatus: header.PO_STATUS || 'PENDING',
+                    confirmedBy: [header.CONFIRMEDBY_1, header.CONFIRMEDBY_2].filter(name => name && name.trim()).join(' , '),
+                    dateConfirmed: header.DATECONFIRMED_1 || header.DATECONFIRMED_2
+                },
+                details: detailsResult.recordset.map(detail => ({
+                    id: detail.ROWID,
+                    poNumber: detail.PONUMBER,
+                    rid: detail.RID,
+                    pqCode: detail.PQCODE,
+                    prCode: detail.PRCODE,
+                    itemNmbr: detail.ITEMNMBR,
+                    itemDesc: detail.ITEMDESC,
+                    uofm: detail.UOFM,
+                    qtyOrder: detail.QTYORDER,
+                    qtyCancel: detail.QTYCANCEL,
+                    qtyAllocated: detail.QTYALLOCATED,
+                    unitCost: detail.UNITCOST,
+                    extdCost: detail.EXTDCOST,
+                    brand: detail.BRAND,
+                    origin: detail.ORIGIN,
+                    qtyServed: detail.QTYSERVED,
+                    itemStatus: detail.ITEMSTATUS,
+                    budgetNo: detail.BUDGETNO,
+                    purchaseType: detail.PURCHASETYPE,
+                    currency: detail.CURRENCY
+                }))
+            };
+        } catch (error) {
+            console.error('Error fetching purchase order:', error);
+            throw new Error('Failed to fetch purchase order: ' + error.message);
         }
     }
 }
