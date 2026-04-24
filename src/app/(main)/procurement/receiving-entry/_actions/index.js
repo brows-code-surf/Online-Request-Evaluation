@@ -133,3 +133,94 @@ export async function getNextReceivingNumber() {
     return { success: false, message: error.message };
   }
 }
+
+// Check if user has RR Distribution of Account authorization
+export async function checkUserHasRRAuthorization(userName) {
+  try {
+    const USERACCESS = (await import('@/models/UserAccess.js')).default;
+    const authorizations = await USERACCESS.getAuthorizationUsersForUser(userName);
+    const hasAuthorization = authorizations.some(auth =>
+      auth.ACTION === 'RR Distribution of Account' &&
+      (auth.ACTIVE === 1 || auth.ACTIVE === '1' || auth.ACTIVE === true)
+    );
+    return {
+      success: true,
+      hasAuthorization
+    };
+  } catch (error) {
+    console.error('Error checking RR authorization:', error);
+    return {
+      success: false,
+      hasAuthorization: false,
+      message: 'Failed to check authorization: ' + error.message
+    };
+  }
+}
+
+// Get distribution accounts
+export async function getDistributionAccounts() {
+  try {
+    const { connectToDatabase } = await import('@/lib/db.js');
+
+    const connection = await connectToDatabase(process.env.DB_SFC);
+
+    const query = `
+      SELECT ROWID, ACCTNO, ACCTNAME, ACTIVE
+      FROM [SETTINGS.DISTRIBUTION.ACCOUNTS.1]
+      WHERE ACTIVE = 1
+      ORDER BY ACCTNAME
+    `;
+
+    const result = await connection.request().query(query);
+    return {
+      success: true,
+      accounts: result.recordset.map(record => ({
+        id: record.ROWID,
+        acctNo: record.ACCTNO,
+        acctName: record.ACCTNAME,
+        active: record.ACTIVE
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching distribution accounts:', error);
+    return {
+      success: false,
+      accounts: [],
+      message: 'Failed to fetch accounts: ' + error.message
+    };
+  }
+}
+
+// Save distributions
+export async function saveDistributions(referenceNo, distributions, ewt, userName) {
+  try {
+    const DistributionOfAccounts = (await import('@/models/DistributionOfAccounts.js')).default;
+    const result = await DistributionOfAccounts.saveDistributions(referenceNo, distributions, ewt, userName);
+    return result;
+  } catch (error) {
+    console.error('Error saving distributions:', error);
+    return {
+      success: false,
+      message: 'Failed to save distributions: ' + error.message
+    };
+  }
+}
+
+// Get distributions by reference number
+export async function getDistributionsByReferenceNo(referenceNo) {
+  try {
+    const DistributionOfAccounts = (await import('@/models/DistributionOfAccounts.js')).default;
+    const distributions = await DistributionOfAccounts.getDistributionsByReferenceNo(referenceNo);
+    return {
+      success: true,
+      distributions
+    };
+  } catch (error) {
+    console.error('Error fetching distributions:', error);
+    return {
+      success: false,
+      distributions: [],
+      message: 'Failed to fetch distributions: ' + error.message
+    };
+  }
+}

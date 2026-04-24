@@ -8,7 +8,7 @@ import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../../utils/authContext';
 import ContentLeftPanel from '../../_components/contentLeftPanel';
 import ConfirmModal from '../../_components/confirmModal';
-import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules, addUserToConfirmBy, getConfirmByUsersForUser, updateUserStatus, addUserToApproveBy, getApproveByUsersForUser, updateApproveByUserStatus } from './_actions';
+import { getAllUsers, getUserAccess, grantAccess, revokeAccess, getAvailableModules, addUserToConfirmBy, getConfirmByUsersForUser, updateUserStatus, addUserToApproveBy, getApproveByUsersForUser, updateApproveByUserStatus, addUserToAuthorization, getAuthorizationUsersForUser, updateAuthorizationUserStatus } from './_actions';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import { SkeletonUserAccountsDetail } from '../../../_components/skeletonLoader';
@@ -39,6 +39,7 @@ function UserAccessContent() {
     // User Management State
     const [confirmByUsers, setConfirmByUsers] = useState([]);
     const [approveByUsers, setApproveByUsers] = useState([]);
+    const [authorizationUsers, setAuthorizationUsers] = useState([]);
 
     useEffect(() => {
         if (loading) return;
@@ -112,7 +113,7 @@ function UserAccessContent() {
 
     const fetchApproveByUsers = async () => {
         if (!selectedUser) return;
-        
+
         setDetailsLoading(true);
         try {
             console.log('Fetching approve by users for:', selectedUser.requester);
@@ -127,6 +128,28 @@ function UserAccessContent() {
         } catch (error) {
             console.error('Error fetching approve by users:', error);
             setErrorMessage('Failed to load approve by users');
+        } finally {
+            setDetailsLoading(false);
+        }
+    };
+
+    const fetchAuthorizationUsers = async () => {
+        if (!selectedUser) return;
+
+        setDetailsLoading(true);
+        try {
+            console.log('Fetching authorization users for:', selectedUser.requester);
+            const result = await getAuthorizationUsersForUser(selectedUser.requester);
+            console.log('getAuthorizationUsersForUser result:', result);
+            if (result.success) {
+                console.log('Setting authorizationUsers to:', result.data);
+                setAuthorizationUsers(result.data);
+            } else {
+                setErrorMessage(result.message || 'Failed to load authorization users');
+            }
+        } catch (error) {
+            console.error('Error fetching authorization users:', error);
+            setErrorMessage('Failed to load authorization users');
         } finally {
             setDetailsLoading(false);
         }
@@ -326,12 +349,45 @@ function UserAccessContent() {
             setPendingAction(null);
         } else if (confirmAction === 'deactivatePOApprover') {
             // Deactivate existing PO Approver
-            const existingUser = approveByUsers.find(u => 
-                u.LOCNCODE === 'PURCHASING' && 
+            const existingUser = approveByUsers.find(u =>
+                u.LOCNCODE === 'PURCHASING' &&
                 u.APPROVENAME === selectedUser.requester
             );
             if (existingUser) {
                 await updateApproveByUserStatus(existingUser.ROWID, 0);
+            }
+            setShowConfirmModal(false);
+            setConfirmAction(null);
+            setConfirmMessage('');
+            setPendingAction(null);
+        } else if (confirmAction === 'addUserToAuthorization') {
+            // Execute the addUserToAuthorization function
+            await handleAddUserToAuthorization();
+            setShowConfirmModal(false);
+            setConfirmAction(null);
+            setConfirmMessage('');
+            setPendingAction(null);
+        } else if (confirmAction === 'activateAuthorization') {
+            // Activate existing authorization
+            const existingUser = authorizationUsers.find(u =>
+                u.ACTION === 'RR Distribution of Account' &&
+                u.NAME === selectedUser.requester
+            );
+            if (existingUser) {
+                await updateAuthorizationUserStatus(existingUser.ROWID, 1);
+            }
+            setShowConfirmModal(false);
+            setConfirmAction(null);
+            setConfirmMessage('');
+            setPendingAction(null);
+        } else if (confirmAction === 'deactivateAuthorization') {
+            // Deactivate existing authorization
+            const existingUser = authorizationUsers.find(u =>
+                u.ACTION === 'RR Distribution of Account' &&
+                u.NAME === selectedUser.requester
+            );
+            if (existingUser) {
+                await updateAuthorizationUserStatus(existingUser.ROWID, 0);
             }
             setShowConfirmModal(false);
             setConfirmAction(null);
@@ -391,12 +447,12 @@ function UserAccessContent() {
     };
 
     const handlePOApproverToggle = () => {
-        const isCurrentlyActive = approveByUsers.some(u => 
-            u.LOCNCODE === 'PURCHASING' && 
-            u.APPROVENAME === selectedUser.requester && 
+        const isCurrentlyActive = approveByUsers.some(u =>
+            u.LOCNCODE === 'PURCHASING' &&
+            u.APPROVENAME === selectedUser.requester &&
             (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
         );
-        
+
         if (isCurrentlyActive) {
             // Deactivate existing record - show confirmation
             setConfirmAction('deactivatePOApprover');
@@ -404,11 +460,11 @@ function UserAccessContent() {
             setShowConfirmModal(true);
         } else {
             // Add new user or activate existing inactive one
-            const existingUser = approveByUsers.find(u => 
-                u.LOCNCODE === 'PURCHASING' && 
+            const existingUser = approveByUsers.find(u =>
+                u.LOCNCODE === 'PURCHASING' &&
                 u.APPROVENAME === selectedUser.requester
             );
-            
+
             if (existingUser) {
                 // Activate existing user - show confirmation
                 setConfirmAction('activatePOApprover');
@@ -417,6 +473,37 @@ function UserAccessContent() {
             } else {
                 // Add new user with confirmation
                 handleAddUserToApproveByWithConfirmation();
+            }
+        }
+    };
+
+    const handleAuthorizationToggle = () => {
+        const isCurrentlyActive = authorizationUsers.some(u =>
+            u.ACTION === 'RR Distribution of Account' &&
+            u.NAME === selectedUser.requester &&
+            (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+        );
+
+        if (isCurrentlyActive) {
+            // Deactivate existing record - show confirmation
+            setConfirmAction('deactivateAuthorization');
+            setConfirmMessage(`Are you sure you want to deactivate ${selectedUser.requester} for RR Distribution of Account?`);
+            setShowConfirmModal(true);
+        } else {
+            // Add new user or activate existing inactive one
+            const existingUser = authorizationUsers.find(u =>
+                u.ACTION === 'RR Distribution of Account' &&
+                u.NAME === selectedUser.requester
+            );
+
+            if (existingUser) {
+                // Activate existing user - show confirmation
+                setConfirmAction('activateAuthorization');
+                setConfirmMessage(`Are you sure you want to activate ${selectedUser.requester} for RR Distribution of Account?`);
+                setShowConfirmModal(true);
+            } else {
+                // Add new user with confirmation
+                handleAddUserToAuthorizationWithConfirmation();
             }
         }
     };
@@ -440,6 +527,28 @@ function UserAccessContent() {
     const handleAddUserToApproveByWithConfirmation = () => {
         setConfirmAction('addUserToApproveBy');
         setConfirmMessage(`Are you sure you want to add ${selectedUser.requester} as a Purchase Order Approver?`);
+        setShowConfirmModal(true);
+    };
+
+    const handleAddUserToAuthorization = async () => {
+        try {
+            const result = await addUserToAuthorization('RR Distribution of Account', selectedUser.requester, 1);
+            if (result.success) {
+                setSuccessMessage('User added for RR Distribution of Account successfully!');
+                fetchAuthorizationUsers();
+                setTimeout(() => setSuccessMessage(''), 3000);
+            } else {
+                setErrorMessage(result.message || 'Failed to add user for RR Distribution of Account');
+            }
+        } catch (error) {
+            console.error('Error adding user to authorization:', error);
+            setErrorMessage('An error occurred while adding user for RR Distribution of Account');
+        }
+    };
+
+    const handleAddUserToAuthorizationWithConfirmation = () => {
+        setConfirmAction('addUserToAuthorization');
+        setConfirmMessage(`Are you sure you want to add ${selectedUser.requester} for RR Distribution of Account?`);
         setShowConfirmModal(true);
     };
 
@@ -523,11 +632,12 @@ function UserAccessContent() {
         }, [selectedUser])
     });
 
-    // Automatically fetch confirm by and approve by users when selectedUser changes
+    // Automatically fetch confirm by, approve by, and authorization users when selectedUser changes
     useEffect(() => {
         if (selectedUser) {
             fetchConfirmByUsers();
             fetchApproveByUsers();
+            fetchAuthorizationUsers();
         }
     }, [selectedUser]);
 
@@ -809,6 +919,67 @@ function UserAccessContent() {
                                                             {approveByUsers.some(u => 
                                                                 u.LOCNCODE === 'PURCHASING' && 
                                                                 u.APPROVENAME === selectedUser.requester && 
+                                                                (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                            ) ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* RR Distribution of Account Card */}
+                                                <div className={`p-4 border rounded-lg ${
+                                                    authorizationUsers.some(u =>
+                                                        u.ACTION === 'RR Distribution of Account' &&
+                                                        u.NAME === selectedUser.requester &&
+                                                        (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                    )
+                                                        ? 'border-green-500 bg-green-50' + (darkMode ? ' bg-green-900/20' : '')
+                                                        : 'border-gray-200 bg-gray-50' + (darkMode ? ' bg-gray-700' : '')
+                                                }`}>
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-sm">RR Distribution of Account</h4>
+                                                            <p className="text-xs text-gray-500 mt-1">Enable this user for RR Distribution of Account</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={handleAuthorizationToggle}
+                                                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                                                                authorizationUsers.some(u =>
+                                                                    u.ACTION === 'RR Distribution of Account' &&
+                                                                    u.NAME === selectedUser.requester &&
+                                                                    (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                                )
+                                                                    ? 'bg-blue-600'
+                                                                    : 'bg-gray-200'
+                                                            }`}
+                                                        >
+                                                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                                authorizationUsers.some(u =>
+                                                                    u.ACTION === 'RR Distribution of Account' &&
+                                                                    u.NAME === selectedUser.requester &&
+                                                                    (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                                ) ? 'translate-x-5' : 'translate-x-0'
+                                                            }`} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${
+                                                            authorizationUsers.some(u =>
+                                                                u.ACTION === 'RR Distribution of Account' &&
+                                                                u.NAME === selectedUser.requester &&
+                                                                (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                            ) ? 'bg-green-500' : 'bg-gray-400'
+                                                        }`} />
+                                                        <span className={`text-xs font-medium ${
+                                                            authorizationUsers.some(u =>
+                                                                u.ACTION === 'RR Distribution of Account' &&
+                                                                u.NAME === selectedUser.requester &&
+                                                                (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
+                                                            ) ? 'text-green-600' : 'text-gray-500'
+                                                        }`}>
+                                                            {authorizationUsers.some(u =>
+                                                                u.ACTION === 'RR Distribution of Account' &&
+                                                                u.NAME === selectedUser.requester &&
                                                                 (u.ACTIVE === 1 || u.ACTIVE === '1' || u.ACTIVE === true)
                                                             ) ? 'Active' : 'Inactive'}
                                                         </span>

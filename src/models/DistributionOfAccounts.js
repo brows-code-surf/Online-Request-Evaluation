@@ -1,0 +1,216 @@
+'use server';
+
+import 'server-only';
+import sql from 'mssql';
+import connectToDatabase from '@/lib/db.js';
+
+class DistributionOfAccounts {
+    // Save distributions for a receiving entry
+    static async saveDistributions(referenceNo, distributions, ewt, userName) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for saving distributions');
+
+            // First, delete existing distributions for this reference no
+            const deleteQuery = `
+                DELETE FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                WHERE REFERENCENO = @referenceNo
+            `;
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(deleteQuery);
+
+            // Insert new distributions
+            for (const dist of distributions) {
+                const insertQuery = `
+                    INSERT INTO [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] (
+                        REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
+                        DATECREATED, CREATEDBY
+                    ) VALUES (
+                        @referenceNo, @acctNo, @accountType, @debitAmount, @creditAmount, @ewt,
+                        GETDATE(), @createdBy
+                    )
+                `;
+
+                await transaction.request()
+                    .input('referenceNo', referenceNo)
+                    .input('acctNo', dist.accountNo)
+                    .input('accountType', dist.accountType)
+                    .input('debitAmount', dist.debit)
+                    .input('creditAmount', dist.credit)
+                    .input('ewt', ewt)
+                    .input('createdBy', userName)
+                    .query(insertQuery);
+            }
+
+            console.log(`Saved ${distributions.length} distributions for ${referenceNo}`);
+
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Distributions saved successfully'
+            };
+
+        } catch (error) {
+            console.error('Error saving distributions:', error);
+
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to save distributions: ' + error.message);
+        }
+    }
+
+    // Get distributions by reference number
+    static async getDistributionsByReferenceNo(referenceNo) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                SELECT ROWID, REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
+                       DATECREATED, CREATEDBY, DATEMODIFIED, MODIFIEDBY
+                FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                WHERE REFERENCENO = @referenceNo
+                ORDER BY ROWID
+            `;
+
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+
+            return result.recordset.map(record => ({
+                id: record.ROWID,
+                referenceNo: record.REFERENCENO,
+                acctNo: record.ACCTNO,
+                accountType: record.ACCOUNTTYPE,
+                debitAmount: record.DEBITAMOUNT,
+                creditAmount: record.CREDITAMOUNT,
+                ewt: record.EWT,
+                dateCreated: record.DATECREATED,
+                createdBy: record.CREATEDBY,
+                dateModified: record.DATEMODIFIED,
+                modifiedBy: record.MODIFIEDBY
+            }));
+        } catch (error) {
+            console.error('Error fetching distributions:', error);
+            throw new Error('Failed to fetch distributions: ' + error.message);
+        }
+    }
+
+    // Update distributions (delete and re-insert)
+    static async updateDistributions(referenceNo, distributions, ewt, userName) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for updating distributions');
+
+            // Delete existing
+            const deleteQuery = `
+                DELETE FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                WHERE REFERENCENO = @referenceNo
+            `;
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(deleteQuery);
+
+            // Insert updated distributions
+            for (const dist of distributions) {
+                const insertQuery = `
+                    INSERT INTO [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] (
+                        REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
+                        DATECREATED, CREATEDBY
+                    ) VALUES (
+                        @referenceNo, @acctNo, @accountType, @debitAmount, @creditAmount, @ewt,
+                        GETDATE(), @createdBy
+                    )
+                `;
+
+                await transaction.request()
+                    .input('referenceNo', referenceNo)
+                    .input('acctNo', dist.accountNo)
+                    .input('accountType', dist.accountType)
+                    .input('debitAmount', dist.debit)
+                    .input('creditAmount', dist.credit)
+                    .input('ewt', ewt)
+                    .input('createdBy', userName)
+                    .query(insertQuery);
+            }
+
+            console.log(`Updated ${distributions.length} distributions for ${referenceNo}`);
+
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Distributions updated successfully'
+            };
+
+        } catch (error) {
+            console.error('Error updating distributions:', error);
+
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to update distributions: ' + error.message);
+        }
+    }
+
+    // Delete distributions for a reference number
+    static async deleteDistributions(referenceNo) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                DELETE FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                WHERE REFERENCENO = @referenceNo
+            `;
+
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+
+            return {
+                success: true,
+                message: 'Distributions deleted successfully',
+                rowsAffected: result.rowsAffected[0]
+            };
+        } catch (error) {
+            console.error('Error deleting distributions:', error);
+            throw new Error('Failed to delete distributions: ' + error.message);
+        }
+    }
+}
+
+export default DistributionOfAccounts;

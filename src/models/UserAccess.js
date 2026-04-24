@@ -483,6 +483,126 @@ export const USERACCESS = {
     }
   },
 
+  // Add user to AUTHORIZATION table
+  async addUserToAuthorization(action, name, active = 1) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // Check if user already exists for this action
+      const checkQuery = `
+        SELECT ROWID, ACTION, NAME, ACTIVE
+        FROM [SETTINGS.AUTHORIZATION.1]
+        WHERE ACTION = @action AND NAME = @name
+      `;
+
+      const checkResult = await connection.request()
+        .input('action', action)
+        .input('name', name)
+        .query(checkQuery);
+
+      if (checkResult.recordset.length > 0) {
+        const existingUser = checkResult.recordset[0];
+        // If user exists but is inactive, activate them
+        if (existingUser.ACTIVE === 0 || existingUser.ACTIVE === '0') {
+          const activateQuery = `
+            UPDATE [SETTINGS.AUTHORIZATION.1]
+            SET ACTIVE = @active
+            WHERE ROWID = @rowId
+          `;
+
+          const activateResult = await connection.request()
+            .input('active', active)
+            .input('rowId', existingUser.ROWID)
+            .query(activateQuery);
+
+          if (activateResult.rowsAffected[0] > 0) {
+            return { success: true, message: "User activated successfully" };
+          } else {
+            return { success: false, message: "Failed to activate user" };
+          }
+        } else {
+          // User already exists and is active
+          return { success: true, message: "User is already active for this authorization" };
+        }
+      }
+
+      // Insert new user
+      const insertQuery = `
+        INSERT INTO [SETTINGS.AUTHORIZATION.1]
+        (ACTION, NAME, ACTIVE)
+        VALUES
+        (@action, @name, @active)
+      `;
+
+      const result = await connection.request()
+        .input('action', action)
+        .input('name', name)
+        .input('active', active)
+        .query(insertQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User added successfully" };
+      } else {
+        return { success: false, message: "Failed to add user" };
+      }
+    } catch (error) {
+      console.error("Add user to authorization error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Get authorization users for a specific user
+  async getAuthorizationUsersForUser(name) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT ROWID, ACTION, NAME, ACTIVE
+        FROM [SETTINGS.AUTHORIZATION.1]
+        WHERE NAME = @name
+        ORDER BY ACTION
+      `;
+
+      const result = await connection.request()
+        .input('name', name)
+        .query(query);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get authorization users for user error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Update user status in AUTHORIZATION table
+  async updateAuthorizationUserStatus(rowId, active) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        UPDATE [SETTINGS.AUTHORIZATION.1]
+        SET ACTIVE = @active
+        WHERE ROWID = @rowId
+      `;
+
+      const result = await connection.request()
+        .input('rowId', rowId)
+        .input('active', active)
+        .query(query);
+
+      if (result.rowsAffected[0] > 0) {
+        return { success: true, message: "User status updated successfully" };
+      } else {
+        return { success: false, message: "No user found to update" };
+      }
+    } catch (error) {
+      console.error("Update authorization user status error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
   // Get accessible modules with child module information
   async getAccessibleModulesWithChildren(employeeId) {
     let connection;

@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/utils/authContext';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
-import { postReceivingEntry, deleteReceivingEntry } from '../_actions';
+import { postReceivingEntry, deleteReceivingEntry, checkUserHasRRAuthorization, getDistributionsByReferenceNo } from '../_actions';
 import { handlePrintReceivingEntry } from './ReceivingEntryPrintModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import EditReceivingEntryModal from './EditReceivingEntryModal';
+import AssignDistributionModal from './AssignDistributionModal';
 
 function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDataRefresh, onRefreshList, darkMode = false, loading = false, isModal = false }) {
   const { user } = useAuth();
@@ -18,7 +19,14 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   const [actionLoading, setActionLoading] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [hasRRAuthorization, setHasRRAuthorization] = useState(false);
+  const [distributions, setDistributions] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
+  const modalRef = useRef(null);
+  const dragRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -35,6 +43,119 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showActionMenu]);
+
+  // Drag functionality for modal
+  useEffect(() => {
+    if (isModal && showAssignModal) {
+      setDragOffset({ x: 0, y: 0 });
+    }
+  }, [isModal, showAssignModal]);
+
+  // Responsive positioning
+  useEffect(() => {
+    const updatePosition = () => {
+      if (modalRef.current && isModal) {
+        const isMobile = window.innerWidth < 1024;
+        if (isMobile) {
+          modalRef.current.style.left = '5%';
+          modalRef.current.style.right = '5%';
+          modalRef.current.style.top = showAssignModal ? '45%' : '50%';
+          modalRef.current.style.transform = 'translateY(-50%)';
+          modalRef.current.style.maxWidth = '90%';
+        } else {
+          modalRef.current.style.left = showAssignModal ? '5%' : '50%';
+          modalRef.current.style.right = 'auto';
+          modalRef.current.style.top = '50%';
+          modalRef.current.style.transform = showAssignModal ? 'translateY(-50%)' : 'translate(-50%, -50%)';
+          modalRef.current.style.maxWidth = showAssignModal ? '50%' : '1480px';
+          modalRef.current.style.maxHeight = '90vh';
+        }
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, [isModal, showAssignModal]);
+
+  const handleMouseDown = (e) => {
+    if (!dragRef.current?.contains(e.target)) return;
+
+    setIsDragging(true);
+    const rect = modalRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !modalRef.current) return;
+
+    const newX = e.clientX - dragOffset.x;
+    const newY = e.clientY - dragOffset.y;
+
+    modalRef.current.style.left = `${newX}px`;
+    modalRef.current.style.top = `${newY}px`;
+    modalRef.current.style.transform = 'none';
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
+  // Check RR Distribution authorization
+  useEffect(() => {
+    const checkAuthorization = async () => {
+      if (user?.empName) {
+        try {
+          const result = await checkUserHasRRAuthorization(user.empName);
+          if (result.success) {
+            setHasRRAuthorization(result.hasAuthorization);
+          }
+        } catch (error) {
+          console.error('Error checking RR authorization:', error);
+        }
+      }
+    };
+
+    checkAuthorization();
+  }, [user?.empName]);
+
+  // Fetch distributions
+  useEffect(() => {
+    const fetchDistributions = async () => {
+      if (receivingEntry?.header?.referenceNo) {
+        try {
+          const result = await getDistributionsByReferenceNo(receivingEntry.header.referenceNo);
+          if (result.success) {
+            setDistributions(result.distributions || []);
+          }
+        } catch (error) {
+          console.error('Error fetching distributions:', error);
+        }
+      }
+    };
+
+    fetchDistributions();
+  }, [receivingEntry?.header?.referenceNo]);
+
+
 
   const getStatusColor = (status) => {
     const s = Number(status);
@@ -112,6 +233,10 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   const handleEditSuccess = () => {
     onRefreshList?.();
     onDataRefresh?.();
+  };
+
+  const handleAssignDistribution = () => {
+    setShowAssignModal(true);
   };
 
   let content;
@@ -336,6 +461,8 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
           </div>
         </div>
 
+
+
         <ConfirmModal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
@@ -404,16 +531,31 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
           </>
         )}
         {Number(receivingEntry.header.postStatus) === 1 && (
-          <button
-            onClick={() => handlePrintReceivingEntry(receivingEntry)}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px]`}
-            aria-label="Print receiving entry"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2h-2m-4 6h4m0 0H9m4 0v4m0-4V5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h4m10-10V7a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2h-4a2 2 0 01-2-2z" />
-            </svg>
-            Print
-          </button>)}
+          <>
+            <button
+              onClick={() => handlePrintReceivingEntry(receivingEntry)}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px]`}
+              aria-label="Print receiving entry"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2h-2m-4 6h4m0 0H9m4 0v4m0-4V5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h4m10-10V7a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2h-4a2 2 0 01-2-2z" />
+              </svg>
+              Print
+            </button>
+            {hasRRAuthorization && (
+              <button
+                onClick={handleAssignDistribution}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px]`}
+                aria-label="Assign distribution of account"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+{distributions.length > 0 ? 'Edit / Post DA' : 'Assign Distribution'}
+              </button>
+            )}
+          </>
+        )}
         <button
           onClick={onClose}
           className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
@@ -450,27 +592,50 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
     />
   );
 
+  const assignModal = showAssignModal && (
+    <AssignDistributionModal
+      isOpen={showAssignModal}
+      onClose={() => setShowAssignModal(false)}
+      darkMode={darkMode}
+      receivingEntry={receivingEntry}
+      user={user}
+    />
+  );
+
   if (isModal) {
     return (
       <>
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-          <div className={`relative w-full max-w-7xl max-h-[90vh] overflow-hidden rounded-lg shadow-xl ${darkMode ? 'bg-gray-800' : 'bg-white'
-            }`}>
-            <div className={`space-x-2 px-6 py-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} flex items-center justify-between gap-3`}>
-              <div className="flex items-center gap-3">
-                <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Receiving Entry Details
-                </h2>
-              </div>
-              {modalButtons}
+        {!showAssignModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+          </div>
+        )}
+        <div
+          ref={modalRef}
+          className={`fixed w-full overflow-hidden rounded-lg shadow-xl z-50 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+          style={{
+            position: 'fixed',
+            maxHeight: '90vh'
+          }}
+        >
+          <div
+            ref={dragRef}
+            className={`space-x-2 px-6 py-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} flex items-center justify-between gap-3 cursor-move`}
+            onMouseDown={handleMouseDown}
+          >
+            <div className="flex items-center gap-3">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Receiving Entry Details
+              </h2>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              {content}
-            </div>
+            {modalButtons}
+          </div>
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {content}
           </div>
         </div>
         {editModal}
+        {assignModal}
       </>
     );
   }
@@ -479,6 +644,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
     <>
       {content}
       {editModal}
+      {assignModal}
     </>
   );
 }

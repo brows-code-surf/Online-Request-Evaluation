@@ -2,6 +2,7 @@ import sql from 'mssql';
 import connectToDatabase from '@/lib/db.js';
 import Notification from './Notification.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
+import { sendEmailWithTemplate } from '@/utils/emailService.js';
 
 class RequestEvaluation {
     //#region PURCHASE REQUEST
@@ -1148,7 +1149,7 @@ class RequestEvaluation {
                 await transaction.request()
                     .input('poNumber', poNumber)
                     .query(statusUpdateQuery);
-                
+
                 const itemStatusQuery = ` UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'FOR P.O. APPROVAL' WHERE PONUMBER = @poNumber `;
                 await transaction.request()
                     .input('poNumber', poNumber)
@@ -1200,6 +1201,124 @@ class RequestEvaluation {
                             await transaction.request()
                                 .input('prCode', prCode)
                                 .query(updateRequestStatusQuery);
+
+                            // Create notification and email for the requester
+                            try {
+                                // Get requester from PR header
+                                const requesterQuery = `SELECT REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @prCode`;
+                                const requesterResult = await transaction.request()
+                                    .input('prCode', prCode)
+                                    .query(requesterQuery);
+
+                                const approverQuer = `SELECT APPROVEDBY FROM [PURCHASE.ORDERHEADER.1] WHERE PONUMBER = @poNumber`;
+                                const approverResult = await transaction.request()
+                                    .input('poNumber', poNumber)
+                                    .query(approverQuer);
+
+                                if (requesterResult.recordset.length > 0) {
+                                    const requester = requesterResult.recordset[0].REQUESTEDBY;
+                                    const approver = approverResult.recordset.length > 0 ? approverResult.recordset[0].APPROVEDBY : null;
+                                    // Create in-app notification
+                                    const notification = new Notification(
+                                        'FOR P.O. APPROVAL',
+                                        `PO NO. ${poNumber} is now ready for P.O. approval.`,
+                                        requester
+                                    );
+                                    await notification.save(confirmBy);
+                                    console.log(`Notification created for requester ${requester} on PR ${prCode}`);
+
+                                    const notifyApprover = new Notification(
+                                        'FOR P.O. APPROVAL',
+                                        `PR NO. ${prCode} is now ready for P.O. approval.`,
+                                        approver
+                                    );
+                                    await notifyApprover.save(confirmBy);
+
+                                    // Send email notification
+                                    let requesterEmail = null;
+                                    if (requester.includes('@')) {
+                                        requesterEmail = requester;
+                                        console.log('Requester is already an email:', requesterEmail);
+                                    } else {
+                                        // Look up email by employee name
+                                        try {
+                                            const gdbConnection = await connectToDatabase(process.env.DB_NAME);
+                                            const userQuery = `SELECT EMAIL FROM [SYSTEM.USERACCOUNT.1] WHERE EMPLOYEENAME = @requester`;
+                                            const userResult = await gdbConnection.request()
+                                                .input('requester', requester)
+                                                .query(userQuery);
+                                            requesterEmail = userResult.recordset.length > 0 ? userResult.recordset[0].EMAIL : null;
+                                            console.log('Requester email:', requesterEmail);
+                                        } catch (emailError) {
+                                            console.error('Error fetching requester email:', emailError);
+                                        }
+                                    }
+                                    if (requesterEmail) {
+                                        const emailData = {
+                                            email: requesterEmail,
+                                            name: requester,
+                                            subject: 'P.O. Request For Approval',
+                                            companyName: 'SANTEH',
+                                            greeting: 'Hello',
+                                            body: `We are pleased to inform you that Purchase Order No. <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been confirmed and is now ready for approval.`,
+                                            buttonText: 'View Request',
+                                            buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL}/procurement/request-evaluation`,
+                                            companyEmail: 'jcvalencia@santehfeeds.com',
+                                            companyPhone: '123-456-7890',
+                                            unsubscribeUrl: '#',
+                                            preferencesUrl: '#'
+                                        };
+                                        console.log('Sending email to:', requesterEmail);
+                                        await sendEmailWithTemplate(emailData);
+                                        console.log('Email sent successfully');
+                                    } else {
+                                        console.log('No email found for requester:', requester);
+                                    }
+
+                                    // Send email notification to approver
+                                    let approverEmail = null;
+                                    if (approver && approver.includes('@')) {
+                                        approverEmail = approver;
+                                        console.log('Approver is already an email:', approverEmail);
+                                    } else if (approver) {
+                                        // Look up email by employee name
+                                        try {
+                                            const gdbConnection = await connectToDatabase(process.env.DB_NAME);
+                                            const userQuery = `SELECT EMAIL FROM [SYSTEM.USERACCOUNT.1] WHERE EMPLOYEENAME = @approver`;
+                                            const userResult = await gdbConnection.request()
+                                                .input('approver', approver)
+                                                .query(userQuery);
+                                            approverEmail = userResult.recordset.length > 0 ? userResult.recordset[0].EMAIL : null;
+                                            console.log('Approver email:', approverEmail);
+                                        } catch (emailError) {
+                                            console.error('Error fetching approver email:', emailError);
+                                        }
+                                    }
+                                    if (approverEmail) {
+                                        const emailData = {
+                                            email: approverEmail,
+                                            name: approver,
+                                            subject: 'P.O. Request For Approval',
+                                            companyName: 'SANTEH',
+                                            greeting: 'Hello',
+                                            body: `A purchase order <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been submitted and is waiting for your approval. Please review and approve the purchase order at your earliest convenience.`,
+                                            buttonText: 'View Request',
+                                            buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL}/procurement/request-evaluation`,
+                                            companyEmail: 'jcvalencia@santehfeeds.com',
+                                            companyPhone: '123-456-7890',
+                                            unsubscribeUrl: '#',
+                                            preferencesUrl: '#'
+                                        };
+                                        console.log('Sending email to:', approverEmail);
+                                        await sendEmailWithTemplate(emailData);
+                                        console.log('Email sent successfully');
+                                    } else {
+                                        console.log('No email found for approver:', approver);
+                                    }
+                                }
+                            } catch (notificationError) {
+                                console.error(`Error creating notification/email for PR ${prCode}:`, notificationError);
+                            }
                         } else {
                             console.log(`Skipping PR ${prCode} header update - has advanced statuses`);
                         }
@@ -1333,6 +1452,70 @@ class RequestEvaluation {
                     await transaction.request()
                         .input('prCode', prCode)
                         .query(updateRequestStatusQuery);
+
+                    try {
+                        // Get requester from PR header
+                        const requesterQuery = `SELECT REQUESTEDBY FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @prCode`;
+                        const requesterResult = await transaction.request()
+                            .input('prCode', prCode)
+                            .query(requesterQuery);
+
+                        if (requesterResult.recordset.length > 0) {
+                            const requester = requesterResult.recordset[0].REQUESTEDBY;
+
+                            // Create in-app notification
+                            const notification = new Notification(
+                                'FOR Receiving',
+                                `PO NO. ${poNumber} is now ready for Receiving.`,
+                                requester
+                            );
+                            await notification.save(approvedBy);
+                            console.log(`Notification created for requester ${requester} on PR ${prCode}`);
+
+                            // Send email notification
+                            let requesterEmail = null;
+                            if (requester.includes('@')) {
+                                requesterEmail = requester;
+                                console.log('Requester is already an email:', requesterEmail);
+                            } else {
+                                // Look up email by employee name
+                                try {
+                                    const gdbConnection = await connectToDatabase(process.env.DB_NAME);
+                                    const userQuery = `SELECT EMAIL FROM [SYSTEM.USERACCOUNT.1] WHERE EMPLOYEENAME = @requester`;
+                                    const userResult = await gdbConnection.request()
+                                        .input('requester', requester)
+                                        .query(userQuery);
+                                    requesterEmail = userResult.recordset.length > 0 ? userResult.recordset[0].EMAIL : null;
+                                    console.log('Requester email:', requesterEmail);
+                                } catch (emailError) {
+                                    console.error('Error fetching requester email:', emailError);
+                                }
+                            }
+                            if (requesterEmail) {
+                                const emailData = {
+                                    email: requesterEmail,
+                                    name: requester,
+                                    subject: 'P.O. Request For Receiving',
+                                    companyName: 'SANTEH',
+                                    greeting: 'Hello',
+                                    body: `We are pleased to inform you that Purchase Order No. <strong style="font-size:20px;color:#2563eb;">${poNumber}</strong> has been approved and is now ready for receiving.`,
+                                    buttonText: 'View Request',
+                                    buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL}/procurement/request-evaluation`,
+                                    companyEmail: 'jcvalencia@santehfeeds.com',
+                                    companyPhone: '123-456-7890',
+                                    unsubscribeUrl: '#',
+                                    preferencesUrl: '#'
+                                };
+                                console.log('Sending email to:', requesterEmail);
+                                await sendEmailWithTemplate(emailData);
+                                console.log('Email sent successfully');
+                            } else {
+                                console.log('No email found for requester:', requester);
+                            }
+                        }
+                    } catch (notificationError) {
+                        console.error(`Error creating notification/email for PR ${prCode}:`, notificationError);
+                    }
                 }
             }
 

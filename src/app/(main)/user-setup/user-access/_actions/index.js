@@ -302,3 +302,50 @@ export async function updateApproveByUserStatus(recordId, isActive) {
     };
   }
 }
+
+// Authorization Actions
+export async function addUserToAuthorization(action, name, active = 1) {
+  try {
+    console.log('Server action: addUserToAuthorization called with:', { action, name, active });
+    const result = await USERACCESS.addUserToAuthorization(action, name, active);
+    console.log('Server action: addUserToAuthorization result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error adding user to authorization:', error);
+    return {
+      success: false,
+      message: 'Failed to add user: ' + error.message
+    };
+  }
+}
+
+export async function getAuthorizationUsersForUser(name) {
+  try {
+    console.log('Server action: getAuthorizationUsersForUser called with:', name);
+    const users = await USERACCESS.getAuthorizationUsersForUser(name);
+    console.log('Server action: getAuthorizationUsersForUser result from model:', users);
+    return {
+      success: true,
+      data: users
+    };
+  } catch (error) {
+    console.error('Error fetching authorization users for user:', error);
+    return {
+      success: false,
+      message: 'Failed to fetch users: ' + error.message
+    };
+  }
+}
+
+export async function updateAuthorizationUserStatus(recordId, isActive) {
+  try {
+    const result = await USERACCESS.updateAuthorizationUserStatus(recordId, isActive);
+    return result;
+  } catch (error) {
+    console.error('Error updating authorization user status:', error);
+    return {
+      success: false,
+      message: 'Failed to update user status: ' + error.message
+    };
+  }
+}

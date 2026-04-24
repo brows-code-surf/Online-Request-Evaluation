@@ -1082,18 +1082,18 @@ class PurchaseOrder {
         }
     }
 
-    // Get next PO number with PO- prefix
+    // Get next PO number with POHO- prefix
     static async getNextPONumber() {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
-            // Get the highest PO number with PO- prefix
+            // Get the highest PO number with POHO- prefix
             const query = `
                 SELECT TOP 1 PONUMBER
                 FROM [PURCHASE.ORDERHEADER.1]
-                WHERE PONUMBER LIKE 'PO-%'
-                ORDER BY CAST(SUBSTRING(PONUMBER, 4, LEN(PONUMBER)-3) AS INT) DESC
+                WHERE PONUMBER LIKE 'POHO-%'
+                ORDER BY CAST(SUBSTRING(PONUMBER, 6, LEN(PONUMBER)-5) AS INT) DESC
             `;
 
             const result = await connection.request().query(query);
@@ -1101,11 +1101,11 @@ class PurchaseOrder {
             let nextNumber = 1;
             if (result.recordset.length > 0) {
                 const lastPO = result.recordset[0].PONUMBER;
-                const lastNumber = parseInt(lastPO.substring(3)); // Remove 'PO-' prefix
+                const lastNumber = parseInt(lastPO.substring(5)); // Remove 'POHO-' prefix
                 nextNumber = lastNumber + 1;
             }
 
-            return `PO-${nextNumber}`;
+            return `POHO-${nextNumber.toString().padStart(8, '0')}`;
         } catch (error) {
             console.error('Error getting next PO number:', error);
             throw new Error('Failed to generate PO number: ' + error.message);
