@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/utils/authContext';
 import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
-import { postReceivingEntry, deleteReceivingEntry, checkUserHasRRAuthorization, getDistributionsByReferenceNo } from '../_actions';
+import { postReceivingEntryWithNotifications, deleteReceivingEntry, checkUserHasRRAuthorization, getDistributionsByReferenceNo } from '../_actions';
 import { handlePrintReceivingEntry } from './ReceivingEntryPrintModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import EditReceivingEntryModal from './EditReceivingEntryModal';
@@ -22,6 +22,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [hasRRAuthorization, setHasRRAuthorization] = useState(false);
   const [distributions, setDistributions] = useState([]);
+  const [isDAPosted, setIsDAPosted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
@@ -144,7 +145,9 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
         try {
           const result = await getDistributionsByReferenceNo(receivingEntry.header.referenceNo);
           if (result.success) {
-            setDistributions(result.distributions || []);
+            const dists = result.distributions || [];
+            setDistributions(dists);
+            setIsDAPosted(dists.some(d => d.postStatus === 1));
           }
         } catch (error) {
           console.error('Error fetching distributions:', error);
@@ -169,12 +172,12 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status, isDAPosted = false) => {
     const s = Number(status);
     if (isNaN(s)) return 'Unknown';
     switch (s) {
       case 1:
-        return 'Posted';
+        return isDAPosted ? 'Posted w/ DA' : 'Posted';
       case 0:
         return 'Not Posted';
       default:
@@ -212,7 +215,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   const handlePostConfirm = async () => {
     setPosting(true);
     try {
-      const result = await postReceivingEntry(receivingEntry.header.referenceNo, user?.empName);
+      const result = await postReceivingEntryWithNotifications(receivingEntry.header.referenceNo, user?.empName);
       if (result.success) {
         toast.success('Receiving entry posted successfully');
         setShowPostModal(false);
@@ -321,7 +324,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
                 {header.referenceNo}
               </h4>
               <span className={`px-4 py-1 rounded-full text-sm font-semibold border ${getStatusColor(header.postStatus)}`}>
-                {getStatusText(header.postStatus)}
+                {getStatusText(header.postStatus, isDAPosted)}
               </span>
               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {getDateCreated()}
@@ -551,7 +554,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-{distributions.length > 0 ? 'Edit / Post DA' : 'Assign Distribution'}
+ {distributions.length > 0 ? (isDAPosted ? 'View Distribution of Accounts' : 'Edit / Post DA') : 'Assign Distribution'}
               </button>
             )}
           </>
@@ -599,6 +602,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
       darkMode={darkMode}
       receivingEntry={receivingEntry}
       user={user}
+      isViewMode={isDAPosted}
     />
   );
 

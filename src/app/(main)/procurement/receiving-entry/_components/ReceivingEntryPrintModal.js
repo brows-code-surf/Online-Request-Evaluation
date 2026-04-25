@@ -1,5 +1,7 @@
 'use client';
 
+import { getDistributionsByReferenceNo } from '../_actions/index.js';
+
 const generateHeader = (receivingEntry, currentPage, totalPages) => `
   <!-- Header Top -->
   <div class="header-top">
@@ -115,6 +117,15 @@ export const handlePrintReceivingEntry = async (receivingEntry) => {
     const totalItems = items.length;
     const remarks = receivingEntry.header.remarks || '';
 
+    // Fetch distributions if DA is posted
+    let distributions = [];
+    if (receivingEntry.header.hasDA) {
+      const distResult = await getDistributionsByReferenceNo(receivingEntry.header.referenceNo);
+      if (distResult.success) {
+        distributions = distResult.distributions;
+      }
+    }
+
     const calculateRemarksHeight = (text) => {
       if (!text || text.length === 0) return 0;
       const charsPerLine = 100;
@@ -212,7 +223,36 @@ export const handlePrintReceivingEntry = async (receivingEntry) => {
                 : '<tr><td colspan="6" style="padding: 4px 3px; text-align: center; color: #666;">No items found for this receiving entry</td></tr>'}
             </tbody>
           </table>
-          
+
+          ${isLastPage && distributions.length > 0 ? `
+            <!-- Distribution of Accounts Section -->
+            <div class="distribution-section">
+              <div class="distribution-title">Distribution of Accounts</div>
+              <table class="distribution-table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Account No.</th>
+                    <th style="width: 20%;">Account Type</th>
+                    <th style="width: 20%; text-align: right;">Debit Amount</th>
+                    <th style="width: 20%; text-align: right;">Credit Amount</th>
+                    <th style="width: 20%; text-align: right;">EWT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${distributions.map(dist => `
+                    <tr>
+                      <td>${dist.acctNo || '-'}</td>
+                      <td>${dist.accountType || '-'}</td>
+                      <td style="text-align: right;">${dist.debitAmount ? dist.debitAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                      <td style="text-align: right;">${dist.creditAmount ? dist.creditAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                      <td style="text-align: right;">${dist.ewt ? dist.ewt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+
           ${isLastPage ? `
             <div class="nothing-else">--------------------------------------------------------------------------------------------------- Nothing Else Follows -----------------------------------------------------------------------------------------------</div>
 
@@ -276,6 +316,11 @@ export const handlePrintReceivingEntry = async (receivingEntry) => {
             .line-items-count { font-size: 9px; margin: 5px 0; }
             .remarks-label { font-style: italic; margin: 10px 0 5px 0; font-size: 9px; }
             .condition-text { font-size: 9px; line-height: 1.5; color: #333; margin: 15px 0; }
+            .distribution-section { margin: 15px 0; }
+            .distribution-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: center; }
+            .distribution-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 10px; }
+            .distribution-table th { background: #666; color: white; font-weight: bold; padding: 4px 3px; text-align: left; }
+            .distribution-table td { padding: 4px 3px; border-bottom: 1px solid #ccc; }
             .signature-section { border-top: 1px solid #ccc; padding-top: 8px; margin-bottom: 10px; }
             .sig-header { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 10px; color: #666; }
             .sig-col { flex: 1; text-align: center; }

@@ -33,10 +33,10 @@ class DistributionOfAccounts {
                 const insertQuery = `
                     INSERT INTO [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] (
                         REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
-                        DATECREATED, CREATEDBY
+                        DATECREATED, CREATEDBY, POSTSTATUS
                     ) VALUES (
                         @referenceNo, @acctNo, @accountType, @debitAmount, @creditAmount, @ewt,
-                        GETDATE(), @createdBy
+                        GETDATE(), @createdBy, 0
                     )
                 `;
 
@@ -85,7 +85,7 @@ class DistributionOfAccounts {
 
             const query = `
                 SELECT ROWID, REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
-                       DATECREATED, CREATEDBY, DATEMODIFIED, MODIFIEDBY
+                        DATECREATED, CREATEDBY, DATEMODIFIED, MODIFIEDBY, POSTSTATUS
                 FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
                 WHERE REFERENCENO = @referenceNo
                 ORDER BY ROWID
@@ -106,7 +106,8 @@ class DistributionOfAccounts {
                 dateCreated: record.DATECREATED,
                 createdBy: record.CREATEDBY,
                 dateModified: record.DATEMODIFIED,
-                modifiedBy: record.MODIFIEDBY
+                modifiedBy: record.MODIFIEDBY,
+                postStatus: record.POSTSTATUS
             }));
         } catch (error) {
             console.error('Error fetching distributions:', error);
@@ -142,10 +143,10 @@ class DistributionOfAccounts {
                 const insertQuery = `
                     INSERT INTO [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] (
                         REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
-                        DATECREATED, CREATEDBY
+                        DATECREATED, CREATEDBY, POSTSTATUS
                     ) VALUES (
                         @referenceNo, @acctNo, @accountType, @debitAmount, @creditAmount, @ewt,
-                        GETDATE(), @createdBy
+                        GETDATE(), @createdBy, 0
                     )
                 `;
 
@@ -183,6 +184,57 @@ class DistributionOfAccounts {
             }
 
             throw new Error('Failed to update distributions: ' + error.message);
+        }
+    }
+
+    // Post distributions (update postStatus to 1)
+    static async postDistributions(referenceNo, userName) {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for posting distributions');
+
+            // Update postStatus to 1 for existing distributions
+            const updateQuery = `
+                UPDATE [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                SET POSTSTATUS = 1, DATEMODIFIED = GETDATE(), MODIFIEDBY = @userName
+                WHERE REFERENCENO = @referenceNo
+            `;
+            await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('userName', userName)
+                .query(updateQuery);
+
+            console.log(`Posted distributions for ${referenceNo}`);
+
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Distributions posted successfully'
+            };
+
+        } catch (error) {
+            console.error('Error posting distributions:', error);
+
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to post distributions: ' + error.message);
         }
     }
 

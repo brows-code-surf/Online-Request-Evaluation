@@ -197,12 +197,12 @@ function ReceivingEntryContent() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status, hasDA = false) => {
     const s = Number(status);
     if (isNaN(s)) return 'Unknown';
     switch (s) {
       case 1:
-        return 'POSTED';
+        return hasDA ? 'POSTED W/ DA' : 'POSTED';
       case 0:
         return 'NOT POSTED';
       default:
@@ -319,17 +319,17 @@ function ReceivingEntryContent() {
                       />
                     </div>
 
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className={`px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer ${darkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'}`}
-                    >
-                      <option value="">All Status</option>
-                      <option value="1">POSTED</option>
-                      <option value="0">NOT POSTED</option>
-                    </select>
+                     <select
+                       value={filterStatus}
+                       onChange={(e) => setFilterStatus(e.target.value)}
+                       className={`px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer ${darkMode
+                         ? 'bg-gray-700 border-gray-600 text-white'
+                         : 'bg-white border-gray-300 text-gray-900'}`}
+                     >
+                       <option value="">All Status</option>
+                       <option value="1">POSTED</option>
+                       <option value="0">NOT POSTED</option>
+                     </select>
 
                     <select
                       value={sortBy}
@@ -436,7 +436,7 @@ function ReceivingEntryContent() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(entry.postStatus)}`}>
-                            {getStatusText(entry.postStatus)}
+                            {getStatusText(entry.postStatus, entry.hasDA)}
                           </span>
                         </td>
                       </tr>

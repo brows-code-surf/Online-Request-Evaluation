@@ -206,6 +206,110 @@ export async function saveDistributions(referenceNo, distributions, ewt, userNam
   }
 }
 
+// Update distributions
+export async function updateDistributions(referenceNo, distributions, ewt, userName) {
+  try {
+    const DistributionOfAccounts = (await import('@/models/DistributionOfAccounts.js')).default;
+    const result = await DistributionOfAccounts.updateDistributions(referenceNo, distributions, ewt, userName);
+    return result;
+  } catch (error) {
+    console.error('Error updating distributions:', error);
+    return {
+      success: false,
+      message: 'Failed to update distributions: ' + error.message
+    };
+  }
+}
+
+// Post distributions
+export async function postDistributions(referenceNo, userName) {
+  try {
+    const DistributionOfAccounts = (await import('@/models/DistributionOfAccounts.js')).default;
+    const result = await DistributionOfAccounts.postDistributions(referenceNo, userName);
+    return result;
+  } catch (error) {
+    console.error('Error posting distributions:', error);
+    return {
+      success: false,
+      message: 'Failed to post distributions: ' + error.message
+    };
+  }
+}
+
+export async function postReceivingEntryWithNotifications(receivingNumber, posterName) {
+  try {
+    const result = await ReceivingEntry.postReceivingEntry(receivingNumber, posterName);
+
+    if (result.success) {
+      // Send notifications and emails to all authorization users
+      try {
+        const USERACCESS = (await import('@/models/UserAccess.js')).default;
+        const { Notification } = await import('@/models/Notification.js');
+        const { sendEmailWithTemplate } = await import('@/utils/emailService.js');
+        const { connectToDatabase } = await import('@/lib/db.js');
+
+        const authorizationUsers = await USERACCESS.getAllAuthorizationUsers();
+        console.log('Sending notifications to authorization users:', authorizationUsers.length);
+
+        for (const authUser of authorizationUsers) {
+          if (authUser.ACTIVE === 1) {
+            try {
+              // Get email for the user
+              const connection = await connectToDatabase();
+              const query = `SELECT EMAIL FROM [SYSTEM.USERACCOUNT.1] WHERE EMPLOYEENAME = @employeeName`;
+              const emailResult = await connection.request()
+                .input('employeeName', authUser.NAME)
+                .query(query);
+              const userEmail = emailResult.recordset.length > 0 ? emailResult.recordset[0].EMAIL : null;
+
+              if (userEmail) {
+                // Create in-app notification
+                const notification = new Notification(
+                  'Receiving Entry Posted',
+                  `Receiving entry ${receivingNumber} has been posted by ${posterName}, and is now ready for Distribution of Accounts.`,
+                  authUser.NAME,
+                  `/procurement/receiving-entry`
+                );
+                await notification.save(posterName);
+
+                // Send email notification
+                const emailData = {
+                  email: userEmail,
+                  subject: 'Receiving Entry Posted Notification',
+                  title: 'Receiving Entry Posted',
+                  companyName: 'SANTEH',
+                  greeting: 'Hello',
+                  name: authUser.NAME,
+                  body: `Receiving entry ${receivingNumber} has been posted by ${posterName}. Please review the entry for Distribution of Accounts.`,
+                  buttonText: 'View Entry',
+                  buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/procurement/receiving-entry`,
+                  companyEmail: 'jcvalencia@santehfeeds.com',
+                  companyPhone: '+1-234-567-8900',
+                  unsubscribeUrl: '#',
+                  preferencesUrl: '#'
+                };
+                await sendEmailWithTemplate(emailData);
+              }
+            } catch (userError) {
+              console.error(`Error sending notification/email to ${authUser.NAME}:`, userError);
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications/emails:', notificationError);
+        // Don't fail the posting if notifications fail
+      }
+
+      return { success: true, message: result.message };
+    } else {
+      return { success: false, message: result.message };
+    }
+  } catch (error) {
+    console.error('Error posting receiving entry:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 // Get distributions by reference number
 export async function getDistributionsByReferenceNo(referenceNo) {
   try {

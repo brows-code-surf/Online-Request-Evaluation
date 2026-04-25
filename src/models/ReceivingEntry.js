@@ -25,7 +25,8 @@ class ReceivingEntry {
                     h.RECEIPTTYPE as RECEIVING_STATUS,
                     h.POSTSTATUS,
                     h.HREMARKS as REMARKS,
-                    COUNT(d.RID) as itemCount
+                    COUNT(d.RID) as itemCount,
+                    CASE WHEN EXISTS (SELECT 1 FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] WHERE REFERENCENO = h.REFERENCENO AND POSTSTATUS = 1) THEN 1 ELSE 0 END as hasDA
                 FROM [PURCHASE.RECEIVEHEADER.1] h
                 LEFT JOIN [PURCHASE.RECEIVEDETAILS.1] d ON h.REFERENCENO = d.REFERENCENO
                 WHERE 1=1
@@ -94,7 +95,8 @@ class ReceivingEntry {
                 receivingStatus: record.RECEIVING_STATUS || 'PENDING',
                 postStatus: record.POSTSTATUS || 0,
                 remarks: record.REMARKS,
-                itemCount: record.itemCount
+                itemCount: record.itemCount,
+                hasDA: record.hasDA === 1
             }));
         } catch (error) {
             console.error('Error fetching receiving entries:', error);
@@ -125,7 +127,8 @@ class ReceivingEntry {
 
             const headerQuery = `
                 SELECT ROWID, REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, VNDDOCNM, PYMTRMID, INVENTORYDESCRIPTION, HREMARKS, POSTSTATUS, DATECREATED,
-                       CREATEDBY, DATEMODIFIED, MODIFIEDBY
+                        CREATEDBY, DATEMODIFIED, MODIFIEDBY,
+                        CASE WHEN EXISTS (SELECT 1 FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] WHERE REFERENCENO = [PURCHASE.RECEIVEHEADER.1].REFERENCENO AND POSTSTATUS = 1) THEN 1 ELSE 0 END as hasDA
                 FROM [PURCHASE.RECEIVEHEADER.1]
                 WHERE REFERENCENO = @referenceNo
             `;
@@ -169,7 +172,8 @@ class ReceivingEntry {
                     postStatus: header.POSTSTATUS || 0,
                     remarks: header.HREMARKS,
                     dateModified: header.DATEMODIFIED,
-                    modifiedBy: header.MODIFIEDBY
+                    modifiedBy: header.MODIFIEDBY,
+                    hasDA: header.hasDA === 1
                 },
                 details: detailsResult.recordset.map(detail => ({
                     id: detail.ROWID,

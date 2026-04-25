@@ -838,6 +838,29 @@ export const USERACCESS = {
     }
   },
 
+  // Get all authorization users
+  async getAllAuthorizationUsers() {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      const query = `
+        SELECT ROWID, ACTION, NAME, ACTIVE
+        FROM [SETTINGS.AUTHORIZATION.1]
+        WHERE ACTIVE = 1
+        ORDER BY ACTION, NAME
+      `;
+
+      const result = await connection.request()
+        .query(query);
+
+      return result.recordset;
+    } catch (error) {
+      console.error("Get all authorization users error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
   // Helper function for revoking access within a transaction
   async _revokeAccessInTransaction(transaction, employeeId, module, modifiedBy) {
     const query = `
