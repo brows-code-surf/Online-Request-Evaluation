@@ -245,7 +245,7 @@ export async function postReceivingEntryWithNotifications(receivingNumber, poste
       try {
         const USERACCESS = (await import('@/models/UserAccess.js')).default;
         const { Notification } = await import('@/models/Notification.js');
-        const { sendEmailWithTemplate } = await import('@/utils/emailService.js');
+        // const { sendEmailWithTemplate } = await import('@/utils/emailService.js');
         const { connectToDatabase } = await import('@/lib/db.js');
 
         const authorizationUsers = await USERACCESS.getAllAuthorizationUsers();
@@ -273,22 +273,22 @@ export async function postReceivingEntryWithNotifications(receivingNumber, poste
                 await notification.save(posterName);
 
                 // Send email notification
-                const emailData = {
-                  email: userEmail,
-                  subject: 'Receiving Entry Posted Notification',
-                  title: 'Receiving Entry Posted',
-                  companyName: 'SANTEH',
-                  greeting: 'Hello',
-                  name: authUser.NAME,
-                  body: `Receiving entry ${receivingNumber} has been posted by ${posterName}. Please review the entry for Distribution of Accounts.`,
-                  buttonText: 'View Entry',
-                  buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/procurement/receiving-entry`,
-                  companyEmail: 'jcvalencia@santehfeeds.com',
-                  companyPhone: '+1-234-567-8900',
-                  unsubscribeUrl: '#',
-                  preferencesUrl: '#'
-                };
-                await sendEmailWithTemplate(emailData);
+                // const emailData = {
+                //   email: userEmail,
+                //   subject: 'Receiving Entry Posted Notification',
+                //   title: 'Receiving Entry Posted',
+                //   companyName: 'SANTEH',
+                //   greeting: 'Hello',
+                //   name: authUser.NAME,
+                //   body: `Receiving entry ${receivingNumber} has been posted by ${posterName}. Please review the entry for Distribution of Accounts.`,
+                //   buttonText: 'View Entry',
+                //   buttonUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/procurement/receiving-entry`,
+                //   companyEmail: 'jcvalencia@santehfeeds.com',
+                //   companyPhone: '+1-234-567-8900',
+                //   unsubscribeUrl: '#',
+                //   preferencesUrl: '#'
+                // };
+                // await sendEmailWithTemplate(emailData);
               }
             } catch (userError) {
               console.error(`Error sending notification/email to ${authUser.NAME}:`, userError);

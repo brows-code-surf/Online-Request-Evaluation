@@ -276,7 +276,7 @@ function PurchaseOrderDetails({
                         </div>
 
                         {/* Request Details from evaluation */}
-                        {approvalDetails.length > 0 && (
+                        {/* {approvalDetails.length > 0 && (
                             <div className={`${darkMode ? 'bg-gray-800/50 border-gray-600' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} p-4 rounded-lg border`}>
                                 <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Request Details</h3>
 
@@ -295,7 +295,7 @@ function PurchaseOrderDetails({
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        )} */}
 
                         {/* Items Table */}
                         <div>

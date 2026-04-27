@@ -9,7 +9,8 @@ export default function ConfirmModal({
     onConfirm,
     onCancel,
     isLoading,
-    confirmButtonColor = 'green'
+    confirmButtonColor = 'green',
+    hasBackdrop = true
 }) {
     const { darkMode } = useAuth();
     if (!isOpen) return null;
@@ -22,7 +23,7 @@ export default function ConfirmModal({
     };
 
     return (
-        <div className={`fixed inset-0 ${darkMode ? 'bg-gray-900/50' : 'bg-gray-600/30'} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
+        <div className={`fixed inset-0 ${darkMode ? 'bg-gray-900/50' : 'bg-gray-600/30'} ${hasBackdrop ? 'backdrop-blur-sm' : ''} flex items-center justify-center z-50 p-4`}>
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
                 <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{title}</h2>
 

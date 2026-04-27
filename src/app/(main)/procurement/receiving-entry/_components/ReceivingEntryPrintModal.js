@@ -76,17 +76,17 @@ const generateFooter = (receivingEntry) => `
       </div>
       <div style="display: flex; justify-content: space-between; gap: 40px;">
         <div class="sig-col">
-          <div class="sig-name" style="margin-bottom: 1px;">${receivingEntry.header.createdBy || ''}</div>
+          <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;">${receivingEntry.header.createdBy || ''}</div>
           <div class="sig-line"></div>
           <div style="font-size: 10px;">Signature Over Printed Name</div>
         </div>
         <div class="sig-col">
-          <div class="sig-name" style="margin-bottom: 1px;">${receivingEntry.header.inventoryDescription || ''}</div>
+          <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;">${receivingEntry.header.createdBy || ''}</div>
           <div class="sig-line"></div>
           <div style="font-size: 10px;">Signature Over Printed Name</div>
         </div>
         <div class="sig-col">
-          <div class="sig-name" style="margin-bottom: 1px;"></div>
+          <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;"></div>
           <div class="sig-line"></div>
           <div style="font-size: 10px;">Signature Over Printed Name</div>
         </div>
@@ -231,10 +231,11 @@ export const handlePrintReceivingEntry = async (receivingEntry) => {
               <table class="distribution-table">
                 <thead>
                   <tr>
-                    <th style="width: 20%;">Account No.</th>
-                    <th style="width: 20%;">Account Type</th>
-                    <th style="width: 20%; text-align: right;">Debit Amount</th>
-                    <th style="width: 20%; text-align: right;">Credit Amount</th>
+                    <th style="width: 10%;">Account No.</th>
+                    <th style="width: 20%;">Account Name</th>
+                    <th style="width: 10%;">Account Type</th>
+                    <th style="width: 10%; text-align: right;">Debit Amount</th>
+                    <th style="width: 10%; text-align: right;">Credit Amount</th>
                     <th style="width: 20%; text-align: right;">EWT</th>
                   </tr>
                 </thead>
@@ -242,6 +243,7 @@ export const handlePrintReceivingEntry = async (receivingEntry) => {
                   ${distributions.map(dist => `
                     <tr>
                       <td>${dist.acctNo || '-'}</td>
+                      <td>${dist.acctName || '-'}</td>
                       <td>${dist.accountType || '-'}</td>
                       <td style="text-align: right;">${dist.debitAmount ? dist.debitAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
                       <td style="text-align: right;">${dist.creditAmount ? dist.creditAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>

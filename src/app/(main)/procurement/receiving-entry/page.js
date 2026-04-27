@@ -9,7 +9,6 @@ import ReceivingEntryDetails from './_components/ReceivingEntryDetails';
 import CreateReceivingEntryModal from './_components/CreateReceivingEntryModal';
 import EditReceivingEntryModal from './_components/EditReceivingEntryModal';
 import Loader from '@/app/_components/loader';
-import { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
 import { ToastContainer, toast } from 'react-toastify';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import {
@@ -33,6 +32,8 @@ function ReceivingEntryContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -131,10 +132,15 @@ function ReceivingEntryContent() {
           field?.toString().toLowerCase().includes(searchQuery.toLowerCase())
         );
 
-      const statusMatch = filterStatus !== '' && String(entry.postStatus) === filterStatus;
-      const matchesStatus = filterStatus === '' || statusMatch;
+      const matchesStatus = filterStatus === '' ||
+        (filterStatus === '0' && entry.postStatus == 0) ||
+        (filterStatus === '1' && entry.postStatus == 1 && !entry.hasDA) ||
+        (filterStatus === '1da' && entry.postStatus == 1 && entry.hasDA);
 
-      return matchesSearch && matchesStatus;
+      const matchesDate = (!dateFrom || new Date(entry.dateCreated) >= new Date(dateFrom)) &&
+        (!dateTo || new Date(entry.dateCreated) <= new Date(dateTo));
+
+      return matchesSearch && matchesStatus && matchesDate;
     })
     .sort((a, b) => {
       if (sortBy === 'date') {
@@ -142,7 +148,9 @@ function ReceivingEntryContent() {
       } else if (sortBy === 'vendor') {
         return (a.vendName || '').localeCompare(b.vendName || '');
       } else if (sortBy === 'status') {
-        return (a.postStatus || '').localeCompare(b.postStatus || '');
+        return (a.postStatus || 0) - (b.postStatus || 0);
+      } else if (sortBy === 'receivingNo') {
+        return (a.referenceNo || '').localeCompare(b.referenceNo || '');
       }
       return 0;
     });
@@ -281,7 +289,7 @@ function ReceivingEntryContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                     <span className="font-medium">Filters & Search</span>
-                    {(searchQuery || sortBy || filterStatus) && (
+                    {(searchQuery || sortBy !== 'date' || filterStatus || dateFrom || dateTo) && (
                       <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     )}
                   </div>
@@ -302,34 +310,60 @@ function ReceivingEntryContent() {
                     </span>
                   </div>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className={`h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search entries..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`w-full sm:w-56 lg:w-64 pl-10 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
-                      />
-                    </div>
+                     <div className="relative">
+                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg className={`h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                         </svg>
+                       </div>
+                       <input
+                         type="text"
+                         placeholder="Search entries..."
+                         value={searchQuery}
+                         onChange={(e) => setSearchQuery(e.target.value)}
+                         className={`w-full sm:w-56 lg:w-64 pl-10 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${darkMode
+                           ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                           : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
+                       />
+                     </div>
 
-                     <select
-                       value={filterStatus}
-                       onChange={(e) => setFilterStatus(e.target.value)}
-                       className={`px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer ${darkMode
-                         ? 'bg-gray-700 border-gray-600 text-white'
-                         : 'bg-white border-gray-300 text-gray-900'}`}
-                     >
-                       <option value="">All Status</option>
-                       <option value="1">POSTED</option>
-                       <option value="0">NOT POSTED</option>
-                     </select>
+                     <div className="flex gap-4">
+                       <div className="flex items-center gap-2">
+                         <label className={`text-xs font-medium whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>DATE FROM</label>
+                         <input
+                           type="date"
+                           value={dateFrom}
+                           onChange={(e) => setDateFrom(e.target.value)}
+                           className={`px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${darkMode
+                             ? 'bg-gray-700 border-gray-600 text-white'
+                             : 'bg-white border-gray-300 text-gray-900'}`}
+                         />
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <label className={`text-xs font-medium whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>DATE TO</label>
+                         <input
+                           type="date"
+                           value={dateTo}
+                           onChange={(e) => setDateTo(e.target.value)}
+                           className={`px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${darkMode
+                             ? 'bg-gray-700 border-gray-600 text-white'
+                             : 'bg-white border-gray-300 text-gray-900'}`}
+                         />
+                       </div>
+                     </div>
+
+                      <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className={`px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer ${darkMode
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'}`}
+                      >
+                        <option value="">All Status</option>
+                        <option value="0">NOT POSTED</option>
+                        <option value="1">POSTED</option>
+                        <option value="1da">POSTED W/ DA</option>
+                      </select>
 
                     <select
                       value={sortBy}
@@ -341,14 +375,17 @@ function ReceivingEntryContent() {
                       <option value="date">Sort by Date</option>
                       <option value="vendor">Sort by Vendor</option>
                       <option value="status">Sort by Status</option>
+                      <option value="receivingNo">Sort by Receiving No.</option>
                     </select>
 
-                    {(searchQuery || sortBy || filterStatus) && (
+                    {(searchQuery || sortBy !== 'date' || filterStatus || dateFrom || dateTo) && (
                       <button
                         onClick={() => {
                           setSearchQuery('');
                           setSortBy('date');
                           setFilterStatus('');
+                          setDateFrom('');
+                          setDateTo('');
                         }}
                         className={`px-3 py-2 text-sm font-medium rounded-xl transition-colors ${darkMode
                           ? 'text-gray-300 hover:bg-gray-600'

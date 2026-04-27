@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/utils/authContext';
 import { updateReceivingEntry, getApprovedPurchaseOrdersForReceiving, getPurchaseOrderForReceiving } from '../_actions';
+import SkeletonLoader, { SkeletonRequestEvaluationDetail } from '@/app/_components/skeletonLoader';
 
 function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEntry, onSuccess }) {
   const { isAdmin } = useAuth();
@@ -27,55 +28,60 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
   const [originalQuantities, setOriginalQuantities] = useState({}); // Original received quantities
   const [poLoaded, setPoLoaded] = useState(false);
   const [currentPODetails, setCurrentPODetails] = useState(null); // Full PO details for selected PO
+  const [loadingPODetails, setLoadingPODetails] = useState(false);
 
-   const loadApprovedPOs = useCallback(async () => {
-     // Not really needed in edit mode but keep for dropdown options consistency
-     setLoadingPOs(true);
-     setPoLoaded(false);
-     try {
-       const result = await getApprovedPurchaseOrdersForReceiving(user, isAdmin());
-       if (result.success) {
-         setApprovedPOs(result.purchaseOrders || []);
-       } else {
-         toast.error(result.message || 'Failed to load approved purchase orders');
-       }
-     } catch (error) {
-       console.error('Error loading approved POs:', error);
-       toast.error('Failed to load approved purchase orders');
-     } finally {
-       setLoadingPOs(false);
-       setPoLoaded(true);
-     }
-   }, [user, isAdmin]);
+  const loadApprovedPOs = useCallback(async () => {
+    // Not really needed in edit mode but keep for dropdown options consistency
+    setLoadingPOs(true);
+    setPoLoaded(false);
+    try {
+      const result = await getApprovedPurchaseOrdersForReceiving(user, isAdmin());
+      if (result.success) {
+        setApprovedPOs(result.purchaseOrders || []);
+      } else {
+        toast.error(result.message || 'Failed to load approved purchase orders');
+      }
+    } catch (error) {
+      console.error('Error loading approved POs:', error);
+      toast.error('Failed to load approved purchase orders');
+    } finally {
+      setLoadingPOs(false);
+      setPoLoaded(true);
+    }
+  }, [user, isAdmin]);
 
-   const loadPODetails = useCallback(async (poNumber) => {
-     if (!poNumber) {
-       setCurrentPODetails(null);
-       return;
-     }
-     try {
-       const result = await getPurchaseOrderForReceiving(poNumber, user, isAdmin());
-       if (result.success && result.purchaseOrder) {
-         setCurrentPODetails(result.purchaseOrder);
-       } else {
-         console.error('Failed to load PO details:', result.message);
-         setCurrentPODetails(null);
-       }
-     } catch (error) {
-       console.error('Error loading PO details:', error);
-       setCurrentPODetails(null);
-     }
-   }, [user, isAdmin]);
+  const loadPODetails = useCallback(async (poNumber) => {
+    if (!poNumber) {
+      setCurrentPODetails(null);
+      setLoadingPODetails(false);
+      return;
+    }
+    setLoadingPODetails(true);
+    try {
+      const result = await getPurchaseOrderForReceiving(poNumber, user, isAdmin());
+      if (result.success && result.purchaseOrder) {
+        setCurrentPODetails(result.purchaseOrder);
+      } else {
+        console.error('Failed to load PO details:', result.message);
+        setCurrentPODetails(null);
+      }
+    } catch (error) {
+      console.error('Error loading PO details:', error);
+      setCurrentPODetails(null);
+    } finally {
+      setLoadingPODetails(false);
+    }
+  }, [user, isAdmin]);
 
-   // Helper to format date as YYYY-MM-DD for input[type="date"]
-   const formatDateForInput = (dateValue) => {
-     if (!dateValue) return '';
-     const date = new Date(dateValue);
-     const year = date.getFullYear();
-     const month = String(date.getMonth() + 1).padStart(2, '0');
-     const day = String(date.getDate()).padStart(2, '0');
-     return `${year}-${month}-${day}`;
-   };
+  // Helper to format date as YYYY-MM-DD for input[type="date"]
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    const date = new Date(dateValue);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -86,50 +92,51 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
       setOriginalQuantities({});
       setPoLoaded(false);
       setCurrentPODetails(null);
+      setLoadingPODetails(false);
     }
   }, [isOpen, loadApprovedPOs]);
 
-   useEffect(() => {
-     if (isOpen && receivingEntry?.header) {
-       setSelectedPO({
-         poNumber: receivingEntry.header.poNumber,
-         vendorId: receivingEntry.header.vendorId,
-         vendName: receivingEntry.header.vendName
-       });
-       setReceivingData({
-         vendorId: receivingEntry.header.vendorId || '',
-         vendName: receivingEntry.header.vendName || '',
-         receivedBy: receivingEntry.header.createdBy || '',
-         dateReceived: formatDateForInput(receivingEntry.header.dateCreated),
-         vndDocNm: receivingEntry.header.vndDocNm || '',
-         locnCode: receivingEntry.header.locnCode || '',
-         receiptType: receivingEntry.header.receiptType || 'Purchase Receipt',
-         remarks: receivingEntry.header.remarks || ''
-       });
+  useEffect(() => {
+    if (isOpen && receivingEntry?.header) {
+      setSelectedPO({
+        poNumber: receivingEntry.header.poNumber,
+        vendorId: receivingEntry.header.vendorId,
+        vendName: receivingEntry.header.vendName
+      });
+      setReceivingData({
+        vendorId: receivingEntry.header.vendorId || '',
+        vendName: receivingEntry.header.vendName || '',
+        receivedBy: receivingEntry.header.createdBy || '',
+        dateReceived: formatDateForInput(receivingEntry.header.dateCreated),
+        vndDocNm: receivingEntry.header.vndDocNm || '',
+        locnCode: receivingEntry.header.locnCode || '',
+        receiptType: receivingEntry.header.receiptType || 'Purchase Receipt',
+        remarks: receivingEntry.header.remarks || ''
+      });
 
-        if (receivingEntry.details) {
-          const selected = {};
-          const quantities = {};
-          const invQuantities = {};
-          const originals = {};
+      if (receivingEntry.details) {
+        const selected = {};
+        const quantities = {};
+        const invQuantities = {};
+        const originals = {};
 
-          receivingEntry.details.forEach(item => {
-            selected[item.rid] = true;
-            quantities[item.rid] = item.quantity || 0;
-            invQuantities[item.rid] = item.inventoryQuantity || item.quantity || 0;
-            originals[item.rid] = item.quantity || 0; // Store original received quantity
-          });
+        receivingEntry.details.forEach(item => {
+          selected[item.rid] = true;
+          quantities[item.rid] = item.quantity || 0;
+          invQuantities[item.rid] = item.inventoryQuantity || item.quantity || 0;
+          originals[item.rid] = item.quantity || 0; // Store original received quantity
+        });
 
-          setSelectedItems(selected);
-          setItemQuantities(quantities);
-          setInventoryQuantities(invQuantities);
-          setOriginalQuantities(originals);
-        }
-       
-       // Load full PO details for this PO
-       loadPODetails(receivingEntry.header.poNumber);
-     }
-   }, [isOpen, receivingEntry, loadPODetails]);
+        setSelectedItems(selected);
+        setItemQuantities(quantities);
+        setInventoryQuantities(invQuantities);
+        setOriginalQuantities(originals);
+      }
+
+      // Load full PO details for this PO
+      loadPODetails(receivingEntry.header.poNumber);
+    }
+  }, [isOpen, receivingEntry, loadPODetails]);
 
   useEffect(() => {
     if (selectedPO) {
@@ -178,7 +185,7 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
   const handleQuantityChange = (item, value) => {
     const qty = parseInt(value) || 0;
     const originalQty = originalQuantities[item.rid] || 0;
-    const maxQty = originalQty + item.qtyRemaining;
+    const maxQty = (originalQuantities[item.rid] || 0) + item.qtyRemaining;
     setItemQuantities(prev => ({
       ...prev,
       [item.rid]: Math.min(Math.max(0, qty), maxQty)
@@ -305,9 +312,9 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
   // Compute items with remaining quantity from current full PO details
   const poItems = currentPODetails?.details
     ? currentPODetails.details.map(item => ({
-        ...item,
-        qtyRemaining: (item.qtyOrder || 0) - (item.qtyServed || 0)
-      }))
+      ...item,
+      qtyRemaining: (item.qtyOrder || 0) - (item.qtyAllocated || 0) - (item.qtyServed || 0)
+    }))
     : [];
 
   return (
@@ -344,10 +351,7 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {!poLoaded ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading purchase orders...</span>
-            </div>
+            <SkeletonRequestEvaluationDetail />
           ) : (
             <div className="space-y-6">
               <div>
@@ -358,8 +362,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                   value={selectedPO?.poNumber || ''}
                   disabled={true}
                   className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
+                    ? 'bg-gray-700 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
                     } focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
                   <option value={selectedPO?.poNumber || ''}>
@@ -380,8 +384,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.vendorId}
                         readOnly
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-gray-50 border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-gray-50 border-gray-300 text-gray-900'
                           }`}
                       />
                     </div>
@@ -394,8 +398,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.vendName}
                         readOnly
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-gray-50 border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-gray-50 border-gray-300 text-gray-900'
                           }`}
                       />
                     </div>
@@ -409,8 +413,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.vndDocNm}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
                           } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       />
                     </div>
@@ -426,8 +430,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.locnCode}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
                           } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       >
                         <option value="">Select Location</option>
@@ -446,8 +450,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.receiptType}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
                           } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       >
                         <option value="Purchase Receipt">Purchase Receipt</option>
@@ -468,8 +472,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={receivingData.receivedBy}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
                           } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       />
                     </div>
@@ -483,8 +487,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                         value={formatDateForInput(receivingData.dateReceived)}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
                           } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       />
                     </div>
@@ -500,8 +504,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                       onChange={handleInputChange}
                       rows={3}
                       className={`w-full px-4 py-2 rounded-lg border ${darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
                         } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                     />
                   </div>
@@ -523,51 +527,65 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
                             <th className="px-3 py-2 text-right">Inventory Qty</th>
                           </tr>
                         </thead>
-                      <tbody className={`divide-y ${darkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
-                        {poItems.map((item) => (
-                          <tr key={item.rid} className={selectedItems[item.rid] ? (darkMode ? 'bg-gray-600' : 'bg-blue-50') : ''}>
-                            <td className="px-3 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                checked={!!selectedItems[item.rid]}
-                                onChange={(e) => handleItemSelect(item, e.target.checked)}
-                                className="w-4 h-4 rounded"
-                              />
-                            </td>
-                            <td className="px-3 py-2">{item.itemNmbr}</td>
-                            <td className="px-3 py-2">{item.itemDesc}</td>
-                            <td className="px-3 py-2 text-right">{item.qtyOrder}</td>
-                            <td className="px-3 py-2 text-right">{item.qtyRemaining}</td>
-                             <td className="px-3 py-2 text-right">
-                               <input
-                                 type="number"
-                                 min="0"
-                                 max={(originalQuantities[item.rid] || 0) + item.qtyRemaining}
-                                 value={itemQuantities[item.rid] || 0}
-                                 onChange={(e) => handleQuantityChange(item, e.target.value)}
-                                 disabled={!selectedItems[item.rid]}
-                                 className={`w-20 px-2 py-1 rounded border text-right ${darkMode
-                                     ? 'bg-gray-700 border-gray-600 text-white'
-                                     : 'bg-white border-gray-300 text-gray-900'
-                                   } focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed`}
-                               />
-                             </td>
-                            <td className="px-3 py-2 text-right">
-                              <input
-                                type="number"
-                                min="0"
-                                value={inventoryQuantities[item.rid] || 0}
-                                onChange={(e) => handleInventoryQuantityChange(item, e.target.value)}
-                                disabled={!selectedItems[item.rid]}
-                                className={`w-20 px-2 py-1 rounded border text-right ${darkMode
-                                    ? 'bg-gray-700 border-gray-600 text-white'
-                                    : 'bg-white border-gray-300 text-gray-900'
-                                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed`}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
+                        <tbody className={`divide-y ${darkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
+                          {loadingPODetails ? (
+                            Array(3).fill().map((_, i) => (
+                              <tr key={i}>
+                                <td className="px-3 py-2 text-center"><SkeletonLoader width="w-4" height="h-4" /></td>
+                                <td className="px-3 py-2"><SkeletonLoader width="w-16" /></td>
+                                <td className="px-3 py-2"><SkeletonLoader width="w-32" /></td>
+                                <td className="px-3 py-2 text-right"><SkeletonLoader width="w-12" /></td>
+                                <td className="px-3 py-2 text-right"><SkeletonLoader width="w-12" /></td>
+                                <td className="px-3 py-2 text-right"><SkeletonLoader width="w-20" /></td>
+                                <td className="px-3 py-2 text-right"><SkeletonLoader width="w-20" /></td>
+                              </tr>
+                            ))
+                          ) : (
+                            poItems.map((item) => (
+                              <tr key={item.rid} className={selectedItems[item.rid] ? (darkMode ? 'bg-gray-600' : 'bg-blue-50') : ''}>
+                                <td className="px-3 py-2 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!selectedItems[item.rid]}
+                                    onChange={(e) => handleItemSelect(item, e.target.checked)}
+                                    className="w-4 h-4 rounded"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">{item.itemNmbr}</td>
+                                <td className="px-3 py-2">{item.itemDesc}</td>
+                                <td className="px-3 py-2 text-right">{item.qtyOrder}</td>
+                                 <td className="px-3 py-2 text-right">{item.qtyRemaining}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                      max={(originalQuantities[item.rid] || 0) + item.qtyRemaining}
+                                    value={itemQuantities[item.rid] || 0}
+                                    onChange={(e) => handleQuantityChange(item, e.target.value)}
+                                    disabled={!selectedItems[item.rid]}
+                                    className={`w-20 px-2 py-1 rounded border text-right ${darkMode
+                                      ? 'bg-gray-700 border-gray-600 text-white'
+                                      : 'bg-white border-gray-300 text-gray-900'
+                                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={inventoryQuantities[item.rid] || 0}
+                                    onChange={(e) => handleInventoryQuantityChange(item, e.target.value)}
+                                    disabled={!selectedItems[item.rid]}
+                                    className={`w-20 px-2 py-1 rounded border text-right ${darkMode
+                                      ? 'bg-gray-700 border-gray-600 text-white'
+                                      : 'bg-white border-gray-300 text-gray-900'
+                                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  />
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
                       </table>
                     </div>
                   </div>
@@ -581,8 +599,8 @@ function EditReceivingEntryModal({ isOpen, onClose, darkMode, user, receivingEnt
           <button
             onClick={onClose}
             className={`px-4 py-2 rounded-lg border ${darkMode
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
           >
             Cancel

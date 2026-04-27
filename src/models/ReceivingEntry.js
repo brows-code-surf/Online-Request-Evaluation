@@ -18,7 +18,6 @@ class ReceivingEntry {
                     h.PONUMBER,
                     h.VENDORID,
                     h.VENDNAME,
-                    h.INVENTORYDESCRIPTION as RECEIVEDBY,
                     h.RECEIVEDATE as DATERECEIVED,
                     h.DATECREATED,
                     h.CREATEDBY,
@@ -73,7 +72,7 @@ class ReceivingEntry {
             }
 
             query += `
-                GROUP BY h.ROWID, h.REFERENCENO, h.PONUMBER, h.VENDORID, h.VENDNAME, h.INVENTORYDESCRIPTION, 
+                GROUP BY h.ROWID, h.REFERENCENO, h.PONUMBER, h.VENDORID, h.VENDNAME,
                          h.RECEIVEDATE, h.DATECREATED, h.CREATEDBY, h.RECEIPTTYPE, h.POSTSTATUS, h.HREMARKS
                 ORDER BY h.RECEIVEDATE DESC, h.REFERENCENO DESC
             `;
@@ -126,7 +125,7 @@ class ReceivingEntry {
             }
 
             const headerQuery = `
-                SELECT ROWID, REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, VNDDOCNM, PYMTRMID, INVENTORYDESCRIPTION, HREMARKS, POSTSTATUS, DATECREATED,
+                SELECT ROWID, REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, VNDDOCNM, PYMTRMID, HREMARKS, POSTSTATUS, DATECREATED,
                         CREATEDBY, DATEMODIFIED, MODIFIEDBY,
                         CASE WHEN EXISTS (SELECT 1 FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] WHERE REFERENCENO = [PURCHASE.RECEIVEHEADER.1].REFERENCENO AND POSTSTATUS = 1) THEN 1 ELSE 0 END as hasDA
                 FROM [PURCHASE.RECEIVEHEADER.1]
@@ -141,6 +140,18 @@ class ReceivingEntry {
             }
 
             const header = headerResult.recordset[0];
+
+            // Get currency from PO
+            let currency = 'PHP';
+            if (header.PONUMBER) {
+                const poQuery = `SELECT CURRENCY FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+                const poResult = await connection.request()
+                    .input('poNumber', header.PONUMBER)
+                    .query(poQuery);
+                if (poResult.recordset[0]) {
+                    currency = poResult.recordset[0].CURRENCY;
+                }
+            }
 
             const detailsQuery = `
                 SELECT ROWID, REFERENCENO, RID, RRID, ITEMNMBR, ITEMDESC, UOFM, INVENTORYQUANTITY, QUANTITY, UNITCOST, UCOSTNETOFVAT, VATUNITCOST
@@ -165,7 +176,7 @@ class ReceivingEntry {
                     vendName: header.VENDNAME,
                     vndDocNm: header.VNDDOCNM,
                     pymtTermId: header.PYMTRMID,
-                    inventoryDescription: header.INVENTORYDESCRIPTION,
+                    currency: currency,
                     dateCreated: header.DATECREATED,
                     createdBy: header.CREATEDBY,
                     receivingStatus: header.RECEIPTTYPE || 'PENDING',
@@ -229,10 +240,10 @@ class ReceivingEntry {
             const headerQuery = `
                 INSERT INTO [PURCHASE.RECEIVEHEADER.1] (
                     REFERENCENO, REFERENCEID, LOCNCODE, RECEIPTTYPE, RECEIVEDATE, PONUMBER, VENDORID, VENDNAME, 
-                    VNDDOCNM, PYMTRMID, INVENTORYDESCRIPTION, HREMARKS, POSTSTATUS, DATECREATED, CREATEDBY
+                    VNDDOCNM, PYMTRMID, HREMARKS, POSTSTATUS, DATECREATED, CREATEDBY
                 ) VALUES (
                     @referenceNo, @referenceId, @locnCode, @receiptType, @dateReceived, @poNumber, @vendorId, @vendName,
-                    @vndDocNm, @pymtTermId, @inventoryDescription, @remarks, @postStatus, GETDATE(), @createdBy
+                    @vndDocNm, @pymtTermId, @remarks, @postStatus, GETDATE(), @createdBy
                 )
             `;
 
@@ -247,7 +258,6 @@ class ReceivingEntry {
                 .input('vendName', headerData.vendName || '')
                 .input('vndDocNm', headerData.vndDocNm || '')
                 .input('pymtTermId', headerData.pymtTermId || '')
-                .input('inventoryDescription', headerData.inventoryDescription || '')
                 .input('remarks', headerData.remarks || '')
                 .input('postStatus', 0)
                 .input('createdBy', creatorName)
@@ -295,14 +305,14 @@ class ReceivingEntry {
             console.log(`${detailsData.length} receiving entry details inserted`);
 
             if (headerData.poNumber) {
-                const updatePODetailsQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = QTYSERVED + @qtyServed WHERE PONUMBER = @poNumber AND RID = @rid`;
+                const updatePODetailsQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYALLOCATED = QTYALLOCATED + @qtyAllocated WHERE PONUMBER = @poNumber AND RID = @rid`;
 
                 for (const detail of detailsData) {
                     if (detail.rid && headerData.poNumber) {
                         await transaction.request()
                             .input('poNumber', headerData.poNumber)
                             .input('rid', detail.rid)
-                            .input('qtyServed', detail.quantity || 0)
+                            .input('qtyAllocated', detail.quantity || 0)
                             .query(updatePODetailsQuery);
                     }
                 }
@@ -388,7 +398,6 @@ class ReceivingEntry {
                     VENDNAME = @vendName,
                     VNDDOCNM = @vndDocNm,
                     PYMTRMID = @pymtTermId,
-                    INVENTORYDESCRIPTION = @inventoryDescription,
                     HREMARKS = @remarks,
                     DATEMODIFIED = GETDATE(),
                     MODIFIEDBY = @modifiedBy
@@ -406,12 +415,21 @@ class ReceivingEntry {
                 .input('vendName', headerData.vendName || '')
                 .input('vndDocNm', headerData.vndDocNm || '')
                 .input('pymtTermId', headerData.pymtTermId || '')
-                .input('inventoryDescription', headerData.inventoryDescription || '')
                 .input('remarks', headerData.remarks || '')
                 .input('modifiedBy', updaterName)
                 .query(headerUpdateQuery);
 
             console.log('Receiving entry header updated');
+
+            // Get old quantities before deleting
+            const oldQuantitiesQuery = `SELECT RID, QUANTITY FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const oldResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(oldQuantitiesQuery);
+            const oldQuantities = {};
+            oldResult.recordset.forEach(row => {
+                oldQuantities[row.RID] = row.QUANTITY || 0;
+            });
 
             const deleteDetailsQuery = `
                 DELETE FROM [PURCHASE.RECEIVEDETAILS.1]
@@ -461,17 +479,16 @@ class ReceivingEntry {
             console.log(`${detailsData.length} receiving entry details updated`);
 
             if (headerData.poNumber) {
-                console.log('Updating QTYSERVED for PO:', headerData.poNumber);
-
-                console.log('New details:', detailsData);
                 for (const detail of detailsData) {
-                    if (detail.rid && headerData.poNumber) {
-                        console.log(`Setting QTYSERVED to ${detail.quantity} for RID ${detail.rid}`);
+                    const oldQty = oldQuantities[detail.rid] || 0;
+                    const newQty = detail.quantity || 0;
+                    const adjustment = newQty - oldQty;
+                    if (adjustment !== 0) {
                         await transaction.request()
                             .input('poNumber', headerData.poNumber)
                             .input('rid', detail.rid)
-                            .input('qtyServed', detail.quantity || 0)
-                            .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = @qtyServed WHERE PONUMBER = @poNumber AND RID = @rid`);
+                            .input('adjustment', adjustment)
+                            .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYALLOCATED = QTYALLOCATED + @adjustment WHERE PONUMBER = @poNumber AND RID = @rid`);
                     }
                 }
             }
@@ -509,6 +526,41 @@ class ReceivingEntry {
         }
     }
 
+    static async validateStatusToUpdate(referenceNo, dbConnection = null) {
+        let connection = dbConnection;
+        let shouldClose = false;
+        try {
+            if (!connection) {
+                connection = await connectToDatabase(process.env.DB_SFC);
+                shouldClose = true;
+            }
+            const query = `SELECT ITEMSTATUS FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+            if (result.recordset.length === 0) {
+                return null;
+            }
+            const itemStatuses = result.recordset.map(row => row.ITEMSTATUS);
+
+            const allServed = itemStatuses.every(status => status === 'SERVED');
+            const someServed = itemStatuses.some(status => status === 'SERVED');
+
+            if (allServed) {
+                return 'SERVED';
+            } else if (someServed) {
+                return 'PARTIALLY SERVED';
+            }
+
+        } catch (error) {
+            throw error;
+        } finally {
+            if (shouldClose && connection) {
+                connection.close();
+            }
+        }
+    }
+
     static async postReceivingEntry(referenceNo, posterName) {
         let connection = null;
         let transaction = null;
@@ -538,6 +590,22 @@ class ReceivingEntry {
                 throw new Error('Receiving entry is already posted');
             }
 
+            // Get RIDs from receiving entry
+            const receivingRidsQuery = `SELECT RID FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const receivingRidsResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(receivingRidsQuery);
+            const rids = receivingRidsResult.recordset.map(row => row.RID);
+
+            let poDetailsResult = { recordset: [] };
+            if (rids.length > 0) {
+                // Get PO details for RIDs in this receiving entry (supports multiple POs)
+                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')})`;
+                const poDetailsRequest = transaction.request();
+                rids.forEach((rid, i) => poDetailsRequest.input(`rid${i}`, rid));
+                poDetailsResult = await poDetailsRequest.query(poDetailsQuery);
+            }
+
             const postQuery = `
                 UPDATE [PURCHASE.RECEIVEHEADER.1] SET
                     POSTSTATUS = 1,
@@ -552,6 +620,55 @@ class ReceivingEntry {
                 .query(postQuery);
 
             console.log('Receiving entry posted successfully');
+
+            // Get quantities from receiving details
+            const receivingQuantitiesQuery = `SELECT RID, QUANTITY FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const receivingQuantitiesResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(receivingQuantitiesQuery);
+            const quantitiesMap = {};
+            receivingQuantitiesResult.recordset.forEach(row => {
+                quantitiesMap[row.RID] = row.QUANTITY || 0;
+            });
+
+            // Update ITEMSTATUS in REQUESTDETAILS and collect PRCODEs
+            const prCodes = [];
+            for (const row of poDetailsResult.recordset) {
+                const { RID, PRCODE, PONUMBER } = row;
+                const quantity = quantitiesMap[RID] || 0;
+                if (PRCODE) {
+                    await transaction.request()
+                        .input('prCode', PRCODE)
+                        .input('rid', RID)
+                        .query(`UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'SERVED' WHERE REFERENCENO = @prCode AND RID = @rid`);
+                    prCodes.push(PRCODE);
+                }
+                // Update QTYSERVED and deduct from QTYALLOCATED in ORDERDETAILS
+                if (quantity > 0) {
+                    await transaction.request()
+                        .input('poNumber', PONUMBER)
+                        .input('rid', RID)
+                        .input('quantity', quantity)
+                        .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = QTYSERVED + @quantity, QTYALLOCATED = QTYALLOCATED - @quantity WHERE PONUMBER = @poNumber AND RID = @rid`);
+                }
+            }
+
+            // Update REQUESTSTATUS in REQUESTHEADER
+            const uniquePrCodes = [...new Set(prCodes)];
+            for (const prCode of uniquePrCodes) {
+                const status = await this.validateStatusToUpdate(prCode, transaction);
+                if (status) {
+                    await transaction.request()
+                        .input('prCode', prCode)
+                        .input('status', status)
+                        .query(`UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = @status WHERE REFERENCENO = @prCode`);
+
+                    broadcastRequestEvaluationUpdate("purchase-request-status-updated", {
+                        referenceNo: prCode,
+                        requestStatus: status
+                    });
+                }
+            }
 
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
@@ -596,16 +713,29 @@ class ReceivingEntry {
             console.log('deleteReceivingEntry called with:', { referenceNo, deleterName });
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            // Get details and PO number before deleting
+            const detailsQuery = `SELECT RID, QUANTITY FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const detailsResult = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(detailsQuery);
+
+            const headerQuery = `SELECT PONUMBER FROM [PURCHASE.RECEIVEHEADER.1] WHERE REFERENCENO = @referenceNo`;
+            const headerResult = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(headerQuery);
+
+            const poNumber = headerResult.recordset[0]?.PONUMBER;
+
             const deleteHeaderQuery = `
                 DELETE FROM [PURCHASE.RECEIVEHEADER.1]
                 WHERE REFERENCENO = @referenceNo
             `;
 
-            const headerResult = await connection.request()
+            const delHeaderResult = await connection.request()
                 .input('referenceNo', referenceNo)
                 .query(deleteHeaderQuery);
 
-            if (headerResult.rowsAffected[0] === 0) {
+            if (delHeaderResult.rowsAffected[0] === 0) {
                 throw new Error('Receiving entry not found');
             }
 
@@ -614,9 +744,20 @@ class ReceivingEntry {
                 WHERE REFERENCENO = @referenceNo
             `;
 
-            const detailResult = await connection.request()
+            const delDetailResult = await connection.request()
                 .input('referenceNo', referenceNo)
                 .query(deleteDetailQuery);
+
+            // Update QTYALLOCATED
+            if (poNumber) {
+                for (const detail of detailsResult.recordset) {
+                    await connection.request()
+                        .input('poNumber', poNumber)
+                        .input('rid', detail.RID)
+                        .input('qtyToSubtract', detail.QUANTITY || 0)
+                        .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYALLOCATED = QTYALLOCATED - @qtyToSubtract WHERE PONUMBER = @poNumber AND RID = @rid`);
+                }
+            }
 
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
@@ -643,17 +784,17 @@ class ReceivingEntry {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             let query = `
-                SELECT 
+                SELECT
                     h.PONUMBER, h.VENDORID, h.VENDNAME, h.PYMTRMID, h.DATECREATED, h.CREATEDBY,
                     h.DATENEEDED, h.PROMISEDDATE, h.DELIVERY_TO, h.PO_STATUS, h.POSTSTATUS,
-                    d.ROWID as DETAIL_ROWID, d.RID, d.ITEMNMBR, d.ITEMDESC, d.UOFM, 
-                    d.QTYORDER, d.QTYSERVED, d.UNITCOST, d.EXTDCOST, d.BRAND, d.ORIGIN,
+                    d.ROWID as DETAIL_ROWID, d.RID, d.ITEMNMBR, d.ITEMDESC, d.UOFM,
+                    d.QTYORDER, d.QTYALLOCATED, d.QTYSERVED, d.UNITCOST, d.EXTDCOST, d.BRAND, d.ORIGIN,
                     d.BUDGETNO, d.PRCODE, d.PURCHASETYPE, d.CURRENCY,
-                    (d.QTYORDER - ISNULL(d.QTYSERVED, 0)) as QTY_REMAINING
+                    (d.QTYORDER - ISNULL(d.QTYALLOCATED, 0) - ISNULL(d.QTYSERVED, 0)) as QTY_REMAINING
                 FROM [PURCHASE.ORDERHEADER.1] h
                 INNER JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
                 WHERE h.PO_STATUS = 'P.O. APPROVED'
-                    AND (d.QTYORDER - ISNULL(d.QTYSERVED, 0)) > 0
+                    AND (d.QTYORDER - ISNULL(d.QTYALLOCATED, 0) - ISNULL(d.QTYSERVED, 0)) > 0
             `;
 
             const params = [];
@@ -690,6 +831,7 @@ class ReceivingEntry {
                 itemDesc: record.ITEMDESC,
                 uofm: record.UOFM,
                 qtyOrder: record.QTYORDER,
+                qtyAllocated: record.QTYALLOCATED,
                 qtyServed: record.QTYSERVED,
                 qtyRemaining: record.QTY_REMAINING,
                 unitCost: record.UNITCOST,

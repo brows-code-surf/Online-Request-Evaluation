@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getDistributionAccounts, saveDistributions, updateDistributions, postDistributions, getDistributionsByReferenceNo } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
+import SkeletonLoader from '@/app/_components/skeletonLoader';
 
 function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingEntry, user, isViewMode = false }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -20,6 +21,7 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasExistingData, setHasExistingData] = useState(false);
   const [actionType, setActionType] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -37,6 +39,7 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
 
       // Fetch accounts and distributions
       const fetchData = async () => {
+        setIsLoading(true);
         try {
           const [accountsResult, distributionsResult] = await Promise.all([
             getDistributionAccounts(),
@@ -67,9 +70,11 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
             setHasExistingData(mappedDistributions.length > 0);
             setEwt(mappedDistributions.length > 0 ? mappedDistributions[0].ewt : '');
           }
+          setIsLoading(false);
         } catch (error) {
           console.error('Error fetching data:', error);
           toast.error('Failed to load data');
+          setIsLoading(false);
         }
       };
 
@@ -600,7 +605,38 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
             <h3 className={`text-sm font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
               Assigned Distributions
             </h3>
-            {distributions.length === 0 ? (
+            {isLoading ? (
+              <div className="overflow-x-auto">
+                <table className={`w-full text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                  <thead className={`${darkMode ? 'bg-gray-600' : 'bg-gray-200'} text-xs uppercase`}>
+                    <tr>
+                      <th className="px-3 py-2 text-left">Account No.</th>
+                      <th className="px-3 py-2 text-left">Account Name</th>
+                      <th className="px-3 py-2 text-left">Type</th>
+                      <th className="px-3 py-2 text-right">Debit</th>
+                      <th className="px-3 py-2 text-right">Credit</th>
+                      {!isViewMode && (
+                        <th className="px-3 py-2 text-center">Actions</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${darkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
+                    {Array(3).fill().map((_, i) => (
+                      <tr key={i} className={`${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'}`}>
+                        <td className="px-3 py-2"><SkeletonLoader width="w-16" /></td>
+                        <td className="px-3 py-2"><SkeletonLoader width="w-24" /></td>
+                        <td className="px-3 py-2"><SkeletonLoader width="w-12" /></td>
+                        <td className="px-3 py-2 text-right"><SkeletonLoader width="w-16" /></td>
+                        <td className="px-3 py-2 text-right"><SkeletonLoader width="w-16" /></td>
+                        {!isViewMode && (
+                          <td className="px-3 py-2 text-center"><SkeletonLoader width="w-8" /></td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : distributions.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

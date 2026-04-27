@@ -15,6 +15,8 @@ const STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
   { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
+  { value: 'PARTIALLY SERVED', label: 'Partially Served', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'SERVED', label: 'Served', color: 'bg-green-100 text-green-800' },
   { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
   { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
   { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
@@ -29,6 +31,8 @@ const ITEM_STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
   { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
   { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
+  { value: 'PARTIALLY SERVED', label: 'Partially Served', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'SERVED', label: 'Served', color: 'bg-green-100 text-green-800' },
   { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
   { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
   { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
@@ -94,6 +98,20 @@ export default function PurchaseRequestDetails({
         // Check if this change event is for the current purchase request
         if (data && data.referenceNo === purchaseRequest?.referenceNo) {
           console.log("Purchase request changed - updating details:", data);
+          // Small delay to ensure database transaction is committed
+          setTimeout(() => {
+            onDataRefresh && onDataRefresh();
+          }, 1000); // 1 second delay
+        }
+      },
+      [purchaseRequest?.referenceNo, onDataRefresh]
+    ),
+
+    "purchase-request-status-updated": useCallback(
+      (data) => {
+        // Check if this status update event is for the current purchase request
+        if (data && data.referenceNo === purchaseRequest?.referenceNo) {
+          console.log("Purchase request status updated - updating details:", data);
           // Small delay to ensure database transaction is committed
           setTimeout(() => {
             onDataRefresh && onDataRefresh();

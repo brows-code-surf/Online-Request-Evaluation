@@ -311,6 +311,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
 
     const totalQtyReceived = details.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalExtdCost = details.reduce((sum, item) => sum + ((item.extdCost || 0) || (item.unitCost || 0) * (item.quantity || 0)), 0);
+    const currency = header.currency || 'PHP';
 
     content = (
       <div className="space-y-2">
@@ -428,7 +429,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
                 </span>
                 <span>
                   <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Amount: </span>
-                  <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{totalExtdCost.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}</span>
+                  <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{totalExtdCost.toLocaleString('en-US', { style: 'currency', currency: currency })}</span>
                 </span>
               </div>
             </div>
@@ -455,8 +456,8 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
                     <td className="px-4 py-3 text-sm">{detail.uofm || '-'}</td>
                     <td className="px-4 py-3 text-sm text-right">{detail.inventoryQuantity || 0}</td>
                     <td className="px-4 py-3 text-sm text-right">{detail.quantity || 0}</td>
-                    <td className="px-4 py-3 text-sm text-right">{detail.unitCost?.toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-right">{(detail.extdCost || (detail.unitCost || 0) * (detail.quantity || 0)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}</td>
+                     <td className="px-4 py-3 text-sm text-right">{detail.unitCost?.toLocaleString('en-US', { style: 'currency', currency: currency }) || '-'}</td>
+                     <td className="px-4 py-3 text-sm text-right">{(detail.extdCost || (detail.unitCost || 0) * (detail.quantity || 0)).toLocaleString('en-US', { style: 'currency', currency: currency })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -468,24 +469,26 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
 
         <ConfirmModal
           isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
+          onCancel={() => setShowDeleteModal(false)}
           onConfirm={handleConfirmDelete}
           title="Delete Receiving Entry"
           message={`Are you sure you want to delete receiving entry ${header.referenceNo}? This action cannot be undone.`}
           confirmText="Delete"
           confirmVariant="danger"
           isLoading={deleting}
+          hasBackdrop={false}
         />
 
         <ConfirmModal
           isOpen={showPostModal}
-          onClose={() => setShowPostModal(false)}
+          onCancel={() => setShowPostModal(false)}
           onConfirm={handlePostConfirm}
           title="Post Receiving Entry"
           message={`Are you sure you want to post receiving entry ${header.referenceNo}? This action cannot be undone.`}
           confirmText="Post"
           confirmVariant="success"
           isLoading={posting}
+          hasBackdrop={false}
         />
       </div>
     );
@@ -554,7 +557,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
- {distributions.length > 0 ? (isDAPosted ? 'View Distribution of Accounts' : 'Edit / Post DA') : 'Assign Distribution'}
+                {distributions.length > 0 ? (isDAPosted ? 'View Distribution of Accounts' : 'Edit / Post DA') : 'Assign Distribution'}
               </button>
             )}
           </>
@@ -609,7 +612,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   if (isModal) {
     return (
       <>
-        {!showAssignModal && (
+        {!showAssignModal && !showDeleteModal && !showPostModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="fixed inset-0 bg-black/50" onClick={onClose} />
           </div>

@@ -84,9 +84,9 @@ class DistributionOfAccounts {
             connection = await connectToDatabase(process.env.DB_SFC);
 
             const query = `
-                SELECT ROWID, REFERENCENO, ACCTNO, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
-                        DATECREATED, CREATEDBY, DATEMODIFIED, MODIFIEDBY, POSTSTATUS
-                FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
+                SELECT PDA.ROWID, REFERENCENO, PDA.ACCTNO, ACCTNAME, ACCOUNTTYPE, DEBITAMOUNT, CREDITAMOUNT, EWT,
+                        PDA.DATECREATED, PDA.CREATEDBY, PDA.DATEMODIFIED, PDA.MODIFIEDBY, POSTSTATUS
+                FROM [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1] PDA INNER JOIN [SETTINGS.DISTRIBUTION.ACCOUNTS.1] SDA ON PDA.ACCTNO = SDA.ACCTNO
                 WHERE REFERENCENO = @referenceNo
                 ORDER BY ROWID
             `;
@@ -99,6 +99,7 @@ class DistributionOfAccounts {
                 id: record.ROWID,
                 referenceNo: record.REFERENCENO,
                 acctNo: record.ACCTNO,
+                acctName: record.ACCTNAME,
                 accountType: record.ACCOUNTTYPE,
                 debitAmount: record.DEBITAMOUNT,
                 creditAmount: record.CREDITAMOUNT,

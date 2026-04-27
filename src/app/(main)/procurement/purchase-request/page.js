@@ -418,6 +418,8 @@ function PurchaseRequestContent() {
         return 'bg-sky-100 text-sky-800 border-sky-300';
       case 'PARTIALLY SERVED':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+      case 'SERVED':
+        return 'bg-green-100 text-green-800 border-green-300';
       case 'FOR P.O.':
         return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
       case 'P.O. PROCESSING':
@@ -454,6 +456,15 @@ function PurchaseRequestContent() {
     "request-changed": useCallback(
       (data) => {
         console.log("Request changed event received in purchase requests:", data);
+        reloadPurchaseRequestsData();
+      },
+      []
+    ),
+
+    "purchase-request-status-updated": useCallback(
+      (data) => {
+        // Check if this status update event is for the current purchase request
+        console.log("Purchase request status updated - updating details:", data);
         reloadPurchaseRequestsData();
       },
       []
