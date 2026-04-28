@@ -21,7 +21,8 @@ export const MODULE = {
           MODIFIEDBY,
           DATEMODIFIED,
           IS_ACTIVE,
-          'parent' as module_type
+          'parent' as module_type,
+          1 as SHOWNAV
         FROM [SETTINGS.PARENTMODULE.1]
       `;
 
@@ -39,7 +40,8 @@ export const MODULE = {
           MODIFIEDBY,
           DATEMODIFIED,
           IS_ACTIVE,
-          'child' as module_type
+          'child' as module_type,
+          SHOWNAV
         FROM [SETTINGS.CHILDMODULE1.1]
       `;
 
@@ -79,7 +81,8 @@ export const MODULE = {
           MODIFIEDBY,
           DATEMODIFIED,
           IS_ACTIVE,
-          'parent' as module_type
+          'parent' as module_type,
+          1 as SHOWNAV
         FROM [SETTINGS.PARENTMODULE.1]
         WHERE IS_ACTIVE = 1
       `;
@@ -92,12 +95,14 @@ export const MODULE = {
           LINK as MODULE,
           PARENTNAME as SUBMODULE,
           DESCRIPTION,
+          ICON,
           CREATEDBY,
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
           IS_ACTIVE,
-          'child' as module_type
+          'child' as module_type,
+          SHOWNAV
         FROM [SETTINGS.CHILDMODULE1.1]
         WHERE IS_ACTIVE = 1
       `;
@@ -158,12 +163,14 @@ export const MODULE = {
           LINK as MODULE,
           PARENTNAME as SUBMODULE,
           DESCRIPTION,
+          ICON,
           CREATEDBY,
           DATECREATED,
           MODIFIEDBY,
           DATEMODIFIED,
           IS_ACTIVE,
-          'child' as module_type
+          'child' as module_type,
+          SHOWNAV
         FROM [SETTINGS.CHILDMODULE1.1]
         WHERE ROWID = @moduleId
       `;
@@ -263,17 +270,18 @@ export const MODULE = {
         // Insert child module
         insertQuery = `
           INSERT INTO [SETTINGS.CHILDMODULE1.1]
-          (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+          (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, SHOWNAV, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
           VALUES
-          (@parentName, @childName, @link, @description, @icon, @createdBy, GETDATE(), @modifiedBy, GETDATE())
+          (@parentName, @childName, @link, @description, @icon, @showNav, @createdBy, GETDATE(), @modifiedBy, GETDATE())
         `;
 
         result = await connection.request()
-          .input('parentName', moduleData.submodule)
-          .input('childName', moduleData.submodulename)
-          .input('link', moduleData.module)
-          .input('description', moduleData.description || null)
-          .input('icon', moduleData.icon || null)
+          .input('parentName', ((moduleData.submodule || '').trim()).substring(0, 100))
+          .input('childName', ((moduleData.submodulename || '').trim()).substring(0, 100))
+          .input('link', ((moduleData.module || '').trim()).substring(0, 100))
+          .input('description', moduleData.description ? ((moduleData.description.trim()).substring(0, 255)) : null)
+          .input('icon', moduleData.icon ? ((moduleData.icon.trim()).substring(0, 50)) : null)
+          .input('showNav', moduleData.showNav ? 1 : 0)
           .input('createdBy', createdBy)
           .input('modifiedBy', createdBy)
           .query(insertQuery);
@@ -287,10 +295,10 @@ export const MODULE = {
         `;
 
         result = await connection.request()
-          .input('parentName', moduleData.name)
-          .input('link', moduleData.module)
-          .input('description', moduleData.description || null)
-          .input('icon', moduleData.icon || null)
+          .input('parentName', ((moduleData.name || '').trim()).substring(0, 100))
+          .input('link', ((moduleData.module || '').trim()).substring(0, 100))
+          .input('description', moduleData.description ? ((moduleData.description.trim()).substring(0, 255)) : null)
+          .input('icon', moduleData.icon ? ((moduleData.icon.trim()).substring(0, 50)) : null)
           .input('createdBy', createdBy)
           .input('modifiedBy', createdBy)
           .query(insertQuery);
@@ -346,17 +354,18 @@ export const MODULE = {
           // Update existing child module
           updateQuery = `
             UPDATE [SETTINGS.CHILDMODULE1.1]
-            SET PARENTNAME = @parentName, CHILDNAME = @childName, LINK = @link, DESCRIPTION = @description, ICON = @icon,
+            SET PARENTNAME = @parentName, CHILDNAME = @childName, LINK = @link, DESCRIPTION = @description, ICON = @icon, SHOWNAV = @showNav,
             MODIFIEDBY = @modifiedBy, DATEMODIFIED = GETDATE()
             WHERE ROWID = @moduleId
           `;
 
           result = await connection.request()
-            .input('parentName', moduleData.submodule)
-            .input('childName', moduleData.submodulename)
-            .input('link', moduleData.module)
-            .input('description', moduleData.description || null)
-            .input('icon', moduleData.icon || null)
+            .input('parentName', (moduleData.submodule || '').substring(0, 100))
+            .input('childName', (moduleData.submodulename || '').substring(0, 100))
+            .input('link', (moduleData.module || '').substring(0, 100))
+            .input('description', moduleData.description ? (moduleData.description.substring(0, 255)) : null)
+            .input('icon', moduleData.icon ? (moduleData.icon.substring(0, 50)) : null)
+            .input('showNav', moduleData.showNav ? 1 : 0)
             .input('modifiedBy', modifiedBy)
             .input('moduleId', moduleId)
             .query(updateQuery);
@@ -380,17 +389,18 @@ export const MODULE = {
           // Insert into child table
           const insertChildQuery = `
             INSERT INTO [SETTINGS.CHILDMODULE1.1]
-            (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
+            (PARENTNAME, CHILDNAME, LINK, DESCRIPTION, ICON, SHOWNAV, CREATEDBY, DATECREATED, MODIFIEDBY, DATEMODIFIED)
             VALUES
-            (@parentName, @childName, @link, @description, @icon, @createdBy, @dateCreated, @modifiedBy, GETDATE())
+            (@parentName, @childName, @link, @description, @icon, @showNav, @createdBy, @dateCreated, @modifiedBy, GETDATE())
           `;
 
           result = await connection.request()
-            .input('parentName', moduleData.submodule)
-            .input('childName', moduleData.submodulename)
-            .input('link', moduleData.module)
-            .input('description', moduleData.description || null)
-            .input('icon', moduleData.icon || null)
+            .input('parentName', (moduleData.submodule || '').substring(0, 100))
+            .input('childName', (moduleData.submodulename || '').substring(0, 100))
+            .input('link', (moduleData.module || '').substring(0, 100))
+            .input('description', moduleData.description ? (moduleData.description.substring(0, 255)) : null)
+            .input('icon', moduleData.icon ? (moduleData.icon.substring(0, 50)) : null)
+            .input('showNav', moduleData.showNav ? 1 : 0)
             .input('createdBy', parentData.recordset[0].CREATEDBY)
             .input('dateCreated', parentData.recordset[0].DATECREATED)
             .input('modifiedBy', modifiedBy)
@@ -414,10 +424,10 @@ export const MODULE = {
           `;
 
           result = await connection.request()
-            .input('parentName', moduleData.name)
-            .input('link', moduleData.module)
-            .input('description', moduleData.description || null)
-            .input('icon', moduleData.icon || null)
+            .input('parentName', (moduleData.name || '').substring(0, 100))
+            .input('link', (moduleData.module || '').substring(0, 100))
+            .input('description', moduleData.description ? (moduleData.description.substring(0, 255)) : null)
+            .input('icon', moduleData.icon ? (moduleData.icon.substring(0, 50)) : null)
             .input('modifiedBy', modifiedBy)
             .input('moduleId', moduleId)
             .query(updateQuery);
@@ -447,10 +457,10 @@ export const MODULE = {
           `;
 
           result = await connection.request()
-            .input('parentName', moduleData.name)
-            .input('link', moduleData.module)
-            .input('description', moduleData.description || null)
-            .input('icon', moduleData.icon || null)
+            .input('parentName', (moduleData.name || '').substring(0, 100))
+            .input('link', (moduleData.module || '').substring(0, 100))
+            .input('description', moduleData.description ? (moduleData.description.substring(0, 255)) : null)
+            .input('icon', moduleData.icon ? (moduleData.icon.substring(0, 50)) : null)
             .input('createdBy', childData.recordset[0].CREATEDBY)
             .input('dateCreated', childData.recordset[0].DATECREATED)
             .input('modifiedBy', modifiedBy)
@@ -614,6 +624,66 @@ export const MODULE = {
       }
     } catch (error) {
       console.error("Activate module error:", error);
+      throw new Error('Database error: ' + error.message);
+    }
+  },
+
+  // Delete module permanently (removes from database)
+  async deleteModule(moduleId, deletedBy) {
+    let connection;
+    try {
+      connection = await connectToDatabase();
+
+      // First, determine which table the module is in
+      const parentCheckQuery = `SELECT ROWID FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
+      const childCheckQuery = `SELECT ROWID FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
+
+      const [parentCheckResult, childCheckResult] = await Promise.all([
+        connection.request().input('moduleId', moduleId).query(parentCheckQuery),
+        connection.request().input('moduleId', moduleId).query(childCheckQuery)
+      ]);
+
+      const isParent = parentCheckResult.recordset.length > 0;
+      const isChild = childCheckResult.recordset.length > 0;
+
+      if (!isParent && !isChild) {
+        throw new Error('Module not found');
+      }
+
+      let deleteQuery, result;
+
+      if (isParent) {
+        deleteQuery = `DELETE FROM [SETTINGS.PARENTMODULE.1] WHERE ROWID = @moduleId`;
+      } else {
+        deleteQuery = `DELETE FROM [SETTINGS.CHILDMODULE1.1] WHERE ROWID = @moduleId`;
+      }
+
+      result = await connection.request()
+        .input('moduleId', moduleId)
+        .query(deleteQuery);
+
+      if (result.rowsAffected[0] > 0) {
+        // Log the deletion in activity logs (optional - don't fail if logging fails)
+        try {
+          const activityQuery = `
+            INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+            VALUES (@activity, @deletedBy, GETDATE())
+          `;
+          await connection.request()
+            .input('activity', `Module deleted by ${deletedBy}`)
+            .input('deletedBy', deletedBy)
+            .query(activityQuery);
+        } catch (logError) {
+          console.warn('Failed to log module deletion activity:', logError.message);
+          // Continue with success since the main operation succeeded
+        }
+
+        return { success: true, message: "Module deleted successfully" };
+      } else {
+        return { success: false, message: "No module found to delete" };
+      }
+    } catch (error) {
+      console.error("Delete module error:", error);
       throw new Error('Database error: ' + error.message);
     }
   },

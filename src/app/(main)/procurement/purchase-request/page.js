@@ -417,7 +417,7 @@ function PurchaseRequestContent() {
       case 'FOR CANVASSING':
         return 'bg-sky-100 text-sky-800 border-sky-300';
       case 'PARTIALLY SERVED':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+        return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'SERVED':
         return 'bg-green-100 text-green-800 border-green-300';
       case 'FOR P.O.':

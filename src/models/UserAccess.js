@@ -667,6 +667,7 @@ export const USERACCESS = {
             ICON as icon
           FROM [SETTINGS.CHILDMODULE1.1]
           WHERE LINK IN (${accessibleModuleIds.map((_, i) => `@module${i}`).join(',')})
+            AND SHOWNAV = 1
         ) m
         INNER JOIN [SYSTEM.USERACCESS.1] ua ON ua.MODULE = m.module_id AND ua.EMPLOYEEID = @employeeId AND ua.HASACCESS = 1
         WHERE m.is_active = 1

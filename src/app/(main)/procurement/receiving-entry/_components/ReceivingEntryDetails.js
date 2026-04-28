@@ -23,6 +23,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
   const [hasRRAuthorization, setHasRRAuthorization] = useState(false);
   const [distributions, setDistributions] = useState([]);
   const [isDAPosted, setIsDAPosted] = useState(false);
+  const [distributionsReloadKey, setDistributionsReloadKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
@@ -156,7 +157,7 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
     };
 
     fetchDistributions();
-  }, [receivingEntry?.header?.referenceNo]);
+  }, [receivingEntry?.header?.referenceNo, distributionsReloadKey]);
 
 
 
@@ -602,6 +603,8 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
     <AssignDistributionModal
       isOpen={showAssignModal}
       onClose={() => setShowAssignModal(false)}
+      onSuccess={() => setDistributionsReloadKey(prev => prev + 1)}
+      onRefreshList={onRefreshList}
       darkMode={darkMode}
       receivingEntry={receivingEntry}
       user={user}

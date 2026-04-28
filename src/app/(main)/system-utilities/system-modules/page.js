@@ -7,7 +7,7 @@ import Loader from '@/app/_components/loader';
 import ProtectedRoute from '@/utils/protectedRoute';
 import { useAuth } from '../../../../utils/authContext';
 import ConfirmModal from '../../_components/confirmModal';
-import { getAllModules, addModule, updateModule, deactivateModule, activateModule } from './_actions';
+import { getAllModules, addModule, updateModule, deactivateModule, activateModule, deleteModule } from './_actions';
 import AddModuleModal from './_components/AddModuleModal';
 import AddSubmoduleModal from './_components/AddSubmoduleModal';
 import EditModuleModal from './_components/EditModuleModal';
@@ -31,6 +31,7 @@ function SystemModulesContent() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showActivateModal, setShowActivateModal] = useState(false);
+    const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false);
     const [selectedModule, setSelectedModule] = useState(null);
     const [submodules, setSubmodules] = useState([]);
     const [currentSubmodule, setCurrentSubmodule] = useState('');
@@ -253,6 +254,28 @@ function SystemModulesContent() {
         }
     };
 
+    const handlePermanentDeleteModule = async () => {
+        if (!selectedModule) return;
+
+        setFormLoading(true);
+        try {
+            const result = await deleteModule(selectedModule.ROWID, user.empName);
+            if (result.success) {
+                setSuccessMessage('Module permanently deleted successfully!');
+                setShowPermanentDeleteModal(false);
+                setSelectedModule(null);
+                loadModules();
+                setTimeout(() => setSuccessMessage(''), 3000);
+            } else {
+                setErrorMessage(result.message);
+            }
+        } catch (error) {
+            setErrorMessage('Failed to delete module permanently');
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
     const handleQuickSetup = async (template) => {
         setFormLoading(true);
         setSuccessMessage('');
@@ -305,7 +328,7 @@ function SystemModulesContent() {
     };
 
     const resetForm = () => {
-        setFormData({ module: '', name: '', description: '', submodulename: '', submodule: '' });
+        setFormData({ module: '', name: '', description: '', submodulename: '', submodule: '', showNav: false });
         setSubmodules([]);
         setCurrentSubmodule('');
         setFormErrors({});
@@ -320,7 +343,8 @@ function SystemModulesContent() {
             description: module.DESCRIPTION || '',
             submodulename: module.SUBMODULE ? module.NAME : '', // For child modules, submodulename is the child name
             submodule: module.SUBMODULE || '',
-            icon: module.ICON || '' // Add the icon field from the module data
+            icon: module.ICON || '', // Add the icon field from the module data
+            showNav: module.SUBMODULE ? (module.SHOWNAV === 1 || module.SHOWNAV === true) : true // Parent modules always show, submodules check SHOWNAV
         });
 
         // Set submodules list if this is a parent module being edited
@@ -341,6 +365,11 @@ function SystemModulesContent() {
     const openActivateModal = (module) => {
         setSelectedModule(module);
         setShowActivateModal(true);
+    };
+
+    const openPermanentDeleteModal = (module) => {
+        setSelectedModule(module);
+        setShowPermanentDeleteModal(true);
     };
 
     const formatDate = (dateValue) => {
@@ -526,6 +555,7 @@ function SystemModulesContent() {
                                 onEditModule={openEditModal}
                                 onDeleteModule={openDeleteModal}
                                 onActivateModule={openActivateModal}
+                                onPermanentDeleteModule={openPermanentDeleteModal}
                                 darkMode={darkMode}
                             />
                         </div>
@@ -587,6 +617,18 @@ function SystemModulesContent() {
                 confirmButtonColor="green"
                 onConfirm={handleActivateModule}
                 onCancel={() => { setShowActivateModal(false); setSelectedModule(null); }}
+                isLoading={formLoading}
+            />
+
+            {/* Permanent Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showPermanentDeleteModal}
+                title="Permanently Delete Module"
+                message={`Are you sure you want to permanently delete the module "${selectedModule?.NAME}"? This action cannot be undone and will completely remove the module from the system. All associated user access will be lost.`}
+                confirmButtonText="Delete Permanently"
+                confirmButtonColor="red"
+                onConfirm={handlePermanentDeleteModule}
+                onCancel={() => { setShowPermanentDeleteModal(false); setSelectedModule(null); }}
                 isLoading={formLoading}
             />
 

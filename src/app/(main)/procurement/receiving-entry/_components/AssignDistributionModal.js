@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { getDistributionAccounts, saveDistributions, updateDistributions, postDistributions, getDistributionsByReferenceNo } from '../_actions';
+import { getDistributionAccounts, saveDistributions, updateDistributions, postDistributions, deleteDistributions, getDistributionsByReferenceNo } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
-function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingEntry, user, isViewMode = false }) {
+function AssignDistributionModal({ isOpen, onClose, onSuccess, onRefreshList, darkMode = false, receivingEntry, user, isViewMode = false }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [distributions, setDistributions] = useState([]);
@@ -20,6 +20,7 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
   const [editingDistribution, setEditingDistribution] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasExistingData, setHasExistingData] = useState(false);
+  const [initialHasExistingData, setInitialHasExistingData] = useState(false);
   const [actionType, setActionType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef(null);
@@ -68,6 +69,7 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
             });
             setDistributions(mappedDistributions);
             setHasExistingData(mappedDistributions.length > 0);
+            setInitialHasExistingData(mappedDistributions.length > 0);
             setEwt(mappedDistributions.length > 0 ? mappedDistributions[0].ewt : '');
           }
           setIsLoading(false);
@@ -81,6 +83,11 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
       fetchData();
     }
   }, [isOpen, receivingEntry?.header?.referenceNo]);
+
+  // Update hasExistingData based on current distributions
+  useEffect(() => {
+    setHasExistingData(distributions.length > 0);
+  }, [distributions]);
 
   // Responsive positioning
   useEffect(() => {
@@ -298,6 +305,11 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
     setShowConfirmModal(true);
   };
 
+  const handleDelete = () => {
+    setActionType('delete');
+    setShowConfirmModal(true);
+  };
+
   const handleConfirmSubmit = async () => {
     try {
       let result;
@@ -313,6 +325,11 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
           receivingEntry?.header?.referenceNo,
           user?.empName
         );
+      } else if (actionType === 'delete') {
+        result = await deleteDistributions(
+          receivingEntry?.header?.referenceNo,
+          user?.empName
+        );
       } else {
         result = await saveDistributions(
           receivingEntry?.header?.referenceNo,
@@ -325,9 +342,12 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
       if (result.success) {
         const message = actionType === 'update' ? 'Distribution updated successfully' :
           actionType === 'post' ? 'Distribution posted successfully' :
-            'Distribution assigned successfully';
+            actionType === 'delete' ? 'Distribution deleted successfully' :
+              'Distribution assigned successfully';
         toast.success(message);
         setShowConfirmModal(false);
+        onSuccess?.();
+        onRefreshList?.();
         onClose();
       } else {
         toast.error(result.message || 'Failed to save distributions');
@@ -349,7 +369,7 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
           }`}
         style={{
           position: 'fixed',
-          maxHeight: '90vh'
+          maxHeight: '100vh'
         }}
       >
         {/* Header */}
@@ -701,73 +721,105 @@ function AssignDistributionModal({ isOpen, onClose, darkMode = false, receivingE
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-end gap-3 p-4 border-t ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'
+        <div className={`flex items-center justify-between gap-3 p-4 border-t ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'
           }`}>
           <button
             onClick={onClose}
-            className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 ${darkMode
-              ? 'text-gray-300 hover:bg-gray-600'
-              : 'text-gray-700 hover:bg-gray-200'
+            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
+              ? 'text-gray-300 hover:bg-gray-600 focus:ring-gray-500 focus:ring-offset-gray-700'
+              : 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500 focus:ring-offset-white'
               }`}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
             Cancel
           </button>
           {!isViewMode && (
-            <>
-              {!hasExistingData && distributions.length > 0 && (
+            <div className="flex items-center gap-2">
+              {!initialHasExistingData && distributions.length > 0 && (
                 <button
                   onClick={handleAssignDistribution}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900"
                 >
-                  Assign Distribution
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Assign
                 </button>
               )}
-              {hasExistingData && distributions.length > 0 && (
+              {initialHasExistingData && (
                 <>
                   <button
                     onClick={handleUpdate}
-                    className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    disabled={distributions.length === 0}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 ${distributions.length === 0
+                      ? 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                      : 'text-white bg-yellow-600 hover:bg-yellow-700 focus:bg-yellow-700 active:bg-yellow-800 focus:ring-yellow-500 focus:ring-offset-white dark:focus:ring-offset-gray-900'
+                      }`}
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                     Update
                   </button>
                   <button
-                    onClick={handlePost}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onClick={handleDelete}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-lg shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900"
                   >
-                    Post
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete All
                   </button>
+                  {distributions.length > 0 && (
+                    <button
+                      onClick={handlePost}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-lg shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Post
+                    </button>
+                  )}
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div >
 
       <ConfirmModal
         isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
+        onCancel={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmSubmit}
         title={
           actionType === 'update' ? 'Update Distribution' :
             actionType === 'post' ? 'Post Distribution' :
-              'Assign Distribution'
+              actionType === 'delete' ? 'Delete Distribution' :
+                'Assign Distribution'
         }
         message={
           actionType === 'update'
             ? `Are you sure you want to update ${distributions.length} distribution(s) for receiving entry ${receivingEntry?.header?.referenceNo}? This will update the distributions.`
             : actionType === 'post'
               ? `Are you sure you want to post ${distributions.length} distribution(s) for receiving entry ${receivingEntry?.header?.referenceNo}? This will post the distributions and editing will be prohibited.`
-              : `Are you sure you want to assign ${distributions.length} distribution(s) for receiving entry ${receivingEntry?.header?.referenceNo}? This will save the distributions to the database.`
+              : actionType === 'delete'
+                ? `Are you sure you want to delete all distributions for receiving entry ${receivingEntry?.header?.referenceNo}? This action cannot be undone.`
+                : `Are you sure you want to assign ${distributions.length} distribution(s) for receiving entry ${receivingEntry?.header?.referenceNo}? This will save the distributions to the database.`
         }
         confirmText={
           actionType === 'update' ? 'Update' :
             actionType === 'post' ? 'Post' :
-              'Assign'
+              actionType === 'delete' ? 'Delete' :
+                'Assign'
         }
         confirmVariant={
           actionType === 'update' ? 'yellow' :
             actionType === 'post' ? 'green' :
-              'blue'
+              actionType === 'delete' ? 'red' :
+                'blue'
         }
       />
     </>

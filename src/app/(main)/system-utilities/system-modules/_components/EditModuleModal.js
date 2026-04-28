@@ -147,14 +147,15 @@ export default function EditModuleModal({
                             {isSubmodule && (
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Submodule Name</label>
-                                    <input
-                                        type="text"
-                                        name="submodulename"
-                                        value={formData.submodulename}
-                                        onChange={onInputChange}
-                                        placeholder="e.g., User Access"
-                                        className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodulename ? 'border-red-500' : ''}`}
-                                    />
+                                     <input
+                                         type="text"
+                                         name="submodulename"
+                                         value={formData.submodulename}
+                                         onChange={onInputChange}
+                                         placeholder="e.g., User Access"
+                                         maxLength={100}
+                                         className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodulename ? 'border-red-500' : ''}`}
+                                     />
                                     {formErrors.submodulename && <p className="text-red-500 text-xs mt-1">{formErrors.submodulename}</p>}
                                 </div>
                             )}
@@ -163,27 +164,29 @@ export default function EditModuleModal({
                             {/* Module Name */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={onInputChange}
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
-                                />
+                                 <input
+                                     type="text"
+                                     name="name"
+                                     value={formData.name}
+                                     onChange={onInputChange}
+                                     maxLength={100}
+                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : ''}`}
+                                 />
                                 {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
                             </div>
 
                             {/* Module Identifier */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module Identifier</label>
-                                <input
-                                    type="text"
-                                    name="module"
-                                    value={formData.module}
-                                    onChange={onInputChange}
-                                    placeholder={isSubmodule ? "e.g., user-access" : "e.g., User Setup"}
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.module ? 'border-red-500' : ''}`}
-                                />
+                                 <input
+                                     type="text"
+                                     name="module"
+                                     value={formData.module}
+                                     onChange={onInputChange}
+                                     placeholder={isSubmodule ? "e.g., user-access" : "e.g., User Setup"}
+                                     maxLength={100}
+                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.module ? 'border-red-500' : ''}`}
+                                 />
                                 {formErrors.module && <p className="text-red-500 text-xs mt-1">{formErrors.module}</p>}
                                 <p className="text-xs text-gray-500 mt-1">
                                     {isSubmodule
@@ -196,25 +199,45 @@ export default function EditModuleModal({
                             {/* Description */}
                             <div>
                                 <label className="block text-sm font-medium mb-1">Description</label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={onInputChange}
-                                    placeholder="Describe what this module does..."
-                                    rows={3}
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : ''}`}
-                                />
+                                 <textarea
+                                     name="description"
+                                     value={formData.description}
+                                     onChange={onInputChange}
+                                     placeholder="Describe what this module does..."
+                                     rows={3}
+                                     maxLength={500}
+                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : ''}`}
+                                 />
                                 {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
                             </div>
 
-                            {/* Icon */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Icon</label>
-                                <IconSelect value={formData.icon} onChange={onInputChange} darkMode={darkMode} />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Choose an appropriate icon for this module
-                                </p>
-                            </div>
+                             {/* Icon */}
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Icon</label>
+                                 <IconSelect value={formData.icon} onChange={onInputChange} darkMode={darkMode} />
+                                 <p className="text-xs text-gray-500 mt-1">
+                                     Choose an appropriate icon for this module
+                                 </p>
+                             </div>
+
+                             {/* Show in Navigation (only for submodules) */}
+                             {isSubmodule && (
+                                 <div>
+                                     <label className="flex items-center">
+                                         <input
+                                             type="checkbox"
+                                             name="showNav"
+                                             checked={formData.showNav || false}
+                                             onChange={(e) => onInputChange({ target: { name: 'showNav', value: e.target.checked } })}
+                                             className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                         />
+                                         <span className="text-sm font-medium">Show in Navigation</span>
+                                     </label>
+                                     <p className="text-xs text-gray-500 mt-1">
+                                         Check this to display the submodule in the main navigation menu
+                                     </p>
+                                 </div>
+                             )}
                         </div>
 
                         <div className="flex gap-3 mt-6">

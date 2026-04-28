@@ -289,6 +289,10 @@ function PurchaseOrderContent() {
         return 'bg-red-100 text-red-800 border-red-300';
       case 'P.R. REJECTED FROM P.O.':
         return 'bg-red-100 text-red-800 border-red-300';
+      case 'PARTIALLY SERVED':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'SERVED':
+        return 'bg-green-100 text-green-800 border-green-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -331,6 +335,13 @@ function PurchaseOrderContent() {
       },
       [reloadPurchaseOrdersData]
     ),
+    "purchase-order-status-updated": useCallback(
+      (data) => {
+        console.log("Purchase order status updated event received:", data);
+        reloadPurchaseOrdersData();
+      },
+      [reloadPurchaseOrdersData]
+    )
   });
 
   useSocketMultiple("request-evaluation-broadcast", {

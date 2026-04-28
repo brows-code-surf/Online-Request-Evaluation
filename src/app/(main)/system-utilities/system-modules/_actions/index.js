@@ -72,6 +72,17 @@ export async function addModule(moduleData, createdBy) {
       }
     }
 
+    // Trim and validate field lengths to prevent database truncation errors
+    const sanitizedData = {
+      ...moduleData,
+      submodule: moduleData.submodule?.trim().substring(0, 100) || '',
+      submodulename: moduleData.submodulename?.trim().substring(0, 100) || '',
+      name: moduleData.name?.trim().substring(0, 100) || '',
+      module: moduleData.module?.trim().substring(0, 100) || '',
+      description: moduleData.description?.trim().substring(0, 500) || '',
+      icon: moduleData.icon?.trim().substring(0, 100) || ''
+    };
+
     // For parent modules, validate module identifier
     if (!moduleData.submodule && !moduleData.submodulename) {
       if (!moduleData.module) {
@@ -105,7 +116,7 @@ export async function addModule(moduleData, createdBy) {
       }
     }
 
-    const result = await MODULE.addModule(moduleData, createdBy);
+    const result = await MODULE.addModule(sanitizedData, createdBy);
     return result;
   } catch (error) {
     console.error('Error adding module:', error);
@@ -138,6 +149,17 @@ export async function updateModule(moduleId, moduleData, modifiedBy) {
       }
     }
 
+    // Trim and validate field lengths to prevent database truncation errors
+    const sanitizedData = {
+      ...moduleData,
+      submodule: moduleData.submodule?.trim().substring(0, 100) || '',
+      submodulename: moduleData.submodulename?.trim().substring(0, 100) || '',
+      name: moduleData.name?.trim().substring(0, 100) || '',
+      module: moduleData.module?.trim().substring(0, 100) || '',
+      description: moduleData.description?.trim().substring(0, 500) || '',
+      icon: moduleData.icon?.trim().substring(0, 100) || ''
+    };
+
     // For parent modules, validate module identifier
     if (!moduleData.submodule && !moduleData.submodulename) {
       if (!moduleData.module) {
@@ -171,7 +193,7 @@ export async function updateModule(moduleId, moduleData, modifiedBy) {
       }
     }
 
-    const result = await MODULE.updateModule(moduleId, moduleData, modifiedBy);
+    const result = await MODULE.updateModule(moduleId, sanitizedData, modifiedBy);
     return result;
   } catch (error) {
     console.error('Error updating module:', error);
@@ -204,6 +226,19 @@ export async function activateModule(moduleId, modifiedBy) {
     return {
       success: false,
       message: error.message || 'Failed to activate module'
+    };
+  }
+}
+
+export async function deleteModule(moduleId, deletedBy) {
+  try {
+    const result = await MODULE.deleteModule(moduleId, deletedBy);
+    return result;
+  } catch (error) {
+    console.error('Error deleting module:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to delete module'
     };
   }
 }

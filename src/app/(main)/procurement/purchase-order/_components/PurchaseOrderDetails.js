@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../utils/authContext';
 import { handlePrintPurchaseOrder } from './PurchaseOrderPrintModal';
 import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 import currencyData from '@/utils/currency.json';
+import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 
 function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
@@ -36,6 +37,12 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showActionMenu]);
+
+  useSocketMultiple("purchase-order-status-updated", {
+    "purchase-order-status-updated": useCallback(() => {
+      onDataRefresh?.();
+    }, [onDataRefresh]),
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -643,8 +650,11 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                 <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                   Extended Cost
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                   Status
+                </th>
+                <th className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  Served QTY
                 </th>
               </tr>
             </thead>
@@ -686,15 +696,15 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                       {currencyDisplay(details[0]?.currency)}{item.extdCost?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
-                        {item.itemStatus || 'PENDING'}
-                      </span>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Served: {item.qtyServed || 0}
-                      </div>
-                    </div>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex justify-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
+                      {item.itemStatus || 'PENDING'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-sm justify-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {item.qtyServed || 0}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -707,6 +717,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                 <td className={`px-6 py-4 text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {currencyDisplay(details[0]?.currency)}{header.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                 </td>
+                <td></td>
                 <td></td>
               </tr>
             </tfoot>
@@ -765,12 +776,17 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                       Status
                     </div>
                     <div className="flex flex-col space-y-1">
-                        <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
-                          {item.itemStatus || 'PENDING'}
-                        </span>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Served: {item.qtyServed || 0}
-                      </div>
+                      <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.itemStatus)}`}>
+                        {item.itemStatus || 'PENDING'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
+                      Served Qty
+                    </div>
+                    <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {item.qtyServed || 0}
                     </div>
                   </div>
                 </div>
@@ -815,7 +831,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
         isLoading={deleting}
         confirmButtonColor="red"
       />
-    </div>
+    </div >
   );
 }
 

@@ -310,6 +310,25 @@ export async function postReceivingEntryWithNotifications(receivingNumber, poste
   }
 }
 
+// Delete distributions for a reference number
+export async function deleteDistributions(referenceNo, userName) {
+  try {
+    const DistributionOfAccounts = (await import('@/models/DistributionOfAccounts.js')).default;
+    const result = await DistributionOfAccounts.deleteDistributions(referenceNo, userName);
+
+    return {
+      success: true,
+      message: 'Distributions deleted successfully'
+    };
+  } catch (error) {
+    console.error('Error deleting distributions:', error);
+    return {
+      success: false,
+      message: 'Failed to delete distributions: ' + error.message
+    };
+  }
+}
+
 // Get distributions by reference number
 export async function getDistributionsByReferenceNo(referenceNo) {
   try {

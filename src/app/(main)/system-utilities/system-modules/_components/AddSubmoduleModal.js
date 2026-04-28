@@ -209,14 +209,15 @@ export default function AddSubmoduleModal({
                                         ))}
                                     </select>
                                 ) : (
-                                    <input
-                                        type="text"
-                                        name="submodule"
-                                        value={formData.submodule}
-                                        onChange={handleParentModuleChange}
-                                        placeholder="e.g., user-setup"
-                                        className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodule ? 'border-red-500' : ''}`}
-                                    />
+                                     <input
+                                         type="text"
+                                         name="submodule"
+                                         value={formData.submodule}
+                                         onChange={handleParentModuleChange}
+                                         placeholder="e.g., user-setup"
+                                         maxLength={100}
+                                         className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodule ? 'border-red-500' : ''}`}
+                                     />
                                 )}
                                 {formErrors.submodule && <p className="text-red-500 text-xs mt-1">{formErrors.submodule}</p>}
                                 <p className="text-xs text-gray-500 mt-1">
@@ -227,55 +228,76 @@ export default function AddSubmoduleModal({
                                 </p>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Submodule Name</label>
-                                <input
-                                    type="text"
-                                    name="submodulename"
-                                    value={formData.submodulename}
-                                    onChange={onInputChange}
-                                    placeholder="e.g., User Account Management"
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodulename ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.submodulename && <p className="text-red-500 text-xs mt-1">{formErrors.submodulename}</p>}
-                            </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Submodule Name</label>
+                                 <input
+                                     type="text"
+                                     name="submodulename"
+                                     value={formData.submodulename}
+                                     onChange={onInputChange}
+                                     placeholder="e.g., User Account Management"
+                                     maxLength={100}
+                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.submodulename ? 'border-red-500' : ''}`}
+                                 />
+                                 {formErrors.submodulename && <p className="text-red-500 text-xs mt-1">{formErrors.submodulename}</p>}
+                                 <p className="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
+                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Submodule Identifier (Link)</label>
-                                <input
-                                    type="text"
-                                    name="module"
-                                    value={formData.module}
-                                    onChange={onInputChange}
-                                    placeholder="e.g., user-access"
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.module ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.module && <p className="text-red-500 text-xs mt-1">{formErrors.module}</p>}
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Submodule identifiers must use lowercase letters, numbers, hyphens, and underscores
-                                </p>
-                            </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Submodule Identifier (Link)</label>
+                                 <input
+                                     type="text"
+                                     name="module"
+                                     value={formData.module}
+                                     onChange={onInputChange}
+                                     placeholder="e.g., user-access"
+                                     maxLength={100}
+                                     className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.module ? 'border-red-500' : ''}`}
+                                 />
+                                 {formErrors.module && <p className="text-red-500 text-xs mt-1">{formErrors.module}</p>}
+                                 <p className="text-xs text-gray-500 mt-1">
+                                     Submodule identifiers must use lowercase letters, numbers, hyphens, and underscores (max 100 chars)
+                                 </p>
+                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Description</label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={onInputChange}
-                                    placeholder="Describe what this submodule does..."
-                                    rows={3}
-                                    className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
-                            </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Description</label>
+                                  <textarea
+                                      name="description"
+                                      value={formData.description}
+                                      onChange={onInputChange}
+                                      placeholder="Describe what this submodule does..."
+                                      rows={3}
+                                      maxLength={255}
+                                      className={`w-full px-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : ''}`}
+                                  />
+                                  {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
+                                  <p className="text-xs text-gray-500 mt-1">Maximum 255 characters</p>
+                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Icon</label>
-                                <IconSelect value={formData.icon} onChange={onInputChange} darkMode={darkMode} />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Choose an appropriate icon for this submodule
-                                </p>
-                            </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Icon</label>
+                                 <IconSelect value={formData.icon} onChange={onInputChange} darkMode={darkMode} />
+                                 <p className="text-xs text-gray-500 mt-1">
+                                     Choose an appropriate icon for this submodule
+                                 </p>
+                             </div>
+
+                             <div>
+                                 <label className="flex items-center">
+                                     <input
+                                         type="checkbox"
+                                         name="showNav"
+                                         checked={formData.showNav || false}
+                                         onChange={(e) => onInputChange({ target: { name: 'showNav', value: e.target.checked } })}
+                                         className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                     />
+                                     <span className="text-sm font-medium">Show in Navigation</span>
+                                 </label>
+                                 <p className="text-xs text-gray-500 mt-1">
+                                     Check this to display the submodule in the main navigation menu
+                                 </p>
+                             </div>
                         </div>
 
                         <div className="flex gap-3 mt-6">

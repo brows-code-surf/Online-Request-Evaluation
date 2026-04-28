@@ -47,6 +47,12 @@ class ReceivingEntry {
                 paramIndex++;
             }
 
+            if (filters.postStatus !== undefined) {
+                query += ` AND h.POSTSTATUS = @postStatus${paramIndex}`;
+                params.push({ name: `postStatus${paramIndex}`, value: filters.postStatus });
+                paramIndex++;
+            }
+
             if (filters.poNumber) {
                 query += ` AND h.PONUMBER LIKE @poNumber${paramIndex}`;
                 params.push({ name: `poNumber${paramIndex}`, value: `%${filters.poNumber}%` });
@@ -526,7 +532,7 @@ class ReceivingEntry {
         }
     }
 
-    static async validateStatusToUpdate(referenceNo, dbConnection = null) {
+    static async validatePRStatusToUpdate(referenceNo, dbConnection = null) {
         let connection = dbConnection;
         let shouldClose = false;
         try {
@@ -547,6 +553,41 @@ class ReceivingEntry {
             const someServed = itemStatuses.some(status => status === 'SERVED');
 
             if (allServed) {
+                return 'SERVED';
+            } else if (someServed) {
+                return 'PARTIALLY SERVED';
+            }
+
+        } catch (error) {
+            throw error;
+        } finally {
+            if (shouldClose && connection) {
+                connection.close();
+            }
+        }
+    }
+
+    static async validatePOStatusToUpdate(poNumber, dbConnection = null) {
+        let connection = dbConnection;
+        let shouldClose = false;
+        try {
+            if (!connection) {
+                connection = await connectToDatabase(process.env.DB_SFC);
+                shouldClose = true;
+            }
+            const query = `SELECT QTYSERVED, QTYORDER FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+            const result = await connection.request()
+                .input('poNumber', poNumber)
+                .query(query);
+            if (result.recordset.length === 0) {
+                return null;
+            }
+
+            const poDetails = result.recordset;
+            const allClosed = poDetails.every(status => (status.QTYORDER || 0) === (status.QTYSERVED || 0));
+            const someServed = poDetails.some(status => (status.QTYSERVED || 0) > 0);
+
+            if (allClosed) {
                 return 'SERVED';
             } else if (someServed) {
                 return 'PARTIALLY SERVED';
@@ -650,13 +691,19 @@ class ReceivingEntry {
                         .input('rid', RID)
                         .input('quantity', quantity)
                         .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYSERVED = QTYSERVED + @quantity, QTYALLOCATED = QTYALLOCATED - @quantity WHERE PONUMBER = @poNumber AND RID = @rid`);
+
+                    // Update ITEMSTATUS based on whether fully served
+                    await transaction.request()
+                        .input('poNumber', PONUMBER)
+                        .input('rid', RID)
+                        .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = CASE WHEN QTYORDER = QTYSERVED THEN 'SERVED' ELSE 'PARTIALLY SERVED' END WHERE PONUMBER = @poNumber AND RID = @rid`);
                 }
             }
 
             // Update REQUESTSTATUS in REQUESTHEADER
             const uniquePrCodes = [...new Set(prCodes)];
             for (const prCode of uniquePrCodes) {
-                const status = await this.validateStatusToUpdate(prCode, transaction);
+                const status = await this.validatePRStatusToUpdate(prCode, transaction);
                 if (status) {
                     await transaction.request()
                         .input('prCode', prCode)
@@ -666,6 +713,22 @@ class ReceivingEntry {
                     broadcastRequestEvaluationUpdate("purchase-request-status-updated", {
                         referenceNo: prCode,
                         requestStatus: status
+                    });
+                }
+            }
+
+            const uniquePoNumbers = [...new Set(poDetailsResult.recordset.map(row => row.PONUMBER))];
+            for (const poNumber of uniquePoNumbers) {
+                const status = await this.validatePOStatusToUpdate(poNumber, transaction);
+                if (status) {
+                    await transaction.request()
+                        .input('poNumber', poNumber)
+                        .input('status', status)
+                        .query(`UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = @status WHERE PONUMBER = @poNumber`);
+
+                    broadcastRequestEvaluationUpdate("purchase-order-status-updated", {
+                        referenceNo: poNumber,
+                        poStatus: status
                     });
                 }
             }
@@ -793,7 +856,7 @@ class ReceivingEntry {
                     (d.QTYORDER - ISNULL(d.QTYALLOCATED, 0) - ISNULL(d.QTYSERVED, 0)) as QTY_REMAINING
                 FROM [PURCHASE.ORDERHEADER.1] h
                 INNER JOIN [PURCHASE.ORDERDETAILS.1] d ON h.PONUMBER = d.PONUMBER
-                WHERE h.PO_STATUS = 'P.O. APPROVED'
+                WHERE h.PO_STATUS IN ('P.O. APPROVED', 'PARTIALLY SERVED')
                     AND (d.QTYORDER - ISNULL(d.QTYALLOCATED, 0) - ISNULL(d.QTYSERVED, 0)) > 0
             `;
 
