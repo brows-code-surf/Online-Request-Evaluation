@@ -6,6 +6,8 @@ import HeaderNavBar from '@/app/_components/headerNavBar.js';
 import { getReceivingEntryDetails, getDistributionAccounts, unpostDistributionAccounts } from './_actions/index.js';
 import SearchReceivingModal from '../delete-receiving/_components/SearchReceivingModal.js';
 import { Search, AlertTriangle, RotateCcw } from 'lucide-react';
+import ConfirmModal from '../../../_components/confirmModal.js';
+import SuccessModal from '../../../_components/successModal.js';
 
 export default function DistributionOfAccounts() {
   const { darkMode, user, isAdmin } = useAuth();
@@ -18,6 +20,7 @@ export default function DistributionOfAccounts() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [unpostConfirm, setUnpostConfirm] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const fetchEntryDetails = async () => {
@@ -36,7 +39,7 @@ export default function DistributionOfAccounts() {
           setSelectedEntryDetails(null);
         }
 
-        const distResult = await getReceivingEntriesWithDA.getDistributionAccounts(selectedEntry.referenceNo);
+        const distResult = await getDistributionAccounts(selectedEntry.referenceNo);
         if (distResult.success) {
           setDistributions(distResult.data);
         } else {
@@ -66,11 +69,9 @@ export default function DistributionOfAccounts() {
     try {
       const result = await unpostDistributionAccounts(referenceNo, user.empName);
       if (result.success) {
-        // Update the entry's hasDA to false or refresh
-        setSelectedEntry(prev => prev ? { ...prev, hasDA: false } : null);
+        setSelectedEntry(null);
         setUnpostConfirm(null);
-        // Could add success toast here
-        alert('Distribution of Accounts unposted successfully');
+        setShowSuccess(true);
       } else {
         alert('Error unposting DA: ' + result.error);
       }
@@ -316,41 +317,24 @@ export default function DistributionOfAccounts() {
             filters={{postStatus: 1, hasDA: true}}
           />
 
-          {/* Unpost Confirmation Modal */}
-          {unpostConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className={`p-6 rounded-lg max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className="flex items-center mb-4">
-                  <AlertTriangle className="h-6 w-6 text-orange-600 mr-2" />
-                  <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Confirm Unpost DA
-                  </h3>
-                </div>
-                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Are you sure you want to unpost the Distribution of Accounts for receiving entry <strong>{unpostConfirm.referenceNo}</strong>?
-                  This will set the DA post status back to unposted.
-                </p>
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setUnpostConfirm(null)}
-                    className={`px-4 py-2 rounded-md ${
-                      darkMode ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    }`}
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleUnpost(unpostConfirm.referenceNo)}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Unposting...' : 'Unpost DA'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ConfirmModal
+            isOpen={!!unpostConfirm}
+            title="Confirm Unpost DA"
+            message={`Are you sure you want to unpost the Distribution of Accounts for receiving entry ${unpostConfirm?.referenceNo}? This will set the DA post status back to unposted.`}
+            confirmButtonText="Unpost DA"
+            onConfirm={() => handleUnpost(unpostConfirm?.referenceNo)}
+            onCancel={() => setUnpostConfirm(null)}
+            isLoading={actionLoading}
+            confirmButtonColor="orange"
+          />
+
+          <SuccessModal
+            isOpen={showSuccess}
+            title="Success"
+            message="Distribution of Accounts unposted successfully"
+            onClose={() => setShowSuccess(false)}
+            autoCloseDelay={3000}
+          />
         </div>
       </div>
     </div>

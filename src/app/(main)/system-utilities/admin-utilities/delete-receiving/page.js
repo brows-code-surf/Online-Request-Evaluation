@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/utils/authContext';
 import HeaderNavBar from '@/app/_components/headerNavBar.js';
-import { getReceivingEntries, deleteReceivingEntryAction, getReceivingEntryDetails, getDistributionAccounts } from './_actions/index.js';
+import { getReceivingEntries, deleteReceivingEntryAction, getReceivingEntryDetails, getDistributionAccounts, unpostReceivingEntryAction } from './_actions/index.js';
 import SearchReceivingModal from './_components/SearchReceivingModal.js';
+import ConfirmModal from '../../../_components/confirmModal.js';
+import SuccessModal from '../../../_components/successModal.js';
 import { Trash2, Search, AlertTriangle } from 'lucide-react';
 
 export default function DeleteReceiving() {
@@ -19,9 +21,10 @@ export default function DeleteReceiving() {
     dateFrom: '',
     dateTo: ''
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [unpostConfirm, setUnpostConfirm] = useState(null);
+  const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [selectedEntryDetails, setSelectedEntryDetails] = useState(null);
@@ -83,14 +86,36 @@ export default function DeleteReceiving() {
     fetchEntryDetails();
   }, [selectedEntry]);
 
-
-
-  const handleClearSelection = () => {
+  const handleRemoveEntry = () => {
     setSelectedEntry(null);
   };
 
-  const handleRemoveEntry = () => {
-    setSelectedEntry(null);
+  const handleUnpost = async (referenceNo) => {
+    setActionLoading(true);
+    try {
+      const result = await unpostReceivingEntryAction(referenceNo, user.empName, isAdmin());
+      if (result.success) {
+        // Update the selected entry's post status
+        if (selectedEntry?.referenceNo === referenceNo) {
+          setSelectedEntry({ ...selectedEntry, postStatus: 0 });
+        }
+        // Update in entries list
+        setEntries(entries.map(entry =>
+          entry.referenceNo === referenceNo ? { ...entry, postStatus: 0 } : entry
+        ));
+        setUnpostConfirm(null);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Unpost Successful',
+          message: `Receiving entry ${referenceNo} has been unposted successfully.`
+        });
+      } else {
+        alert('Error unposting entry: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error unposting entry: ' + error.message);
+    }
+    setActionLoading(false);
   };
 
   const handleDelete = async (referenceNo) => {
@@ -103,7 +128,11 @@ export default function DeleteReceiving() {
           setSelectedEntry(null);
         }
         setDeleteConfirm(null);
-        // Could add success toast here
+        setSuccessModal({
+          isOpen: true,
+          title: 'Deletion Successful',
+          message: `Receiving entry ${referenceNo} has been deleted successfully.`
+        });
       } else {
         alert('Error deleting entry: ' + result.error);
       }
@@ -174,7 +203,7 @@ export default function DeleteReceiving() {
                   Delete Receiving Entries
                 </h1>
                 <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Select specific receiving entries to delete. Use with caution as this action cannot be undone.
+                  Select specific posted receiving entries to delete. Use with caution as this action cannot be undone.
                 </p>
               </div>
               <button
@@ -343,6 +372,16 @@ export default function DeleteReceiving() {
 
                     {/* Action Buttons */}
                     <div className="flex justify-end space-x-3">
+                      {selectedEntry.postStatus === 1 && (
+                        <button
+                          onClick={() => setUnpostConfirm(selectedEntry)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                          disabled={actionLoading}
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          {actionLoading ? 'Unposting...' : 'Unpost Entry'}
+                        </button>
+                      )}
                       <button
                         onClick={() => setDeleteConfirm(selectedEntry)}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
@@ -379,44 +418,40 @@ export default function DeleteReceiving() {
               setSelectedEntry(entry);
               setShowSearchModal(false);
             }}
-            filters={{postStatus: 0}}
+            filters={{postStatus: 1}}
+          />
+
+          {/* Unpost Confirmation Modal */}
+          <ConfirmModal
+            isOpen={!!unpostConfirm}
+            title="Confirm Unpost"
+            message={`Are you sure you want to unpost receiving entry ${unpostConfirm?.referenceNo}? This will reverse the posting and update related purchase orders and requests.`}
+            confirmButtonText="Unpost"
+            onConfirm={() => handleUnpost(unpostConfirm.referenceNo)}
+            onCancel={() => setUnpostConfirm(null)}
+            isLoading={actionLoading}
+            confirmButtonColor="orange"
           />
 
           {/* Delete Confirmation Modal */}
-          {deleteConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className={`p-6 rounded-lg max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className="flex items-center mb-4">
-                  <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
-                  <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Confirm Deletion
-                  </h3>
-                </div>
-                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Are you sure you want to delete receiving entry <strong>{deleteConfirm.referenceNo}</strong>?
-                  This action cannot be undone.
-                </p>
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className={`px-4 py-2 rounded-md ${
-                      darkMode ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    }`}
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleDelete(deleteConfirm.referenceNo)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ConfirmModal
+            isOpen={!!deleteConfirm}
+            title="Confirm Deletion"
+            message={`Are you sure you want to delete receiving entry ${deleteConfirm?.referenceNo}? This action cannot be undone.`}
+            confirmButtonText="Delete"
+            onConfirm={() => handleDelete(deleteConfirm.referenceNo)}
+            onCancel={() => setDeleteConfirm(null)}
+            isLoading={actionLoading}
+            confirmButtonColor="red"
+          />
+
+          {/* Success Modal */}
+          <SuccessModal
+            isOpen={successModal.isOpen}
+            title={successModal.title}
+            message={successModal.message}
+            onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
+          />
         </div>
       </div>
     </div>

@@ -98,7 +98,7 @@ class ReceivingEntry {
                 dateCreated: record.DATECREATED,
                 createdBy: record.CREATEDBY,
                 receivingStatus: record.RECEIVING_STATUS || 'PENDING',
-                postStatus: record.POSTSTATUS || 0,
+                postStatus: Number(record.POSTSTATUS) || 0,
                 remarks: record.REMARKS,
                 itemCount: record.itemCount,
                 hasDA: record.hasDA === 1
@@ -186,7 +186,7 @@ class ReceivingEntry {
                     dateCreated: header.DATECREATED,
                     createdBy: header.CREATEDBY,
                     receivingStatus: header.RECEIPTTYPE || 'PENDING',
-                    postStatus: header.POSTSTATUS || 0,
+                    postStatus: Number(header.POSTSTATUS) || 0,
                     remarks: header.HREMARKS,
                     dateModified: header.DATEMODIFIED,
                     modifiedBy: header.MODIFIEDBY,
@@ -550,11 +550,10 @@ class ReceivingEntry {
             const itemStatuses = result.recordset.map(row => row.ITEMSTATUS);
 
             const allServed = itemStatuses.every(status => status === 'SERVED');
-            const someServed = itemStatuses.some(status => status === 'SERVED');
 
             if (allServed) {
                 return 'SERVED';
-            } else if (someServed) {
+            } else {
                 return 'PARTIALLY SERVED';
             }
 
@@ -585,11 +584,10 @@ class ReceivingEntry {
 
             const poDetails = result.recordset;
             const allClosed = poDetails.every(status => (status.QTYORDER || 0) === (status.QTYSERVED || 0));
-            const someServed = poDetails.some(status => (status.QTYSERVED || 0) > 0);
 
             if (allClosed) {
                 return 'SERVED';
-            } else if (someServed) {
+            } else {
                 return 'PARTIALLY SERVED';
             }
 
@@ -677,13 +675,6 @@ class ReceivingEntry {
             for (const row of poDetailsResult.recordset) {
                 const { RID, PRCODE, PONUMBER } = row;
                 const quantity = quantitiesMap[RID] || 0;
-                if (PRCODE) {
-                    await transaction.request()
-                        .input('prCode', PRCODE)
-                        .input('rid', RID)
-                        .query(`UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'SERVED' WHERE REFERENCENO = @prCode AND RID = @rid`);
-                    prCodes.push(PRCODE);
-                }
                 // Update QTYSERVED and deduct from QTYALLOCATED in ORDERDETAILS
                 if (quantity > 0) {
                     await transaction.request()
@@ -697,6 +688,14 @@ class ReceivingEntry {
                         .input('poNumber', PONUMBER)
                         .input('rid', RID)
                         .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = CASE WHEN QTYORDER = QTYSERVED THEN 'SERVED' ELSE 'PARTIALLY SERVED' END WHERE PONUMBER = @poNumber AND RID = @rid`);
+                }
+                if (PRCODE) {
+                    // Update ITEMSTATUS in REQUESTDETAILS to match ORDERDETAILS after posting
+                    await transaction.request()
+                        .input('prCode', PRCODE)
+                        .input('rid', RID)
+                        .query(`UPDATE rd SET ITEMSTATUS = od.ITEMSTATUS FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.REFERENCENO = od.PRCODE AND rd.RID = od.RID WHERE rd.REFERENCENO = @prCode AND rd.RID = @rid`);
+                    prCodes.push(PRCODE);
                 }
             }
 
@@ -770,77 +769,6 @@ class ReceivingEntry {
         }
     }
 
-    static async deleteReceivingEntry(referenceNo, deleterName) {
-        let connection;
-        try {
-            console.log('deleteReceivingEntry called with:', { referenceNo, deleterName });
-            connection = await connectToDatabase(process.env.DB_SFC);
-
-            // Get details and PO number before deleting
-            const detailsQuery = `SELECT RID, QUANTITY FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
-            const detailsResult = await connection.request()
-                .input('referenceNo', referenceNo)
-                .query(detailsQuery);
-
-            const headerQuery = `SELECT PONUMBER FROM [PURCHASE.RECEIVEHEADER.1] WHERE REFERENCENO = @referenceNo`;
-            const headerResult = await connection.request()
-                .input('referenceNo', referenceNo)
-                .query(headerQuery);
-
-            const poNumber = headerResult.recordset[0]?.PONUMBER;
-
-            const deleteHeaderQuery = `
-                DELETE FROM [PURCHASE.RECEIVEHEADER.1]
-                WHERE REFERENCENO = @referenceNo
-            `;
-
-            const delHeaderResult = await connection.request()
-                .input('referenceNo', referenceNo)
-                .query(deleteHeaderQuery);
-
-            if (delHeaderResult.rowsAffected[0] === 0) {
-                throw new Error('Receiving entry not found');
-            }
-
-            const deleteDetailQuery = `
-                DELETE FROM [PURCHASE.RECEIVEDETAILS.1]
-                WHERE REFERENCENO = @referenceNo
-            `;
-
-            const delDetailResult = await connection.request()
-                .input('referenceNo', referenceNo)
-                .query(deleteDetailQuery);
-
-            // Update QTYALLOCATED
-            if (poNumber) {
-                for (const detail of detailsResult.recordset) {
-                    await connection.request()
-                        .input('poNumber', poNumber)
-                        .input('rid', detail.RID)
-                        .input('qtyToSubtract', detail.QUANTITY || 0)
-                        .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYALLOCATED = QTYALLOCATED - @qtyToSubtract WHERE PONUMBER = @poNumber AND RID = @rid`);
-                }
-            }
-
-            const activityQuery = `
-                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
-                VALUES (@activity, @deleterName, GETDATE())
-            `;
-            await connection.request()
-                .input('activity', `Receiving Entry ${referenceNo} deleted by ${deleterName}`)
-                .input('deleterName', deleterName)
-                .query(activityQuery);
-
-            return {
-                success: true,
-                message: 'Receiving entry deleted successfully'
-            };
-        } catch (error) {
-            console.error('Error deleting receiving entry:', error);
-            throw new Error('Failed to delete receiving entry: ' + error.message);
-        }
-    }
-
     static async getPostedPurchaseOrdersForReceiving(user = null, isAdmin = false) {
         let connection;
         try {
@@ -887,7 +815,7 @@ class ReceivingEntry {
                 promisedDate: record.PROMISEDDATE,
                 deliveryTo: record.DELIVERY_TO,
                 poStatus: record.PO_STATUS,
-                postStatus: record.POSTSTATUS,
+                postStatus: Number(record.POSTSTATUS),
                 detailRowId: record.DETAIL_ROWID,
                 rid: record.RID,
                 itemNmbr: record.ITEMNMBR,
@@ -984,7 +912,7 @@ class ReceivingEntry {
             return {
                 header: {
                     id: header.ROWID,
-                    postStatus: header.POSTSTATUS,
+                    postStatus: Number(header.POSTSTATUS),
                     poNumber: header.PONUMBER,
                     dateCreated: header.DATECREATED,
                     createdBy: header.CREATEDBY,

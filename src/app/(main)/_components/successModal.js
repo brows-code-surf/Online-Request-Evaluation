@@ -35,7 +35,7 @@ export default function SuccessModal({
                 {/* Content */}
                 <div className="p-6 text-center">
                     <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>{title}</h2>
-                    <p className={`text-gray-600 text-sm mb-6 ${darkMode ? 'text-gray-300' : ''}`}>{message}</p>
+                    <p className={`text-gray-600 text-sm mb-6 ${darkMode ? 'text-white' : ''}`}>{message}</p>
 
                     {/* Close Button */}
                     <button
