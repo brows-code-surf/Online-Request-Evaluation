@@ -869,6 +869,29 @@ class ReceivingEntry {
         }
     }
 
+    static async hasReceivingForPR(referenceNo) {
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+
+            const query = `
+                SELECT TOP 1 1
+                FROM [PURCHASE.RECEIVEHEADER.1] rh
+                INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rh.PONUMBER = od.PONUMBER
+                WHERE od.PRCODE = @referenceNo
+            `;
+
+            const result = await connection.request()
+                .input('referenceNo', referenceNo)
+                .query(query);
+
+            return result.recordset.length > 0;
+        } catch (error) {
+            console.error('Error checking receiving for PR:', error);
+            return false;
+        }
+    }
+
     // Get purchase order by PO number for receiving entry operations (no creator access check - receiving entry access already validated)
     static async getPurchaseOrderForReceiving(poNumber, user = null, isAdmin = false) {
         let connection;

@@ -114,14 +114,26 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
           return 'bg-yellow-100 text-yellow-800 border-yellow-300';
         case 'FOR PURCHASING LEAD TIME':
           return 'bg-orange-100 text-orange-800 border-orange-300';
-        case 'PARTIALLY_SERVED':
-          return 'bg-indigo-100 text-indigo-800 border-indigo-300';
         case 'REJECTED':
           return 'bg-red-100 text-red-800 border-red-300';
         case 'CANCELLED':
           return 'bg-red-100 text-red-800 border-red-300';
         case 'FOR CANVASSING':
           return 'bg-sky-100 text-sky-800 border-sky-300';
+        case 'PARTIALLY SERVED':
+          return 'bg-orange-100 text-orange-800 border-orange-300';
+        case 'SERVED':
+          return 'bg-green-100 text-green-800 border-green-300';
+        case 'FOR P.O.':
+          return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
+        case 'P.O. PROCESSING':
+          return 'bg-blue-200 text-blue-900 border-blue-400';
+        case 'FOR P.O. CONFIRMATION':
+          return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        case 'FOR P.O. APPROVAL':
+          return 'bg-yellow-200 text-yellow-900 border-yellow-400';
+        case 'P.O. APPROVED':
+          return 'bg-green-100 text-green-800 border-green-300';
         default:
           return 'bg-gray-100 text-gray-800 border-gray-300';
       }
@@ -179,11 +191,20 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
     if (type === 'purchase-request') {
       return [
         { value: '', label: 'All Statuses' },
+        { value: 'POSTED', label: 'Posted' },
         { value: 'FOR CONFIRMATION', label: 'For Confirmation' },
         { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval' },
         { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time' },
-        { value: 'COMPLETED', label: 'Completed' },
+        { value: 'FOR CANVASSING', label: 'For Canvassing' },
+        { value: 'FOR P.O.', label: 'For P.O.' },
+        { value: 'P.O. PROCESSING', label: 'P.O. Processing' },
+        { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation' },
+        { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval' },
+        { value: 'P.O. APPROVED', label: 'P.O. Approved' },
         { value: 'REJECTED', label: 'Rejected' },
+        { value: 'CANCELLED', label: 'Cancelled' },
+        { value: 'PARTIALLY SERVED', label: 'Partially Served' },
+        { value: 'SERVED', label: 'Served' },
       ];
     } else if (type === 'canvassing-approval') {
       return [

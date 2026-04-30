@@ -82,7 +82,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                   <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-black'}`}>
                     Select Item from Masterfile
                   </h3>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-gray-600'}`}>
                     Double-click or select an item to choose
                   </p>
                 </div>
@@ -90,7 +90,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`rounded-md p-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'}`}
+                    className={`rounded-md p-2 ${darkMode ? 'text-white hover:text-gray-300' : 'text-gray-400 hover:text-gray-500'}`}
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -113,7 +113,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                     className={`w-full px-3 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'}`}
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-5 h-5 ${darkMode ? 'text-white' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
@@ -127,13 +127,13 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <tr>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Item Number
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Item Description
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Unit of Measure
                           </th>
                         </tr>
@@ -161,7 +161,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
                   </svg>
-                  <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`mt-2 text-sm ${darkMode ? 'text-white' : 'text-gray-600'}`}>
                     No items found in masterfile
                   </p>
                 </div>
@@ -171,13 +171,13 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <tr>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Item Number
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Item Description
                           </th>
-                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Unit of Measure
                           </th>
                         </tr>
@@ -232,7 +232,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
             {/* Footer */}
             <div className={`px-6 py-4 border-t flex-shrink-0 ${darkMode ? 'border-blue-700 bg-gradient-to-r from-blue-800 to-blue-900' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-                <div className="text-sm text-gray-500 text-center sm:text-left">
+                <div className={`text-sm ${darkMode ? 'text-white' : 'text-gray-500'} text-center sm:text-left`}>
                   Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredItems.length)} of {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}
                 </div>
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -240,8 +240,8 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                     type="button"
                     onClick={onClose}
                     className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 order-2 sm:order-1 ${darkMode
-                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? `border-gray-600 ${darkMode ? 'text-white' : 'text-gray-300'} hover:bg-gray-700`
+                      : `border-gray-300 ${darkMode ? 'text-white' : 'text-gray-700'} hover:bg-gray-50`
                       }`}
                   >
                     Cancel
@@ -257,7 +257,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, onSelectItem }) {
                     disabled={!selectedItem}
                     className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors duration-200 order-1 sm:order-2 ${selectedItem
                       ? 'bg-blue-600 border-transparent text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                      : 'bg-gray-300 border-gray-300 text-gray-500 cursor-not-allowed'
+                      : `bg-gray-300 border-gray-300 ${darkMode ? 'text-white' : 'text-gray-500'} cursor-not-allowed`
                       }`}
                   >
                     Select Item

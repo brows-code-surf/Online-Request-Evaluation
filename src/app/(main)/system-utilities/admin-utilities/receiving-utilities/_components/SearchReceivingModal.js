@@ -45,8 +45,10 @@ function SearchReceivingModal({ isOpen, onClose, darkMode, user, isAdmin, onDone
   };
 
   useEffect(() => {
-    fetchAllEntries();
-  }, []);
+    if (isOpen) {
+      fetchAllEntries();
+    }
+  }, [isOpen, filters]);
 
   useEffect(() => {
     handleFilter();
@@ -122,7 +124,7 @@ function SearchReceivingModal({ isOpen, onClose, darkMode, user, isAdmin, onDone
                 </div>
               </div>
               <p className={`text-xs sm:text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-white/70'}`}>
-                Find and select receiving entries to delete
+                Find and select receiving entries to edit
               </p>
             </div>
 

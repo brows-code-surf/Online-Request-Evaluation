@@ -239,57 +239,6 @@ class DistributionOfAccounts {
         }
     }
 
-    // Unpost distributions (update postStatus to 0)
-    static async unpostDistributions(referenceNo, userName) {
-        let connection = null;
-        let transaction = null;
-
-        try {
-            const pool = await connectToDatabase(process.env.DB_SFC);
-            connection = await pool.connect();
-
-            transaction = new sql.Transaction(connection);
-            await transaction.begin();
-
-            console.log('Transaction started for unposting distributions');
-
-            // Update postStatus to 0 for existing distributions
-            const updateQuery = `
-                UPDATE [PURCHASE.RECEIVE.DISTRIBUTION.ACCOUNTS.1]
-                SET POSTSTATUS = 0, DATEMODIFIED = GETDATE(), MODIFIEDBY = @userName
-                WHERE REFERENCENO = @referenceNo
-            `;
-            await transaction.request()
-                .input('referenceNo', referenceNo)
-                .input('userName', userName)
-                .query(updateQuery);
-
-            console.log(`Unposted distributions for ${referenceNo}`);
-
-            await transaction.commit();
-            console.log('Transaction committed successfully');
-
-            return {
-                success: true,
-                message: 'Distributions unposted successfully'
-            };
-
-        } catch (error) {
-            console.error('Error unposting distributions:', error);
-
-            if (transaction) {
-                try {
-                    await transaction.rollback();
-                    console.log('Transaction rolled back due to error');
-                } catch (rollbackError) {
-                    console.error('Error during transaction rollback:', rollbackError);
-                }
-            }
-
-            throw new Error('Failed to unpost distributions: ' + error.message);
-        }
-    }
-
     // Delete distributions for a reference number
     static async deleteDistributions(referenceNo, userName) {
         let connection;

@@ -695,29 +695,62 @@ class PurchaseRequest {
 
     // Cancel purchase request
     static async cancelPurchaseRequest(referenceNo, cancellerName, cancelReason = '') {
-        let connection;
+        let connection = null;
+        let transaction = null;
+
         try {
             console.log('cancelPurchaseRequest called with:', { referenceNo, cancellerName, cancelReason });
-            connection = await connectToDatabase(process.env.DB_SFC);
+
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for purchase request cancellation');
 
             // Update header status to CANCELLED
-            const updateHeaderQuery = `
-                UPDATE [PURCHASE.REQUESTHEADER.1]
-                SET REQUESTSTATUS = 'CANCELLED',
-                    CANCELREMARKS = @cancelReason,
-                    IS_READ = 1
-                WHERE REFERENCENO = @referenceNo
-            `;
+            const updateHeaderQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'CANCELLED', CANCELREMARKS = @cancelReason, IS_READ = 1
+                                       WHERE REFERENCENO = @referenceNo`;
 
             console.log('Executing query:', updateHeaderQuery);
             console.log('With parameters:', { referenceNo, cancelReason });
 
-            const headerResult = await connection.request()
+            const headerResult = await transaction.request()
                 .input('referenceNo', referenceNo)
                 .input('cancelReason', cancelReason)
                 .query(updateHeaderQuery);
 
             console.log('Update result:', headerResult);
+
+            const updateDetailsQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = 'CANCELLED' WHERE REFERENCENO = @referenceNo`;
+            const detailsResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(updateDetailsQuery);
+            console.log('Details update result:', detailsResult);
+
+            const getPoNumberQuery = `SELECT PONUMBER FROM [PURCHASE.ORDERDETAILS.1] WHERE PRCODE = @referenceNo`;
+            const poNumberResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(getPoNumberQuery);
+            console.log('PO number query result:', poNumberResult.recordset);
+
+            for (const record of poNumberResult.recordset) {
+                const poNumber = record.PONUMBER;
+                const updatePOHeaderQuery = `UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
+                const poHeaderResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(updatePOHeaderQuery);
+                console.log('PO header update result:', poHeaderResult);
+
+                const updatePODetailsQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
+                const poDetailsResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .query(updatePODetailsQuery);
+                console.log('PO details update result for PO', poNumber, ':', poDetailsResult);
+            }
 
             if (headerResult.rowsAffected[0] === 0) {
                 throw new Error('Purchase request not found');
@@ -725,7 +758,7 @@ class PurchaseRequest {
 
             // Verify the update by checking the result
             const verifyQuery = `SELECT CANCELREMARKS FROM [PURCHASE.REQUESTHEADER.1] WHERE REFERENCENO = @referenceNo`;
-            const verifyResult = await connection.request()
+            const verifyResult = await transaction.request()
                 .input('referenceNo', referenceNo)
                 .query(verifyQuery);
 
@@ -736,10 +769,14 @@ class PurchaseRequest {
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
                 VALUES (@activity, @cancellerName, GETDATE())
             `;
-            await connection.request()
+            await transaction.request()
                 .input('activity', `Purchase Request ${referenceNo} cancelled by ${cancellerName}`)
                 .input('cancellerName', cancellerName)
                 .query(activityQuery);
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
 
             return {
                 success: true,
@@ -747,7 +784,21 @@ class PurchaseRequest {
             };
         } catch (error) {
             console.error('Error canceling purchase request:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
             throw new Error('Failed to cancel purchase request: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
         }
     }
 

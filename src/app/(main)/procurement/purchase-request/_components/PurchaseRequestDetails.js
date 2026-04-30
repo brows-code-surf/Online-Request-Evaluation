@@ -6,6 +6,7 @@ import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import { PurchaseRequestPrintModal } from './PurchaseRequestPrintModal';
+import { hasReceivingForPR } from '../_actions';
 
 const STATUS_OPTIONS = [
   { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
@@ -53,15 +54,16 @@ export default function PurchaseRequestDetails({
   loading = false
 }) {
   const { user, darkMode, isAdmin } = useAuth();
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null);
-  const [cancelRemarks, setCancelRemarks] = useState('');
-  const menuRef = useRef(null);
+   const [showRejectModal, setShowRejectModal] = useState(false);
+   const [showConfirmModal, setShowConfirmModal] = useState(false);
+   const [showCancelModal, setShowCancelModal] = useState(false);
+   const [showPrintModal, setShowPrintModal] = useState(false);
+   const [showActionMenu, setShowActionMenu] = useState(false);
+   const [actionLoading, setActionLoading] = useState(false);
+   const [pendingAction, setPendingAction] = useState(null);
+   const [cancelRemarks, setCancelRemarks] = useState('');
+   const [hasReceiving, setHasReceiving] = useState(false);
+   const menuRef = useRef(null);
 
   // Real-time updates for this specific purchase request
   useSocketMultiple("request-evaluation-broadcast", {
@@ -145,21 +147,37 @@ export default function PurchaseRequestDetails({
   });
 
   // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowActionMenu(false);
-      }
-    };
+   useEffect(() => {
+     const handleClickOutside = (event) => {
+       if (menuRef.current && !menuRef.current.contains(event.target)) {
+         setShowActionMenu(false);
+       }
+     };
 
-    if (showActionMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+     if (showActionMenu) {
+       document.addEventListener('mousedown', handleClickOutside);
+     }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showActionMenu]);
+     return () => {
+       document.removeEventListener('mousedown', handleClickOutside);
+     };
+   }, [showActionMenu]);
+
+    // Check if there is existing receiving for this PR
+    useEffect(() => {
+      const checkReceiving = async () => {
+        if (purchaseRequest?.referenceNo) {
+          try {
+            const result = await hasReceivingForPR(purchaseRequest.referenceNo);
+            setHasReceiving(result.hasReceiving);
+          } catch (error) {
+            console.error('Error checking receiving:', error);
+            setHasReceiving(false);
+          }
+        }
+      };
+      checkReceiving();
+    }, [purchaseRequest?.referenceNo]);
 
   if (!purchaseRequest) return null;
 
@@ -325,8 +343,8 @@ export default function PurchaseRequestDetails({
                   Post
                 </button>
               )}
-              {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
-                <button
+                   {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
+                     <button
                   onClick={() => setShowCancelModal(true)}
                   disabled={loading || actionLoading}
                   className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
@@ -428,7 +446,7 @@ export default function PurchaseRequestDetails({
                       <span className="truncate">Post Request</span>
                     </button>
                   )}
-                  {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
+              {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
                     <button
                       onClick={() => {
                         setShowCancelModal(true);

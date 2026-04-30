@@ -2,6 +2,7 @@
 
 import ReceivingEntry from '@/models/ReceivingEntry';
 import DistributionOfAccounts from '@/models/DistributionOfAccounts';
+import AdminUtilities from '@/models/AdminUtilities';
 
 export async function getReceivingEntriesWithDA(filters = {}, user, isAdmin) {
   try {
@@ -38,7 +39,7 @@ export async function getDistributionAccounts(referenceNo) {
 
 export async function unpostDistributionAccounts(referenceNo, userName) {
   try {
-    const result = await DistributionOfAccounts.unpostDistributions(referenceNo, userName);
+    const result = await AdminUtilities.unpostDistributions(referenceNo, userName);
     return result;
   } catch (error) {
     console.error('Error unposting distributions:', error);

@@ -439,13 +439,13 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 value={formData.company}
                 onChange={(e) => handleHeaderChange('company', e.target.value)}
                 data-error={errors.company ? 'true' : 'false'}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.company ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white')
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.company ? 'border-red-300 bg-red-50 text-gray-900' : (darkMode ? 'border-gray-600 bg-white-700 text-white' : 'border-gray-300 bg-white')
                   }`}
                 disabled={loading}
               >
                 <option value="">Select company</option>
                 {COMPANY_OPTIONS.map(company => (
-                  <option key={company} value={company} className={darkMode ? 'bg-gray-700' : ''}>
+                  <option key={company} value={company} className={darkMode ? 'bg-gray-700 text-white' : ''}>
                     {company}
                   </option>
                 ))}
@@ -453,28 +453,41 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
               {errors.company && <p className="mt-1 text-sm text-red-600">{errors.company}</p>}
             </div>
 
-
-
-
-
             {/* Rush Request */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                  Rush Request
-                </label>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isRush}
-                    onChange={(e) => handleHeaderChange('isRush', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            <div>
+              <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                Rush Request
+              </label>
+              <div className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => handleHeaderChange('isRush', !formData.isRush)}
                     disabled={loading}
-                  />
-                  <span className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Mark as <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'} font-semibold whitespace-nowrap`}>
-                      RUSH
-                    </span>
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      formData.isRush
+                        ? 'bg-red-600'
+                        : darkMode
+                        ? 'bg-gray-600'
+                        : 'bg-gray-200'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        formData.isRush ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {formData.isRush ? (
+                      <>
+                        Marked as <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold whitespace-nowrap">
+                          RUSH
+                        </span>
+                      </>
+                    ) : (
+                      'Normal priority'
+                    )}
                   </span>
                 </div>
               </div>
@@ -497,7 +510,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 {users
                   .filter(approverUser => approverUser.empName.toUpperCase() !== user?.empName?.toUpperCase())
                   .map(user => (
-                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
+                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700 text-white' : ''}>
                       {user.empName}
                     </option>
                   ))}
@@ -522,7 +535,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 {users
                   .filter(approverUser => approverUser.empName.toUpperCase() !== user?.empName?.toUpperCase())
                   .map(approverUser => (
-                    <option key={approverUser.empName} value={approverUser.empName} className={darkMode ? 'bg-gray-700' : ''}>
+                    <option key={approverUser.empName} value={approverUser.empName} className={darkMode ? 'bg-gray-700 text-white' : ''}>
                       {approverUser.empName}
                     </option>
                   ))}
@@ -547,7 +560,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 {users
                   .filter(approverUser => approverUser.empName.toUpperCase() !== user?.empName?.toUpperCase())
                   .map(user => (
-                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700' : ''}>
+                    <option key={user.empName} value={user.empName} className={darkMode ? 'bg-gray-700 text-white' : ''}>
                       {user.empName}
                     </option>
                   ))}

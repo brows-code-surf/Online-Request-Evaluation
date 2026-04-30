@@ -6,6 +6,7 @@ import UserProfile from '@/models/UserProfile.js';
 import Notification from '@/models/Notification.js';
 import { sendEmailWithTemplate } from '@/utils/emailService.js';
 import { broadcastRequestEvaluationUpdate } from '@/lib/socketBroadcast.js';
+import ReceivingEntry from '@/models/ReceivingEntry.js';
 
 export async function getAllPurchaseRequests(filters = {}, user = null, isAdmin = false) {
   try {
@@ -147,11 +148,11 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
     // Note: Notifications are no longer sent here - they will be sent when the request is posted
 
     return {
-        success: true,
-        referenceNo: result.referenceNo,
-        referenceNumberChanged: result.referenceNumberChanged,
-        originalReferenceNo: result.originalReferenceNo,
-        message: 'Purchase request created successfully'
+      success: true,
+      referenceNo: result.referenceNo,
+      referenceNumberChanged: result.referenceNumberChanged,
+      originalReferenceNo: result.originalReferenceNo,
+      message: 'Purchase request created successfully'
     };
   } catch (error) {
     console.error('Error creating purchase request:', error);
@@ -313,6 +314,15 @@ export async function searchItems(searchTerm) {
   }
 }
 
+export async function hasReceivingForPR(referenceNo) {
+  try {
+    const hasReceiving = await ReceivingEntry.hasReceivingForPR(referenceNo);
+    return { success: true, hasReceiving };
+  } catch (error) {
+    console.error('Error checking receiving entries for PR:', error);
+    return { success: false, message: 'Failed to check receiving entries for purchase request' };
+  }
+}
 // Notification helper functions
 async function notifyReviewersOfNewPR(referenceNo, headerData, detailsData, creatorName) {
   try {
