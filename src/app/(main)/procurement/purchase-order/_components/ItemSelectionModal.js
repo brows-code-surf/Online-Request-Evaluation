@@ -168,7 +168,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'}`}
+                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-white hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'}`}
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -176,7 +176,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                   </button>
                 </div>
               </div>
-              <p className={`text-xs sm:text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-white/70'}`}>
+              <p className={`text-xs sm:text-sm mt-1 ${darkMode ? 'text-white' : 'text-white/70'}`}>
                 Select Items for Purchase Order
               </p>
             </div>
@@ -192,7 +192,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                     </svg>
                     <span className={`font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                       Selected Supplier: {selectedSupplier}
-                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-600'}`}>
                         {currentSelectedItems.length} item{currentSelectedItems.length !== 1 ? 's' : ''} selected
                       </p>
                     </span>
@@ -223,7 +223,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                      <span className={`text-xs font-medium ${darkMode ? 'text-white group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                         My Items Only
                       </span>
                     </label>
@@ -242,7 +242,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                      <span className={`text-xs font-medium ${darkMode ? 'text-white group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                         Select All ({filteredAvailableItems.length} items)
                       </span>
                     </label>
@@ -272,7 +272,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                       }`}
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className={`w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${darkMode ? 'text-white' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
@@ -280,7 +280,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                     <button
                       type="button"
                       onClick={() => setTableSearchTerm('')}
-                      className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                      className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-white hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -297,28 +297,28 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                         <tr>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Select
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             PR No
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             COQ CODE
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             COQ POST DATE
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             CANVASS BY
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             ITEM CODE | DESCRIPTION
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             UNIT COST (CURRENCY) / U OF M
                           </th>
-                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             PURCHASE TYPE
                           </th>
                         </tr>
@@ -372,10 +372,10 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
                     </svg>
                   </div>
-                  <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                     No canvassing items available
                   </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                     Try adjusting your filters or check back later
                   </p>
                 </div>
@@ -385,28 +385,28 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                         <tr>
-                          <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             Select
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             PR No
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             COQ Code
                           </th>
-                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             COQ POST DATE
                           </th>
-                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             CANVASS BY
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             ITEM CODE | DESCRIPTION
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             UNIT COST (CURRENCY) / U OF M
                           </th>
-                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                          <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                             PURCHASE TYPE
                           </th>
                         </tr>
@@ -448,12 +448,12 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                   {item.canvassDate ? new Date(item.canvassDate).toISOString().split('T')[0] : '-'}
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                   {item.canvassedBy || '-'}
                                 </div>
                               </td>
@@ -462,7 +462,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
                                   <div className={`text-[10px] sm:text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                     {item.itemNumber}
                                   </div>
-                                  <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-400'}`}>
                                     {item.itemDescription}
                                   </div>
                                 </div>
@@ -490,7 +490,7 @@ function ItemSelectionModal({ isOpen, onClose, darkMode, user, selectedItems, se
             {/* Footer */}
             <div className={`px-2 sm:px-4 py-2 sm:py-3 border-t flex-shrink-0 ${darkMode ? 'border-blue-700/50 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900' : 'border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-                <div className={`text-sm text-center sm:text-left ${darkMode ? 'text-gray-400' : 'text-white/70'}`}>
+                <div className={`text-sm text-center sm:text-left ${darkMode ? 'text-white' : 'text-white/70'}`}>
                   {currentSelectedItems.length > 0 && (
                     <span className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>

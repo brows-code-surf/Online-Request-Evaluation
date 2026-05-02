@@ -601,6 +601,7 @@ function RequestEvaluationContent() {
                     sortBy={sortBy}
                     onSortByChange={setSortBy}
                     approvals={filteredApprovals}
+                    allApprovals={approvals}
                     selectedApprovalId={selectedApproval?.id}
                     onApprovalSelect={handleSelectApproval}
                     getStatusColor={getStatusColor}

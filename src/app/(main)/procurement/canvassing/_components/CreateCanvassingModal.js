@@ -491,7 +491,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                     type="button"
                     onClick={handleClose}
                     disabled={submitting}
-                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 transition-all duration-200 ${darkMode ? 'text-white hover:text-white hover:bg-white/10' : 'text-white/80 hover:text-white hover:bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -582,7 +582,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                          <span className={`text-xs font-medium ${darkMode ? 'text-white group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             My Items Only
                           </span>
                         </label>
@@ -601,13 +601,13 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <span className={`text-xs font-medium ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
+                          <span className={`text-xs font-medium ${darkMode ? 'text-white group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors`}>
                             Select All ({filteredAvailableItems.length} items)
                           </span>
                         </label>
                       </div>
                       {selectedItems.length > 0 && (
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${darkMode ? 'bg-blue-900/50 text-white' : 'bg-blue-100 text-blue-700'}`}>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -630,7 +630,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             }`}
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg className={`w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={`w-4 h-4 ${darkMode ? 'text-white' : 'text-gray-400'} group-hover:text-blue-500 transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
                         </div>
@@ -638,7 +638,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           <button
                             type="button"
                             onClick={() => setTableSearchTerm('')}
-                            className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`absolute inset-y-0 right-0 pr-4 flex items-center ${darkMode ? 'text-white hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -654,28 +654,28 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Select
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Date Approved
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Requester
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Company
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
-                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
@@ -735,10 +735,10 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-5v2m0 0v2m0-2h2m-2 0h-2" />
                           </svg>
                         </div>
-                        <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <p className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                           No items available for canvassing
                         </p>
-                        <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                           Try adjusting your filters or check back later
                         </p>
                       </div>
@@ -775,13 +775,13 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                       <div className={`text-xs font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {item.RID}
                                       </div>
-                                      <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      <div className={`text-[10px] ${darkMode ? 'text-white' : 'text-gray-400'}`}>
                                         {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
                                       </div>
                                     </div>
                                   </div>
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                                    {item.QUANTITY} <span className="ml-1 text-gray-400">{item.UOFM}</span>
+                                    {item.QUANTITY} <span className={`ml-1 ${darkMode ? 'text-white' : 'text-gray-400'}`}>{item.UOFM}</span>
                                   </span>
                                 </div>
 
@@ -790,27 +790,27 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                     <div className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                       {item.ITEMDESC}
                                     </div>
-                                    <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-400'}`}>
                                       {item.ITEMNMBR}
                                     </div>
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                     <div>
-                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Requester</div>
-                                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-400'}`}>Requester</div>
+                                      <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.requester}
                                       </div>
                                     </div>
                                     <div>
-                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Addressed To</div>
-                                      <div className={`text-xs truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-400'}`}>Addressed To</div>
+                                      <div className={`text-xs truncate ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.addressedTo}
                                       </div>
                                     </div>
                                     <div className="col-span-2">
-                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Company</div>
-                                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-[10px] uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-400'}`}>Company</div>
+                                      <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.company || 'N/A'}
                                       </div>
                                     </div>
@@ -826,28 +826,28 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className={`${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                               <tr>
-                                <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Select
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Date Approved
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Requester
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Company
                                 </th>
-                                <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`hidden md:table-cell px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Addressed To
                                 </th>
-                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-2 sm:px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
@@ -884,12 +884,12 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                       </div>
                                     </td>
                                     <td className="px-2 sm:px-4 py-3.5">
-                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.dateApproved ? new Date(item.dateApproved).toISOString().split('T')[0] : 'N/A'}
                                       </div>
                                     </td>
                                     <td className="px-2 sm:px-4 py-3.5">
-                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-xs sm:text-sm ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.requester}
                                       </div>
                                     </td>
@@ -898,18 +898,18 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                         <div className={`text-[10px] sm:text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                           {item.ITEMDESC}
                                         </div>
-                                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                        <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-400'}`}>
                                           {item.ITEMNMBR}
                                         </div>
                                       </div>
                                     </td>
                                     <td className={`hidden lg:table-cell px-2 sm:px-4 py-2`}>
-                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.company || 'N/A'}
                                       </div>
                                     </td>
                                     <td className={`hidden md:table-cell px-2 sm:px-4 py-2`}>
-                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      <div className={`text-[10px] sm:text-xs ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                                         {item.addressedTo}
                                       </div>
                                     </td>
@@ -954,7 +954,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="relative">
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Supplier <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
@@ -975,7 +975,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             <button
                               type="button"
                               onClick={() => setShowSupplierDropdown(!showSupplierDropdown)}
-                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-white' : 'text-gray-500'}`}
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1032,7 +1032,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               {suppliers.filter(supplier =>
                                 supplier.vendorName.toLowerCase().includes(supplierSearch.toLowerCase())
                               ).length === 0 && supplierSearch && (
-                                  <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <div className={`px-3 py-2 ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                     No suppliers found
                                   </div>
                                 )}
@@ -1040,7 +1040,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           )}
                         </div>
                         <div>
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Supplier ID
                           </label>
                           <input
@@ -1053,7 +1053,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           />
                         </div>
                         <div className="relative">
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Payment Terms <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
@@ -1074,7 +1074,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             <button
                               type="button"
                               onClick={() => setShowPaymentTermDropdown(!showPaymentTermDropdown)}
-                              className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                              className={`absolute right-2 top-2 ${darkMode ? 'text-white' : 'text-gray-500'}`}
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1103,7 +1103,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                   >
                                     <div className="flex justify-between items-center">
                                       <span>{term.paymentTermId}</span>
-                                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      <span className={`text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                         {term.dueDays} days
                                       </span>
                                     </div>
@@ -1112,7 +1112,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               {paymentTerms.filter(term =>
                                 term.paymentTermId.toLowerCase().includes(paymentTermSearch.toLowerCase())
                               ).length === 0 && paymentTermSearch && (
-                                  <div className={`px-3 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <div className={`px-3 py-2 ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                     No payment terms found
                                   </div>
                                 )}
@@ -1125,7 +1125,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                     {/* Item Details */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="relative w-full">
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                           Purchase Type <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
@@ -1146,7 +1146,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           <button
                             type="button"
                             onClick={() => setShowPurchaseTypeDropdown(!showPurchaseTypeDropdown)}
-                            className={`absolute right-2 top-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            className={`absolute right-2 top-2 ${darkMode ? 'text-white' : 'text-gray-500'}`}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1184,7 +1184,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                         )}
                       </div>
                       <div className="relative w-full">
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                           Currency <span className="text-red-500">*</span>
                         </label>
                         <div className="relative w-full">
@@ -1209,7 +1209,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             <button
                               type="button"
                               onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                              className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                              className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-gray-500'}`}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1217,7 +1217,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             </button>
                           )}
                           {canvassingData.purchaseType === 'Local' && (
-                            <div className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className={`absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                               </svg>
@@ -1251,7 +1251,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                 >
                                   <div className="flex justify-between items-center">
                                     <span className="truncate">{currency.name}</span>
-                                    <span className={`text-xs ml-2 shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{currency.symbol_native}</span>
+                                    <span className={`text-xs ml-2 shrink-0 ${darkMode ? 'text-white' : 'text-gray-500'}`}>{currency.symbol_native}</span>
                                   </div>
                                 </div>
                               ))}
@@ -1262,7 +1262,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                               const isImport = canvassingData.purchaseType === 'Foreign';
                               return matchesSearch && !(isPHP && isImport);
                             }).length === 0 && currencySearch && (
-                                <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <div className={`px-3 py-2 text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   No currencies found
                                 </div>
                               )}
@@ -1272,7 +1272,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
 
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Origin
                           </label>
                         </div>
@@ -1290,7 +1290,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                     <div className="mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         {/* <div>
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Delivery Schedule
                           </label>
                           <input
@@ -1302,7 +1302,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           />
                         </div> */}
                         <div>
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Brand
                           </label>
                           <input
@@ -1315,7 +1315,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           />
                         </div>
                         <div>
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                             Supplier QTY
                           </label>
                           <input
@@ -1334,7 +1334,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                       <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                               Offered Price <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -1358,7 +1358,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             />
                           </div>
                           <div>
-                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                               Bid Price <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -1382,7 +1382,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             />
                           </div>
                           <div>
-                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
                               Agreed Price <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -1406,7 +1406,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                             />
                           </div>
                         </div>
-                        <p className={`text-xs mt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`text-xs mt-4 ${darkMode ? 'text-white' : 'text-gray-600'}`}>
                           Changes here will apply to all selected items.
                         </p>
                       </div>
@@ -1417,19 +1417,19 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                               <tr>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Ref No.
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Date Approved
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Requester
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Item Details
                                 </th>
-                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                   Quantity
                                 </th>
                               </tr>
@@ -1457,7 +1457,7 @@ function CreateCanvassingModal({ isOpen, onClose, darkMode, user, onSuccess }) {
                                       <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {item.ITEMDESC}
                                       </div>
-                                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                                         {item.ITEMNMBR}
                                       </div>
                                     </div>

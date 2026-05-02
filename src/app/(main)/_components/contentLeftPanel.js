@@ -15,6 +15,7 @@ export default function ContentLeftPanel({
     sortBy,
     onSortByChange,
     approvals,
+    allApprovals,
     selectedApprovalId,
     onApprovalSelect,
     getStatusColor,
@@ -89,6 +90,47 @@ export default function ContentLeftPanel({
         handleApprovalSelect(approval, true);
     };
 
+    // Dynamic filter options based on fetched statuses
+    const getFilterOptions = () => {
+        const uniqueStatuses = [...new Set(allApprovals.map(a => a.status))].filter(Boolean).sort();
+        return [
+            { value: '', label: filterType === 'purchase-request' ? 'All Statuses' : 'All Status' },
+            ...uniqueStatuses.map(status => ({ value: status, label: status }))
+        ];
+    };
+
+    // Dynamic sort options
+    const getSortOptions = (type) => {
+        const options = {
+            accounts: [
+                { value: 'date', label: 'Sort by Date' },
+                { value: 'requester', label: 'Sort by Name' },
+                { value: 'status', label: 'Sort by Status' }
+            ],
+            'user-accounts-approval': [
+                { value: 'date', label: 'Sort by Date' },
+                { value: 'requester', label: 'Sort by Name' },
+                { value: 'status', label: 'Sort by Status' }
+            ],
+            'request-evaluation': [
+                { value: 'date', label: 'Sort by Date' },
+                { value: 'requester', label: 'Sort by Name' },
+                { value: 'status', label: 'Sort by Status' }
+            ],
+            'purchase-request': [
+                { value: 'date', label: 'Sort by Date' },
+                { value: 'company', label: 'Sort by Company' },
+                { value: 'status', label: 'Sort by Status' }
+            ],
+            'purchase-order': [
+                { value: 'date', label: 'Sort by Date' },
+                { value: 'supplier', label: 'Sort by Supplier' },
+                { value: 'status', label: 'Sort by Status' }
+            ]
+        };
+        return options[type] || [];
+    };
+
     return (
         <>
 
@@ -152,9 +194,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="all">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
+                                {getFilterOptions().map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
 
                             <select
@@ -162,9 +204,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onSortByChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="requester">Sort by Name</option>
-                                <option value="status">Sort by Status</option>
+                                {getSortOptions('accounts').map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </>
                     )}
@@ -176,10 +218,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="all">All Status</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="APPROVED">Approved</option>
-                                <option value="REJECTED">Rejected</option>
+                                {getFilterOptions().map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
 
                             <select
@@ -187,9 +228,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onSortByChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="requester">Sort by Name</option>
-                                <option value="status">Sort by Status</option>
+                                {getSortOptions('user-accounts-approval').map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </>
                     )}
@@ -202,9 +243,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="all">Select Status</option>
-                                <option value="RUSH">Rush</option>
-                                <option value="REJECTED">Rejected</option>
+                                {getFilterOptions().map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
 
                             <select
@@ -212,9 +253,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onSortByChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="requester">Sort by Name</option>
-                                <option value="status">Sort by Status</option>
+                                {getSortOptions('request-evaluation').map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </>
                     )}
@@ -226,15 +267,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="all">Select Status</option>
-                                <option value="POSTED">Posted</option>
-                                <option value="NOT POSTED">Not Posted</option>
-                                <option value="FOR CONFIRMATION">For Confirmation</option>
-                                <option value="FOR REQUEST APPROVAL">For Request Approval</option>
-                                <option value="FOR PURCHASING LEAD TIME">For Purchasing Lead Time</option>
-                                <option value="FOR CANVASSING">For Canvassing</option>
-                                <option value="RUSH">Rush</option>
-                                <option value="REJECTED">Rejected</option>
+                                {getFilterOptions().map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
 
                             <select
@@ -242,9 +277,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onSortByChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="requester">Sort by Name</option>
-                                <option value="status">Sort by Status</option>
+                                {getSortOptions('purchase-request').map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </>
                     )}
@@ -256,11 +291,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onFilterStatusChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs border ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="all">Select Status</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="FOR P.O. CONFIRMATION">For P.O. Confirmation</option>
-                                <option value="FOR P.O. APPROVAL">For P.O. Approval</option>
-                                <option value="P.O. APPROVED">P.O. Approved</option>
+                                {getFilterOptions().map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
 
                             <select
@@ -268,9 +301,9 @@ export default function ContentLeftPanel({
                                 onChange={(e) => onSortByChange(e.target.value)}
                                 className={`flex-1 px-2 py-1 text-xs ${darkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-black border-gray-300'} border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="requester">Sort by Name</option>
-                                <option value="status">Sort by Status</option>
+                                {getSortOptions('purchase-order').map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </>
                     )}

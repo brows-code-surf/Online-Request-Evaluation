@@ -592,6 +592,7 @@ function UserAccountsContent() {
                     sortBy={sortBy}
                     onSortByChange={setSortBy}
                     approvals={filteredUsers}
+                    allApprovals={users}
                     selectedApprovalId={selectedUser?.id}
                     onApprovalSelect={handleSelectUser}
                     getStatusColor={getStatusColor}

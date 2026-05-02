@@ -38,10 +38,74 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
     };
   }, [showActionMenu]);
 
-  useSocketMultiple("purchase-order-status-updated", {
-    "purchase-order-status-updated": useCallback(() => {
-      onDataRefresh?.();
-    }, [onDataRefresh]),
+  // Real-time updates - listen to both purchase-order-broadcast and request-evaluation-broadcast
+  useSocketMultiple("purchase-order-broadcast", {
+    "purchase-order-created": useCallback(
+      (data) => {
+        console.log("Purchase order created event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "purchase-order-updated": useCallback(
+      (data) => {
+        console.log("Purchase order updated event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "po-approved": useCallback(
+      (data) => {
+        console.log("Purchase order approved event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "po-confirmed": useCallback(
+      (data) => {
+        console.log("Purchase order confirmed event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "po-rejected": useCallback(
+      (data) => {
+        console.log("Purchase order rejected event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "purchase-order-status-updated": useCallback(
+      (data) => {
+        console.log("Purchase order status updated event received:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    )
+  });
+
+  useSocketMultiple("request-evaluation-broadcast", {
+    "po-approved": useCallback(
+      (data) => {
+        console.log("PO approved event from request-evaluation:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "po-confirmed": useCallback(
+      (data) => {
+        console.log("PO confirmed event from request-evaluation:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
+    "po-rejected": useCallback(
+      (data) => {
+        console.log("PO rejected event from request-evaluation:", data);
+        onDataRefresh?.();
+      },
+      [onDataRefresh]
+    ),
   });
 
   const getStatusColor = (status) => {
@@ -195,7 +259,9 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
   const { header, details } = purchaseOrder;
 
   const isEditDisabled = loading || actionLoading ||
-    ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. REJECTED', 'C.O.Q. REJECTED FROM P.O.', 'P.R. REJECTED FROM P.O.', 'CANCELLED'].includes(header.poStatus);
+    ['FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. REJECTED', 'C.O.Q. REJECTED FROM P.O.',
+      'P.R. REJECTED FROM P.O.', 'CANCELLED', 'FOR P.O. APPROVAL', 'SERVED', 'PARTIALLY SERVED',
+      'PR CANCELLED'].includes(header.poStatus);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -253,6 +319,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                   <button
                     onClick={() => onEdit?.(purchaseOrder)}
                     disabled={isEditDisabled}
+                    hidden={header.poStatus !== 'PENDING'}
                     className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                       }`}
                     aria-label="Edit purchase order"
@@ -265,8 +332,8 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
 
                   <button
                     onClick={() => handleSubmit()}
-                    disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
-                    hidden={header.poStatus === 'P.O. APPROVED' || header.poStatus === 'P.O. REJECTED' || header.poStatus === 'C.O.Q. REJECTED FROM P.O.' || header.poStatus === 'P.R. REJECTED FROM P.O.' || header.poStatus === 'CANCELLED'}
+                    disabled={loading || actionLoading || header.poStatus !== 'PENDING'}
+                    // hidden={header.poStatus !== 'PENDING'}
                     className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                       }`}
                     aria-label="Submit purchase order for processing"
@@ -274,7 +341,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    {header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}
+                    {header.poStatus === 'PENDING' ? 'Submit for Processing' : 'Submitted'}
                   </button>
 
                   <button
@@ -347,6 +414,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                           setShowActionMenu(false);
                         }}
                         disabled={isEditDisabled}
+                        hidden={header.poStatus !== 'PENDING'}
                         className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
                           ? 'text-blue-400 hover:bg-blue-900/20 hover:text-blue-300 focus:bg-blue-900/20 focus:text-blue-300'
                           : 'text-blue-700 hover:bg-blue-50 hover:text-blue-800 focus:bg-blue-50 focus:text-blue-800'
@@ -386,7 +454,8 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                             handleSubmit();
                             setShowActionMenu(false);
                           }}
-                          disabled={loading || actionLoading || header.poStatus === 'FOR P.O. CONFIRMATION'}
+                          disabled={loading || actionLoading || header.poStatus !== 'PENDING'}
+                          hidden={header.poStatus !== 'PENDING'}
                           className={`w-full inline-flex items-center gap-3 text-left px-4 py-3.5 text-sm font-medium transition-all duration-150 ease-in-out ${darkMode
                             ? 'text-green-400 hover:bg-green-900/20 hover:text-green-300 focus:bg-green-900/20 focus:text-green-300'
                             : 'text-green-700 hover:bg-green-50 hover:text-green-800 focus:bg-green-50 focus:text-green-800'
@@ -398,7 +467,7 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
-                          <span className="truncate">{header.poStatus?.trim() === 'FOR P.O. CONFIRMATION' ? 'Submitted' : 'Submit for Processing'}</span>
+                          <span className="truncate">Submit for Processing</span>
                         </button>
                       )}
                       <button
@@ -666,14 +735,14 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
                       <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {item.itemDesc}
                       </div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                         Item No: {item.itemNmbr}
                       </div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                         Budget: {item.budgetNo}
                       </div>
                       {(item.brand || item.origin) && (
-                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <div className={`text-xs ${darkMode ? 'text-white' : 'text-gray-500'}`}>
                           {item.brand && `Brand: ${item.brand}`}
                           {item.brand && item.origin && ' • '}
                           {item.origin && `Origin: ${item.origin}`}

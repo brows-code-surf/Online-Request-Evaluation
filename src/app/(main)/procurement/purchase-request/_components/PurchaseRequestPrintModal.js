@@ -31,6 +31,109 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
     return quantityNum - qtyCancelNum;
   };
 
+  const generateHeader = (purchaseRequest, currentPage, totalPages) => `
+    <!-- Header Top -->
+    <div class="header-top">
+      <div class="header-left">
+        <img src="/SANTEH-LOGO/SFC.png" alt="SANTEH" class="company-logo" />
+        <div class="company-info">
+          701 RICHWELL CENTER, 102 TIMOG AVE,<br>
+          QUEZON CITY, METRO MANILA, PHILIPPINES<br>
+          NON-VAT Reg. TIN: 000-240-016-00000
+        </div>
+      </div>
+      <div class="header-upper-right">
+        <div class="form-details">
+          <span class="form-details-inline" style="margin-right: 20px;">Form No.:PUR-F-01</span>
+          <span class="form-details-inline" style="margin-right: 20px;">Rev. No.: 2</span>
+          <span class="form-details-inline">Eff. Date: 15 October 2008</span>
+        </div>
+        <div class="po-title">PURCHASE REQUEST</div>
+        <!-- Purchase Request Info Table -->
+        <table class="po-info-table">
+          <tr>
+            <td class="po-info-cell" style="width: 50%; border-top: 1px solid #ccc;">
+              <div class="po-info-label">Document No.</div>
+              <div class="po-info-value" style="font-size: 14px; font-weight: bold;">${purchaseRequest.referenceNo || 'N/A'}</div>
+            </td>
+            <td class="po-info-cell" style="width: 50%; border-top: 1px solid #ccc;">
+              <div class="po-info-label">Page</div>
+              <div class="po-info-value">${currentPage}/${totalPages}</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="po-info-cell">
+              <div class="po-info-label">Requested Date</div>
+              <div class="po-info-value">${purchaseRequest.dateRequested ? new Date(purchaseRequest.dateRequested).toLocaleDateString() : 'N/A'}</div>
+            </td>
+            <td class="po-info-cell">
+              <div class="po-info-label">Location</div>
+              <div class="po-info-value">${purchaseRequest.locationCode || 'N/A'}</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Requester Section -->
+    <div class="supplier-section">
+      <div class="supplier-box">
+        <div class="supplier-label">Requested By</div>
+        <div class="supplier-name">${purchaseRequest.requestedBy || 'N/A'}</div>
+        <div class="supplier-info">
+          Company: ${purchaseRequest.company || 'N/A'}
+        </div>
+      </div>
+      <div class="supplier-box">
+        <div class="supplier-label">Addressed To</div>
+        <div class="supplier-name">${purchaseRequest.addressedTo || 'N/A'}</div>
+        <div class="supplier-info">
+          Status: ${purchaseRequest.requestStatus || 'N/A'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const generateFooter = (purchaseRequest) => `
+    <!-- Footer Section -->
+    <div class="footer-section">
+      <div class="signature-section">
+        <div class="sig-header">
+          <div class="sig-col" style="text-align: left; margin-bottom: 50px;">Requested By:</div>
+          <div class="sig-col" style="text-align: left; margin-left: 50px; margin-bottom: 50px;">Reviewed By:</div>
+          <div class="sig-col" style="text-align: left; margin-left: 50px; margin-bottom: 50px;">Approved By:</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 40px;">
+          <div class="sig-col">
+            <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;">${purchaseRequest.requestedBy || ''}</div>
+            <div class="sig-line"></div>
+            <div style="font-size: 10px;">Signature Over Printed Name</div>
+          </div>
+          <div class="sig-col">
+            <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;">${purchaseRequest.reviewer || ''}</div>
+            <div class="sig-line"></div>
+            <div style="font-size: 10px;">Signature Over Printed Name</div>
+          </div>
+          <div class="sig-col">
+            <div class="sig-name" style="margin-bottom: 1px; height: 15px; display: flex; align-items: center; justify-content: center;">${purchaseRequest.approver || ''}</div>
+            <div class="sig-line"></div>
+            <div style="font-size: 10px;">Signature Over Printed Name</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="footer-row">
+        <div class="footer-col">
+          Document Series: OPR00000001-OPR99999999
+        </div>
+        <div class="footer-col" style="min-width: 600px;">
+          Software Provider: MIS — Software Calumpit, Bulacan
+        </div>
+      </div>
+    </div>
+  `;
+
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
@@ -41,125 +144,187 @@ export const PurchaseRequestPrintModal = ({ isOpen, onClose, purchaseRequest }) 
         return;
       }
 
+      const items = purchaseRequest.details || [];
+      const totalItems = items.length;
+      const remarks = purchaseRequest.remarks || '';
+
+      const calculateRemarksHeight = (text) => {
+        if (!text || text.length === 0) return 0;
+        const charsPerLine = 100;
+        const lineHeight = 14;
+        const numLines = Math.ceil(text.length / charsPerLine);
+        const basePadding = 20;
+        return (numLines * lineHeight) + basePadding;
+      };
+
+      const calculateRowHeight = (item) => {
+        const baseHeight = 28;
+        const descLength = (item.itemDescription || '').length;
+        const extraHeight = Math.floor(descLength / 20) * 3;
+        return baseHeight + extraHeight;
+      };
+
+      const totalItemsHeight = items.reduce((sum, item) => sum + calculateRowHeight(item), 0);
+
+      const HEADER_HEIGHT = 180;
+      const FOOTER_HEIGHT = 150;
+      const availableHeight = 900 - HEADER_HEIGHT - FOOTER_HEIGHT;
+
+      const calculateItemsPerPage = () => {
+        let currentPageItems = [];
+        let currentPageHeight = 0;
+        let pageNum = 1;
+        const pages = [];
+
+        items.forEach((item) => {
+          const itemHeight = calculateRowHeight(item);
+          const reservedHeight = 60;
+          const effectiveAvailableHeight = availableHeight - reservedHeight;
+
+          if (currentPageHeight + itemHeight > effectiveAvailableHeight && currentPageItems.length > 0) {
+            pages.push({ items: currentPageItems, pageNum: pageNum });
+            pageNum++;
+            currentPageItems = [item];
+            currentPageHeight = itemHeight;
+          } else {
+            currentPageItems.push(item);
+            currentPageHeight += itemHeight;
+          }
+        });
+
+        if (currentPageItems.length > 0) {
+          pages.push({ items: currentPageItems, pageNum: pageNum });
+        }
+
+        return pages;
+      };
+
+      const pages = calculateItemsPerPage();
+      const actualTotalPages = pages.length === 0 ? 1 : pages.length;
+
+      let allPagesHtml = '';
+
+      pages.forEach((page, index) => {
+        const pageNum = index + 1;
+        const pageItems = page.items;
+        const isLastPage = pageNum === actualTotalPages;
+        const remarksHeight = calculateRemarksHeight(remarks);
+        const lastPageItemsHeight = pageItems.reduce((sum, item) => sum + calculateRowHeight(item), 0);
+        const footerElementsHeight = 60;
+        const remainingSpaceAfterItems = availableHeight - footerElementsHeight - lastPageItemsHeight;
+        const remarksDisplayMode = remarksHeight > remainingSpaceAfterItems ? 'normal' : 'pre-wrap';
+
+        const pageHtml = `
+          <div class="print-page">
+            ${generateHeader(purchaseRequest, pageNum, actualTotalPages)}
+
+            <!-- Items Table -->
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 10%; padding: 4px 3px;">Item Code</th>
+                  <th style="width: 35%; padding: 4px 3px;">Item Description</th>
+                  <th style="width: 10%; padding: 4px 3px; text-align: center;">U/M</th>
+                  <th style="width: 15%; padding: 4px 3px; text-align: center;">Quantity</th>
+                  <th style="width: 15%; padding: 4px 3px; text-align: left;">Budget Code</th>
+                  <th style="width: 15%; padding: 4px 3px; text-align: left;">Date Needed</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pageItems.length > 0
+                  ? pageItems.map((item) => `
+                      <tr>
+                        <td style="width: 10%; padding: 4px 3px; text-align: left; vertical-align: top;">${item.itemNumber || '-'}</td>
+                        <td style="width: 35%; padding: 4px 3px; vertical-align: top;">${item.itemDescription || '-'}</td>
+                        <td style="width: 10%; padding: 4px 3px; text-align: center; vertical-align: top;">${item.unitOfMeasure || '-'}</td>
+                        <td style="width: 15%; padding: 4px 3px; text-align: center; vertical-align: top;">${finalQty(item.quantity, item.qtyCancel)}</td>
+                        <td style="width: 15%; padding: 4px 3px; vertical-align: top;">${item.budgetCode || '-'}</td>
+                        <td style="width: 15%; padding: 4px 3px; vertical-align: top;">${item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    `).join('')
+                  : '<tr><td colspan="6" style="padding: 4px 3px; text-align: center; color: #666;">No items found for this purchase request</td></tr>'}
+              </tbody>
+            </table>
+
+            ${isLastPage ? `
+              <div class="nothing-else">--------------------------------------------------------------------------------------------------- Nothing Else Follows -----------------------------------------------------------------------------------------------</div>
+
+              <div class="line-items-count">
+                Number of Line Items: ${totalItems}
+              </div>
+
+              ${remarks ? `
+                <div class="remarks-label">Remarks:</div>
+                <div style="font-size: 9px; margin-bottom: 10px; white-space: ${remarksDisplayMode};">${remarksDisplayMode === 'normal' ? remarks.replace(/\n/g, ' ') : remarks}</div>
+              ` : ''}
+            ` : ''}
+
+            ${generateFooter(purchaseRequest)}
+          </div>
+        `;
+
+        allPagesHtml += pageHtml;
+      });
+
       const printContent = `
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Purchase Request - ${purchaseRequest.referenceNo}</title>
           <style>
             @media print {
-              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-              .header { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-              .company-name { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px; }
-              .reference-no { font-size: 18px; font-weight: bold; color: #dc2626; }
-              .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; }
-              .status-posted { background: #ddd6fe; color: #7c3aed; }
-              .status-for-confirmation { background: #dbeafe; color: #2563eb; }
-              .status-for-approval { background: #fef3c7; color: #d97706; }
-              .status-completed { background: #d1fae5; color: #065f46; }
-              .status-rejected { background: #fee2e2; color: #dc2626; }
-              .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
-              .info-item { margin-bottom: 8px; }
-              .info-label { font-size: 12px; color: #666; font-weight: bold; margin-bottom: 2px; }
-              .info-value { font-size: 14px; color: #333; }
-              .remarks { margin-bottom: 30px; padding: 15px; background: #f9f9f9; border-left: 4px solid #2563eb; }
-              .remarks-label { font-weight: bold; margin-bottom: 5px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-              th { background: #f5f5f5; font-weight: bold; }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              .total-row { font-weight: bold; background: #f0f0f0; }
-              .rush-indicator { color: #dc2626; font-weight: bold; font-size: 16px; }
-              .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #666; }
-              @page { margin: 0.5in; }
+              body { font-family: Arial, sans-serif; margin: 0; padding: 2px; padding-bottom: 80px; font-size: 10px; }
+              .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 5px; }
+              .header-left { flex: 0.5; }
+              .header-right { flex: 0.5; text-align: left; }
+              .header-upper-right { flex: 0.5; text-align: right; margin: 5px 0 0 0; }
+              .company-logo { max-width: 120px; height: auto; }
+              .company-name { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 2px; }
+              .company-info { font-size: 10px; color: #333; line-height: 1.3; }
+              .form-details { font-size: 10px; color: #333; margin-bottom: 3px; }
+              .form-details-inline { display: inline-block; }
+              .po-title { font-size: 16px; font-weight: bold; text-align: right; margin: 5px 0 0 0; }
+              .po-info-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 5px; margin-bottom: 10px; font-size: 9px; }
+              .po-info-cell { padding: 3px 5px; border: none; border-bottom: 1px solid #ccc; }
+              .po-info-label { font-size: 10px; color: #666; font-weight: normal; margin-bottom: 2px; }
+              .po-info-value { color: #333; font-size: 10px; }
+              .supplier-section { display: flex; justify-content: space-between; margin: 15px 0; }
+              .supplier-box { flex: 1; }
+              .supplier-box:last-child { margin-left: 10px; }
+              .supplier-label { font-size: 9px; color: #666; font-weight: normal; margin-bottom: 6px; }
+              .supplier-name { font-size: 11px; font-weight: bold; margin-bottom: 5px; }
+              .supplier-info { font-size: 9px; color: #333; line-height: 1.4; }
+              table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9px; table-layout: fixed; }
+              th { background: #666; color: white; font-weight: bold; padding: 4px 3px; text-align: left; }
+              td { padding: 4px 3px; }
+              td.text-center { text-align: center; }
+              td.text-right { text-align: right; }
+              .nothing-else { text-align: center; font-weight: bold; margin: 8px 0; padding: 5px 0; }
+              .total-row { display: flex; justify-content: flex-end; margin: 10px 0; font-weight: bold; font-size: 11px; }
+              .total-amount { border-bottom: 4px double #ccc; padding-bottom: 1px; min-width: 150px; text-align: right; }
+              .line-items-count { font-size: 9px; margin: 5px 0; }
+              .remarks-label { font-style: italic; margin: 10px 0 5px 0; font-size: 9px; }
+              .condition-text { font-size: 9px; line-height: 1.5; color: #333; margin: 15px 0; }
+              .distribution-section { margin: 15px 0; }
+              .distribution-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: center; }
+              .distribution-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 10px; }
+              .distribution-table th { background: #666; color: white; font-weight: bold; padding: 4px 3px; text-align: left; }
+              .distribution-table td { padding: 4px 3px; border-bottom: 1px solid #ccc; }
+              .signature-section { border-top: 1px solid #ccc; padding-top: 8px; margin-bottom: 10px; }
+              .sig-header { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 10px; color: #666; }
+              .sig-col { flex: 1; text-align: center; }
+              .sig-line { border-top: 1px solid #ccc; padding-top: 3px; font-size: 7px; width: 100%; }
+              .sig-name { margin-top: 5px; font-size: 9px; }
+              .footer-section { font-size: 9px; margin-top: 20px; padding-top: 8px; position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 8px 2px; width: 100%; }
+              .footer-row { display: flex; justify-content: space-between; margin: 3px 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding-top: 8px; padding-bottom: 8px; }
+              .footer-col { flex: 1; text-align: left; min-width: 300px; }
+              @page { margin: 0.3in; size: auto; }
+              .print-page { page-break-after: always; min-height: 0; }
+              .print-page:last-child { page-break-after: auto; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-name">${purchaseRequest.company || 'SANTEH'}</div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div class="reference-no">Purchase Request #${purchaseRequest.referenceNo}</div>
-              <div>
-                <span class="status status-${purchaseRequest.requestStatus?.toLowerCase().replace(' ', '-') || 'unknown'}">
-                  ${purchaseRequest.requestStatus || 'Unknown'}
-                </span>
-                ${purchaseRequest.isRush ? '<span class="rush-indicator">RUSH</span>' : ''}
-              </div>
-            </div>
-            <div style="margin-top: 10px; font-size: 12px; color: #666;">
-              Requested on: ${formatDate(purchaseRequest.dateRequested)}
-            </div>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="info-label">REQUESTED BY</div>
-              <div class="info-value">${purchaseRequest.requestedBy || '-'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">LOCATION</div>
-              <div class="info-value">${purchaseRequest.locationCode || '-'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">REVIEWER</div>
-              <div class="info-value">${purchaseRequest.reviewer || '-'}
-                ${purchaseRequest.dateReviewed ? ` [REVIEWED: ${formatDate(purchaseRequest.dateReviewed)}]` : ' [PENDING]'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">APPROVER</div>
-              <div class="info-value">${purchaseRequest.approver || '-'}
-                ${purchaseRequest.dateApproved ? ` [APPROVED: ${formatDate(purchaseRequest.dateApproved)}]` : ' [PENDING]'}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">ADDRESSED TO</div>
-              <div class="info-value">${purchaseRequest.addressedTo || '-'}
-                ${purchaseRequest.dateReceived ? ` [RECEIVED: ${formatDate(purchaseRequest.dateReceived)}]` : ' [PENDING]'}</div>
-            </div>
-          </div>
-
-          ${purchaseRequest.remarks ? `
-            <div class="remarks">
-              <div class="remarks-label">REMARKS:</div>
-              <div>${purchaseRequest.remarks}</div>
-            </div>
-          ` : ''}
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 10%;">Item Code</th>
-                <th style="width: 25%;">Item Description</th>
-                <th style="width: 8%;">UOFM</th>
-                <th style="width: 10%;" class="text-center">Quantity</th>
-                <th style="width: 15%;">Budget Code</th>
-                <th style="width: 12%;">Date Needed</th>
-                <th style="width: 20%;">Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${purchaseRequest.details && purchaseRequest.details.length > 0
-                ? purchaseRequest.details.map(item => `
-                    <tr>
-                      <td>${item.itemNumber || '-'}</td>
-                      <td>${item.itemDescription || '-'}</td>
-                      <td>${item.unitOfMeasure || '-'}</td>
-                      <td class="text-center">${finalQty(item.quantity, item.qtyCancel)}</td>
-                      <td>${item.budgetCode || '-'}</td>
-                      <td>${item.dateNeeded ? new Date(item.dateNeeded).toLocaleDateString() : '-'}</td>
-                      <td>${item.remarks || '-'}</td>
-                    </tr>
-                  `).join('')
-                : '<tr><td colspan="7" class="text-center">No items found for this request</td></tr>'
-              }
-            </tbody>
-          </table>
-
-          <div class="footer">
-            <div>Generated on: ${new Date().toLocaleString()}</div>
-            <div>SANTEH FEEDS CORPORATION - Purchase Request System</div>
-          </div>
+          ${allPagesHtml}
         </body>
         </html>
       `;

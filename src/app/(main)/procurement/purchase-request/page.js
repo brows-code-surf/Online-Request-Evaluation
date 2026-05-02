@@ -273,17 +273,15 @@ function PurchaseRequestContent() {
       const requestStatus = titleParts.length > 1 ? titleParts[1] : '';
 
       const matchesStatus = filterStatus === 'all' || filterStatus === '' ||
-        (filterStatus === 'RUSH' ? approval.isRush :
-          filterStatus === 'POSTED' || filterStatus === 'NOT POSTED' ? approval.status === filterStatus :
-            requestStatus === filterStatus);
+        (filterStatus === 'RUSH' ? approval.isRush : approval.status === filterStatus);
 
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
       if (sortBy === 'date') {
         return new Date(b.requestDate) - new Date(a.requestDate);
-      } else if (sortBy === 'requester') {
-        return a.requester.localeCompare(b.requester);
+      } else if (sortBy === 'company') {
+        return a.title.localeCompare(b.title);
       } else if (sortBy === 'status') {
         return a.status.localeCompare(b.status);
       }
@@ -516,6 +514,7 @@ function PurchaseRequestContent() {
           sortBy={sortBy}
           onSortByChange={setSortBy}
           approvals={filteredApprovals}
+          allApprovals={approvals}
           selectedApprovalId={selectedPurchaseRequest?.id}
           onApprovalSelect={handleSelectPurchaseRequest}
           getStatusColor={getStatusColor}

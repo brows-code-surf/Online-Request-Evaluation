@@ -26,6 +26,7 @@ function PurchaseOrderContent() {
   const loadingRef = useRef(false);
 
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [fullApprovals, setFullApprovals] = useState([]);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
   const [purchaseOrderDetails, setPurchaseOrderDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -79,6 +80,7 @@ function PurchaseOrderContent() {
       try {
         const result = await reloadPurchaseOrdersData();
         if (result.success) {
+          setFullApprovals(result.approvalsData);
           // Only set initial selection if we don't have one already
           if (!selectedPurchaseOrder) {
             const id = searchParams.get('id');
@@ -218,8 +220,8 @@ function PurchaseOrderContent() {
     .sort((a, b) => {
       if (sortBy === 'date') {
         return new Date(b.requestDate) - new Date(a.requestDate);
-      } else if (sortBy === 'requester') {
-        return a.requester.localeCompare(b.requester);
+      } else if (sortBy === 'supplier') {
+        return a.department.localeCompare(b.department);
       } else if (sortBy === 'status') {
         return a.status.localeCompare(b.status);
       }
@@ -395,6 +397,7 @@ function PurchaseOrderContent() {
           sortBy={sortBy}
           onSortByChange={setSortBy}
           approvals={filteredApprovals}
+          allApprovals={fullApprovals}
           selectedApprovalId={selectedPurchaseOrder?.id}
           onApprovalSelect={handleSelectPurchaseOrder}
           getStatusColor={getStatusColor}
