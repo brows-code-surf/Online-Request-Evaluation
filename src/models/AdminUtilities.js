@@ -232,7 +232,7 @@ class AdminUtilities {
             console.log('Transaction started for unposting receiving entry');
 
             const checkQuery = `
-                SELECT POSTSTATUS, ROWID FROM [PURCHASE.RECEIVEHEADER.1]
+                SELECT POSTSTATUS, ROWID, PONUMBER FROM [PURCHASE.RECEIVEHEADER.1]
                 WHERE REFERENCENO = @referenceNo
             `;
             const checkResult = await transaction.request()
@@ -243,7 +243,9 @@ class AdminUtilities {
                 throw new Error('Receiving entry not found');
             }
 
-            if (checkResult.recordset[0].POSTSTATUS === 0) {
+            const header = checkResult.recordset[0];
+
+            if (header.POSTSTATUS === 0) {
                 throw new Error('Receiving entry is not posted');
             }
 
@@ -257,9 +259,10 @@ class AdminUtilities {
             let poDetailsResult = { recordset: [] };
             if (rids.length > 0) {
                 // Get PO details for RIDs in this receiving entry
-                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')})`;
+                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')}) AND PONUMBER = @poNumber`;
                 const poDetailsRequest = transaction.request();
                 rids.forEach((rid, i) => poDetailsRequest.input(`rid${i}`, rid));
+                poDetailsRequest.input('poNumber', header.PONUMBER);
                 poDetailsResult = await poDetailsRequest.query(poDetailsQuery);
             }
 
@@ -437,9 +440,10 @@ class AdminUtilities {
             let poDetailsResult = { recordset: [] };
             if (rids.length > 0) {
                 // Get PO details for RIDs in this receiving entry
-                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')})`;
+                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')}) AND PONUMBER = @poNumber`;
                 const poDetailsRequest = transaction.request();
                 rids.forEach((rid, i) => poDetailsRequest.input(`rid${i}`, rid));
+                poDetailsRequest.input('poNumber', header.PONUMBER);
                 poDetailsResult = await poDetailsRequest.query(poDetailsQuery);
             }
 
@@ -634,10 +638,11 @@ class AdminUtilities {
 
             const allServed = itemStatuses.every(status => status === 'SERVED');
             const someServed = itemStatuses.some(status => status === 'SERVED');
+            const somePartiallyServed = itemStatuses.some(status => status === 'PARTIALLY SERVED');
 
             if (allServed) {
                 return 'SERVED';
-            } else if (someServed) {
+            } else if (someServed || somePartiallyServed) {
                 return 'PARTIALLY SERVED';
             } else {
                 return 'P.O. APPROVED';

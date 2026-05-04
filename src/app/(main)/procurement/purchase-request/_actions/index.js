@@ -224,6 +224,16 @@ export async function cancelPurchaseRequest(referenceNo, cancellerName, cancelRe
   }
 }
 
+export async function cancelPurchaseRequestItem(referenceNo, rid, cancellerName, quantityToCancel, cancelReason = '') {
+  try {
+    const result = await PurchaseRequest.cancelPurchaseRequestItem(referenceNo, rid, cancellerName, quantityToCancel, cancelReason);
+    return result;
+  } catch (error) {
+    console.error('Error canceling purchase request item:', error);
+    return { success: false, message: 'Failed to cancel purchase request item' };
+  }
+}
+
 export async function getPurchaseRequestStats(user = null) {
   try {
     const stats = await PurchaseRequest.getPurchaseRequestStats(user);

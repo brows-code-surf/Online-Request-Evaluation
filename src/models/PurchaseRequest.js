@@ -161,9 +161,12 @@ class PurchaseRequest {
 
             // Get details
             const detailsQuery = `
-                SELECT ROWID, REFERENCENO, ITEMNMBR, ITEMDESC, RID, UOFM, QUANTITY, QTYCANCEL, BUDGETCODE, REMARKS, DATENEEDED, ITEMSTATUS, LINETYPE FROM [PURCHASE.REQUESTDETAILS.1]
-                WHERE REFERENCENO = @referenceNo
-                ORDER BY ROWID
+                SELECT prd.ROWID, prd.REFERENCENO, prd.ITEMNMBR, prd.ITEMDESC, prd.RID, prd.UOFM, prd.QUANTITY, prd.QTYCANCEL, prd.BUDGETCODE, prd.REMARKS, prd.DATENEEDED, prd.ITEMSTATUS, prd.LINETYPE,
+                    CASE WHEN pod.PONUMBER IS NOT NULL THEN 1 ELSE 0 END as hasPO
+                FROM [PURCHASE.REQUESTDETAILS.1] prd
+                LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON prd.REFERENCENO = pod.PRCODE AND prd.RID = pod.RID
+                WHERE prd.REFERENCENO = @referenceNo
+                ORDER BY prd.ROWID
             `;
             const detailsResult = await connection.request()
                 .input('referenceNo', referenceNo)
@@ -210,7 +213,8 @@ class PurchaseRequest {
                     remarks: detail.REMARKS,
                     dateNeeded: detail.DATENEEDED,
                     itemStatus: detail.ITEMSTATUS,
-                    lineType: detail.LINETYPE
+                    lineType: detail.LINETYPE,
+                    hasPO: detail.hasPO === 1
                 }))
             };
         } catch (error) {
@@ -739,11 +743,20 @@ class PurchaseRequest {
 
             for (const record of poNumberResult.recordset) {
                 const poNumber = record.PONUMBER;
-                const updatePOHeaderQuery = `UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
-                const poHeaderResult = await transaction.request()
+                // Check if all items in this PO are cancelled
+                const checkPoCancelledQuery = `SELECT COUNT(*) as total, SUM(CASE WHEN ITEMSTATUS = 'PR CANCELLED' THEN 1 ELSE 0 END) as cancelled FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+                const checkPoResult = await transaction.request()
                     .input('poNumber', poNumber)
-                    .query(updatePOHeaderQuery);
-                console.log('PO header update result:', poHeaderResult);
+                    .query(checkPoCancelledQuery);
+
+                const { total, cancelled } = checkPoResult.recordset[0];
+                if (total === cancelled) {
+                    const updatePOHeaderQuery = `UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
+                    const poHeaderResult = await transaction.request()
+                        .input('poNumber', poNumber)
+                        .query(updatePOHeaderQuery);
+                    console.log('PO header update result:', poHeaderResult);
+                }
 
                 const updatePODetailsQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
                 const poDetailsResult = await transaction.request()
@@ -796,6 +809,168 @@ class PurchaseRequest {
             }
 
             throw new Error('Failed to cancel purchase request: ' + error.message);
+        } finally {
+            // Connection will be automatically released back to the pool
+            // No need to explicitly close it
+        }
+    }
+
+    // Cancel specific item in purchase request
+    static async cancelPurchaseRequestItem(referenceNo, rid, cancellerName, quantityToCancel, cancelReason = '') {
+        let connection = null;
+        let transaction = null;
+
+        try {
+            console.log('cancelPurchaseRequestItem called with:', { referenceNo, rid, cancellerName, cancelReason });
+
+            // Get connection from pool
+            const pool = await connectToDatabase(process.env.DB_SFC);
+            connection = await pool.connect();
+
+            // BEGIN TRANSACTION
+            transaction = new sql.Transaction(connection);
+            await transaction.begin();
+
+            console.log('Transaction started for purchase request item cancellation');
+
+            // Get current item details
+            const itemQuery = `SELECT QUANTITY, QTYCANCEL, ITEMSTATUS, REMARKS FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @referenceNo AND RID = @rid`;
+            const itemResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('rid', rid)
+                .query(itemQuery);
+
+            if (itemResult.recordset.length === 0) {
+                throw new Error('Item not found');
+            }
+
+            const item = itemResult.recordset[0];
+            const currentQtyCancel = item.QTYCANCEL || 0;
+            const newQtyCancel = currentQtyCancel + quantityToCancel;
+
+            if (newQtyCancel > item.QUANTITY) {
+                throw new Error('Cannot cancel more than available quantity');
+            }
+
+            // Update qtyCancel and append remarks
+            const newRemarks = (item.REMARKS || '') + (cancelReason ? ' ' + cancelReason : '');
+            const updateItemQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET QTYCANCEL = @qtyCancel, REMARKS = @remarks WHERE REFERENCENO = @referenceNo AND RID = @rid`;
+            const itemUpdateResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('rid', rid)
+                .input('qtyCancel', newQtyCancel)
+                .input('remarks', newRemarks)
+                .query(updateItemQuery);
+
+            // Update item status based on cancellation
+            let newStatus = item.ITEMSTATUS;
+            if (newQtyCancel >= item.QUANTITY) {
+                newStatus = 'CANCELLED';
+            } else if (item.ITEMSTATUS === 'SERVED') {
+                // If it was fully served, now partially cancelled
+                newStatus = 'PARTIALLY SERVED';
+            }
+
+            if (newStatus !== item.ITEMSTATUS) {
+                const statusQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = @status WHERE REFERENCENO = @referenceNo AND RID = @rid`;
+                await transaction.request()
+                    .input('referenceNo', referenceNo)
+                    .input('rid', rid)
+                    .input('status', newStatus)
+                    .query(statusQuery);
+            }
+
+            console.log('Item update result:', itemUpdateResult);
+
+            // Update related PO details if exists
+            const getPoDetailQuery = `SELECT PONUMBER FROM [PURCHASE.ORDERDETAILS.1] WHERE PRCODE = @referenceNo AND RID = @rid`;
+            const poDetailResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .input('rid', rid)
+                .query(getPoDetailQuery);
+
+            for (const record of poDetailResult.recordset) {
+                const poNumber = record.PONUMBER;
+                const updatePODetailQuery = `UPDATE [PURCHASE.ORDERDETAILS.1] SET QTYCANCEL = QTYCANCEL + @qtyCancel WHERE PONUMBER = @poNumber AND RID = @rid`;
+                const poDetailUpdateResult = await transaction.request()
+                    .input('poNumber', poNumber)
+                    .input('rid', rid)
+                    .input('qtyCancel', quantityToCancel)
+                    .query(updatePODetailQuery);
+                console.log('PO detail update result:', poDetailUpdateResult);
+            }
+
+            // Check if all items are cancelled, then cancel the PR header
+            const checkAllCancelledQuery = `SELECT COUNT(*) as total, SUM(CASE WHEN QTYCANCEL >= QUANTITY THEN 1 ELSE 0 END) as fullyCancelled FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @referenceNo`;
+            const checkResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(checkAllCancelledQuery);
+
+            const { total, fullyCancelled } = checkResult.recordset[0];
+            if (total === fullyCancelled) {
+                // All items fully cancelled, cancel the header
+                const updateHeaderQuery = `UPDATE [PURCHASE.REQUESTHEADER.1] SET REQUESTSTATUS = 'CANCELLED', CANCELREMARKS = @cancelReason, IS_READ = 1 WHERE REFERENCENO = @referenceNo`;
+                await transaction.request()
+                    .input('referenceNo', referenceNo)
+                    .input('cancelReason', cancelReason)
+                    .query(updateHeaderQuery);
+
+                // Also cancel related POs if all their items are cancelled
+                const getPoNumbersQuery = `SELECT DISTINCT PONUMBER FROM [PURCHASE.ORDERDETAILS.1] WHERE PRCODE = @referenceNo`;
+                const poNumbersResult = await transaction.request()
+                    .input('referenceNo', referenceNo)
+                    .query(getPoNumbersQuery);
+
+                for (const record of poNumbersResult.recordset) {
+                    const poNumber = record.PONUMBER;
+                    // Check if all items in this PO are cancelled
+                    const checkPoCancelledQuery = `SELECT COUNT(*) as total, SUM(CASE WHEN QTYCANCEL >= QTYORDER THEN 1 ELSE 0 END) as cancelled FROM [PURCHASE.ORDERDETAILS.1] WHERE PONUMBER = @poNumber`;
+                    const checkPoResult = await transaction.request()
+                        .input('poNumber', poNumber)
+                        .query(checkPoCancelledQuery);
+
+                    const { total, cancelled } = checkPoResult.recordset[0];
+                    if (total === cancelled) {
+                        const updatePOHeaderQuery = `UPDATE [PURCHASE.ORDERHEADER.1] SET PO_STATUS = 'PR CANCELLED' WHERE PONUMBER = @poNumber`;
+                        await transaction.request()
+                            .input('poNumber', poNumber)
+                            .query(updatePOHeaderQuery);
+                    }
+                }
+            }
+            
+            // Log activity for cancelled item
+            const activityQuery = `
+                INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)
+                VALUES (@activity, @cancellerName, GETDATE())
+            `;
+            await transaction.request()
+                .input('activity', `Item ${rid} in Purchase Request ${referenceNo} cancelled ${quantityToCancel} quantity by ${cancellerName}`)
+                .input('cancellerName', cancellerName)
+                .query(activityQuery);
+
+            // COMMIT TRANSACTION - All operations succeeded
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+
+            return {
+                success: true,
+                message: 'Purchase request item cancelled successfully'
+            };
+        } catch (error) {
+            console.error('Error canceling purchase request item:', error);
+
+            // ROLLBACK TRANSACTION - Any failure triggers rollback
+            if (transaction) {
+                try {
+                    await transaction.rollback();
+                    console.log('Transaction rolled back due to error');
+                } catch (rollbackError) {
+                    console.error('Error during transaction rollback:', rollbackError);
+                }
+            }
+
+            throw new Error('Failed to cancel purchase request item: ' + error.message);
         } finally {
             // Connection will be automatically released back to the pool
             // No need to explicitly close it

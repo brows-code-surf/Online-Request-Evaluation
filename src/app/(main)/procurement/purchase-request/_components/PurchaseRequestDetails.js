@@ -6,7 +6,7 @@ import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import { PurchaseRequestPrintModal } from './PurchaseRequestPrintModal';
-import { hasReceivingForPR } from '../_actions';
+import { hasReceivingForPR, cancelPurchaseRequestItem } from '../_actions';
 
 const STATUS_OPTIONS = [
   { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
@@ -54,16 +54,20 @@ export default function PurchaseRequestDetails({
   loading = false
 }) {
   const { user, darkMode, isAdmin } = useAuth();
-   const [showRejectModal, setShowRejectModal] = useState(false);
-   const [showConfirmModal, setShowConfirmModal] = useState(false);
-   const [showCancelModal, setShowCancelModal] = useState(false);
-   const [showPrintModal, setShowPrintModal] = useState(false);
-   const [showActionMenu, setShowActionMenu] = useState(false);
-   const [actionLoading, setActionLoading] = useState(false);
-   const [pendingAction, setPendingAction] = useState(null);
-   const [cancelRemarks, setCancelRemarks] = useState('');
-   const [hasReceiving, setHasReceiving] = useState(false);
-   const menuRef = useRef(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCancelItemModal, setShowCancelItemModal] = useState(false);
+  const [cancelItemRid, setCancelItemRid] = useState('');
+  const [cancelItemQuantity, setCancelItemQuantity] = useState(0);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [cancelRemarks, setCancelRemarks] = useState('');
+  const [cancelItemRemarks, setCancelItemRemarks] = useState('');
+  const [hasReceiving, setHasReceiving] = useState(false);
+  const menuRef = useRef(null);
 
   // Real-time updates for this specific purchase request
   useSocketMultiple("request-evaluation-broadcast", {
@@ -147,37 +151,37 @@ export default function PurchaseRequestDetails({
   });
 
   // Close menu when clicking outside
-   useEffect(() => {
-     const handleClickOutside = (event) => {
-       if (menuRef.current && !menuRef.current.contains(event.target)) {
-         setShowActionMenu(false);
-       }
-     };
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowActionMenu(false);
+      }
+    };
 
-     if (showActionMenu) {
-       document.addEventListener('mousedown', handleClickOutside);
-     }
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-     return () => {
-       document.removeEventListener('mousedown', handleClickOutside);
-     };
-   }, [showActionMenu]);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionMenu]);
 
-    // Check if there is existing receiving for this PR
-    useEffect(() => {
-      const checkReceiving = async () => {
-        if (purchaseRequest?.referenceNo) {
-          try {
-            const result = await hasReceivingForPR(purchaseRequest.referenceNo);
-            setHasReceiving(result.hasReceiving);
-          } catch (error) {
-            console.error('Error checking receiving:', error);
-            setHasReceiving(false);
-          }
+  // Check if there is existing receiving for this PR
+  useEffect(() => {
+    const checkReceiving = async () => {
+      if (purchaseRequest?.referenceNo) {
+        try {
+          const result = await hasReceivingForPR(purchaseRequest.referenceNo);
+          setHasReceiving(result.hasReceiving);
+        } catch (error) {
+          console.error('Error checking receiving:', error);
+          setHasReceiving(false);
         }
-      };
-      checkReceiving();
-    }, [purchaseRequest?.referenceNo]);
+      }
+    };
+    checkReceiving();
+  }, [purchaseRequest?.referenceNo]);
 
   if (!purchaseRequest) return null;
 
@@ -271,11 +275,34 @@ export default function PurchaseRequestDetails({
     }
   };
 
+  const handleCancelItemConfirm = async () => {
+    console.log('Canceling item with quantity:', cancelItemQuantity, 'remarks:', cancelItemRemarks);
+    setShowCancelItemModal(false);
+    setActionLoading(true);
+
+    try {
+      await cancelPurchaseRequestItem(purchaseRequest.referenceNo, cancelItemRid, user?.empName, cancelItemQuantity, cancelItemRemarks);
+      onDataRefresh && onDataRefresh();
+    } catch (error) {
+      console.error('Error canceling purchase request item:', error);
+    } finally {
+      setActionLoading(false);
+      setCancelItemRemarks('');
+      setCancelItemQuantity(0);
+      setCancelItemRid('');
+    }
+  };
+
   const getDateRequested = () => {
     return `Requested on ${formatDate(purchaseRequest.dateRequested)}`;
   };
 
   const showItemStatusColumn = purchaseRequest.requestStatus !== 'FOR CONFIRMATION' && purchaseRequest.requestStatus !== 'FOR REQUEST APPROVAL' && purchaseRequest.requestStatus !== 'FOR PURCHASING LEAD TIME';
+  const showActionsColumn = purchaseRequest.details && purchaseRequest.details.some(item =>
+    item.itemStatus !== 'SERVED' && purchaseRequest.requestStatus !== 'CANCELLED' &&
+    (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) &&
+    !item.hasPO
+  );
 
   return (
     <div className="space-y-6">
@@ -343,8 +370,8 @@ export default function PurchaseRequestDetails({
                   Post
                 </button>
               )}
-                   {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
-                     <button
+              {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
+                <button
                   onClick={() => setShowCancelModal(true)}
                   disabled={loading || actionLoading}
                   className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
@@ -446,7 +473,7 @@ export default function PurchaseRequestDetails({
                       <span className="truncate">Post Request</span>
                     </button>
                   )}
-              {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
+                  {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
                     <button
                       onClick={() => {
                         setShowCancelModal(true);
@@ -592,6 +619,9 @@ export default function PurchaseRequestDetails({
                     <th className={`px-4 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Item Status</th>
                   )}
                   <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Remarks</th>
+                  {showActionsColumn && (
+                    <th className={`px-2 py-3 text-left text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -614,12 +644,31 @@ export default function PurchaseRequestDetails({
                           </span>
                         </td>
                       )}
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
+                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
+                        {showActionsColumn && (
+                          <td className={`px-2 py-3 text-sm`}>
+                          {item.itemStatus !== 'SERVED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
+                            <button
+                              onClick={() => {
+                                setCancelItemRid(item.rid);
+                                setCancelItemQuantity(Math.max(1, item.quantity - (item.qtyCancel || 0))); // Default to available quantity
+                                setShowCancelItemModal(true);
+                              }}
+                                disabled={actionLoading}
+                                className={`inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                                  }`}
+                                aria-label="Cancel item"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </td>
+                        )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={showItemStatusColumn ? 9 : 8} className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <td colSpan={8 + (showItemStatusColumn ? 1 : 0) + (showActionsColumn ? 1 : 0)} className={`px-4 py-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       No items found for this request
                     </td>
                   </tr>
@@ -697,6 +746,25 @@ export default function PurchaseRequestDetails({
                         </p>
                       </div>
                     )}
+
+                     {/* Actions */}
+                     {item.itemStatus !== 'SERVED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
+                       <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                         <button
+                           onClick={() => {
+                             setCancelItemRid(item.rid);
+                             setCancelItemQuantity(Math.max(1, item.quantity - (item.qtyCancel || 0))); // Default to available quantity
+                             setShowCancelItemModal(true);
+                           }}
+                           disabled={actionLoading}
+                           className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                             }`}
+                           aria-label="Cancel item"
+                         >
+                           Cancel Item
+                         </button>
+                       </div>
+                     )}
                   </div>
                 </div>
               ))
@@ -763,6 +831,33 @@ export default function PurchaseRequestDetails({
         confirmButtonText="Confirm Cancel"
         confirmButtonColor="red"
         iconPath="M6 18L18 6M6 6l12 12"
+      />
+
+      {/* Cancel Item Modal */}
+      <RejectRequestModal
+        isOpen={showCancelItemModal}
+        remarks={cancelItemRemarks}
+        onRemarksChange={setCancelItemRemarks}
+        onConfirm={handleCancelItemConfirm}
+        onCancel={() => {
+          setShowCancelItemModal(false);
+          setCancelItemRemarks('');
+          setCancelItemQuantity(0);
+          setCancelItemRid('');
+        }}
+        isLoading={actionLoading}
+        title="Cancel Purchase Request Item"
+        message="Please specify the quantity to cancel and provide additional remarks. Remarks will be appended to existing item remarks."
+        label="Additional Remarks"
+        placeholder="Enter additional remarks for this cancellation..."
+        confirmButtonText="Confirm Cancel Item"
+        confirmButtonColor="red"
+        iconPath="M6 18L18 6M6 6l12 12"
+        showQuantity={true}
+        quantity={cancelItemQuantity}
+        onQuantityChange={setCancelItemQuantity}
+        quantityLabel="Quantity to Cancel"
+        maxQuantity={purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.quantity - (purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.qtyCancel || 0)}
       />
 
       {/* Print Modal */}

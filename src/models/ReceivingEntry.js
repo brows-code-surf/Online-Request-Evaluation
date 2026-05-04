@@ -629,6 +629,13 @@ class ReceivingEntry {
                 throw new Error('Receiving entry is already posted');
             }
 
+            // Get PONUMBER from receiving header
+            const headerPoQuery = `SELECT PONUMBER FROM [PURCHASE.RECEIVEHEADER.1] WHERE REFERENCENO = @referenceNo`;
+            const headerPoResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(headerPoQuery);
+            const poNumber = headerPoResult.recordset[0].PONUMBER;
+
             // Get RIDs from receiving entry
             const receivingRidsQuery = `SELECT RID FROM [PURCHASE.RECEIVEDETAILS.1] WHERE REFERENCENO = @referenceNo`;
             const receivingRidsResult = await transaction.request()
@@ -638,10 +645,11 @@ class ReceivingEntry {
 
             let poDetailsResult = { recordset: [] };
             if (rids.length > 0) {
-                // Get PO details for RIDs in this receiving entry (supports multiple POs)
-                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')})`;
+                // Get PO details for RIDs in this receiving entry
+                const poDetailsQuery = `SELECT RID, PONUMBER, PRCODE, QTYSERVED FROM [PURCHASE.ORDERDETAILS.1] WHERE RID IN (${rids.map((_, i) => `@rid${i}`).join(',')}) AND PONUMBER = @poNumber`;
                 const poDetailsRequest = transaction.request();
                 rids.forEach((rid, i) => poDetailsRequest.input(`rid${i}`, rid));
+                poDetailsRequest.input('poNumber', poNumber);
                 poDetailsResult = await poDetailsRequest.query(poDetailsQuery);
             }
 
@@ -690,11 +698,19 @@ class ReceivingEntry {
                         .query(`UPDATE [PURCHASE.ORDERDETAILS.1] SET ITEMSTATUS = CASE WHEN QTYORDER = QTYSERVED THEN 'SERVED' ELSE 'PARTIALLY SERVED' END WHERE PONUMBER = @poNumber AND RID = @rid`);
                 }
                 if (PRCODE) {
-                    // Update ITEMSTATUS in REQUESTDETAILS to match ORDERDETAILS after posting
+                    // Update ITEMSTATUS in REQUESTDETAILS to 'SERVED' only if quantity received equals QUANTITY from PR
+                    const PRQuantityQuery = `SELECT QUANTITY FROM [PURCHASE.REQUESTDETAILS.1] WHERE REFERENCENO = @prCode AND RID = @rid`;
+                    const PRQuantityResult = await transaction.request()
+                        .input('prCode', PRCODE)
+                        .input('rid', RID)
+                        .query(PRQuantityQuery);
+
+                    const status = (quantity === PRQuantityResult.recordset[0].QUANTITY) ? 'SERVED' : 'PARTIALLY SERVED';
                     await transaction.request()
                         .input('prCode', PRCODE)
                         .input('rid', RID)
-                        .query(`UPDATE rd SET ITEMSTATUS = od.ITEMSTATUS FROM [PURCHASE.REQUESTDETAILS.1] rd INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON rd.REFERENCENO = od.PRCODE AND rd.RID = od.RID WHERE rd.REFERENCENO = @prCode AND rd.RID = @rid`);
+                        .input('status', status)
+                        .query(`UPDATE [PURCHASE.REQUESTDETAILS.1] SET ITEMSTATUS = @status WHERE REFERENCENO = @prCode AND RID = @rid`);
                     prCodes.push(PRCODE);
                 }
             }
