@@ -22,7 +22,8 @@ const STATUS_OPTIONS = [
   { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
   { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
-  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' }
+  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' },
+  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
 ];
 
 const ITEM_STATUS_OPTIONS = [
@@ -38,7 +39,8 @@ const ITEM_STATUS_OPTIONS = [
   { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
   { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
-  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' }
+  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' },
+  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
 ];
 
 export default function PurchaseRequestDetails({
@@ -58,6 +60,7 @@ export default function PurchaseRequestDetails({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showCancelItemModal, setShowCancelItemModal] = useState(false);
+  const [showCancelItemWarningModal, setShowCancelItemWarningModal] = useState(false);
   const [cancelItemRid, setCancelItemRid] = useState('');
   const [cancelItemQuantity, setCancelItemQuantity] = useState(0);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -647,20 +650,24 @@ export default function PurchaseRequestDetails({
                        <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{item.remarks || '-'}</td>
                         {showActionsColumn && (
                           <td className={`px-2 py-3 text-sm`}>
-                          {item.itemStatus !== 'SERVED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
+                          {item.itemStatus !== 'SERVED' && item.itemStatus !== 'CANCELLED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
                             <button
                               onClick={() => {
                                 setCancelItemRid(item.rid);
                                 setCancelItemQuantity(Math.max(1, item.quantity - (item.qtyCancel || 0))); // Default to available quantity
-                                setShowCancelItemModal(true);
+                                if (item.hasCanvass) {
+                                  setShowCancelItemWarningModal(true);
+                                } else {
+                                  setShowCancelItemModal(true);
+                                }
                               }}
-                                disabled={actionLoading}
-                                className={`inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                                  }`}
-                                aria-label="Cancel item"
-                              >
-                                Cancel
-                              </button>
+                              disabled={actionLoading}
+                              className={`inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                                }`}
+                              aria-label="Cancel item"
+                            >
+                              Cancel
+                            </button>
                             )}
                           </td>
                         )}
@@ -748,21 +755,25 @@ export default function PurchaseRequestDetails({
                     )}
 
                      {/* Actions */}
-                     {item.itemStatus !== 'SERVED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
+                      {item.itemStatus !== 'SERVED' && item.itemStatus !== 'CANCELLED' && purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !item.hasPO && (
                        <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                         <button
-                           onClick={() => {
-                             setCancelItemRid(item.rid);
-                             setCancelItemQuantity(Math.max(1, item.quantity - (item.qtyCancel || 0))); // Default to available quantity
-                             setShowCancelItemModal(true);
-                           }}
-                           disabled={actionLoading}
-                           className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
-                             }`}
-                           aria-label="Cancel item"
-                         >
-                           Cancel Item
-                         </button>
+                          <button
+                            onClick={() => {
+                              setCancelItemRid(item.rid);
+                              setCancelItemQuantity(Math.max(1, item.quantity - (item.qtyCancel || 0))); // Default to available quantity
+                              if (item.hasCanvass) {
+                                setShowCancelItemWarningModal(true);
+                              } else {
+                                setShowCancelItemModal(true);
+                              }
+                            }}
+                            disabled={actionLoading}
+                            className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
+                              }`}
+                            aria-label="Cancel item"
+                          >
+                            Cancel Item
+                          </button>
                        </div>
                      )}
                   </div>
@@ -833,32 +844,57 @@ export default function PurchaseRequestDetails({
         iconPath="M6 18L18 6M6 6l12 12"
       />
 
-      {/* Cancel Item Modal */}
-      <RejectRequestModal
-        isOpen={showCancelItemModal}
-        remarks={cancelItemRemarks}
-        onRemarksChange={setCancelItemRemarks}
-        onConfirm={handleCancelItemConfirm}
-        onCancel={() => {
-          setShowCancelItemModal(false);
-          setCancelItemRemarks('');
-          setCancelItemQuantity(0);
-          setCancelItemRid('');
-        }}
-        isLoading={actionLoading}
-        title="Cancel Purchase Request Item"
-        message="Please specify the quantity to cancel and provide additional remarks. Remarks will be appended to existing item remarks."
-        label="Additional Remarks"
-        placeholder="Enter additional remarks for this cancellation..."
-        confirmButtonText="Confirm Cancel Item"
+      {/* Cancel Item Warning Modal */}
+      <ConfirmModal
+        isOpen={showCancelItemWarningModal}
+        title="Warning: Item has Active Quotation"
+        message="This item has an associated quotation/canvass. Cancelling this item will permanently delete the quotation data. Are you sure you want to proceed?"
+        confirmButtonText="Yes, Proceed"
         confirmButtonColor="red"
-        iconPath="M6 18L18 6M6 6l12 12"
-        showQuantity={true}
-        quantity={cancelItemQuantity}
-        onQuantityChange={setCancelItemQuantity}
-        quantityLabel="Quantity to Cancel"
-        maxQuantity={purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.quantity - (purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.qtyCancel || 0)}
+        onConfirm={() => {
+          setShowCancelItemWarningModal(false);
+          setShowCancelItemModal(true);
+        }}
+        onCancel={() => {
+          setShowCancelItemWarningModal(false);
+          setCancelItemRid('');
+          setCancelItemQuantity(0);
+        }}
+        isLoading={false}
       />
+
+      {/* Cancel Item Modal */}
+      {(() => {
+        const currentItem = purchaseRequest.details?.find(item => item.rid === cancelItemRid);
+        const hasCanvass = currentItem?.hasCanvass === 1 || currentItem?.hasCanvass === true;
+        return (
+          <RejectRequestModal
+            isOpen={showCancelItemModal}
+            remarks={cancelItemRemarks}
+            onRemarksChange={setCancelItemRemarks}
+            onConfirm={handleCancelItemConfirm}
+            onCancel={() => {
+              setShowCancelItemModal(false);
+              setCancelItemRemarks('');
+              setCancelItemQuantity(0);
+              setCancelItemRid('');
+            }}
+            isLoading={actionLoading}
+            title="Cancel Purchase Request Item"
+            message={`Please specify the quantity to cancel and provide additional remarks. Remarks will be appended to existing item remarks.${hasCanvass ? ' QUOTATION will be deleted when cancelled per item.' : ''}`}
+            label="Additional Remarks"
+            placeholder="Enter additional remarks for this cancellation..."
+            confirmButtonText="Confirm Cancel Item"
+            confirmButtonColor="red"
+            iconPath="M6 18L18 6M6 6l12 12"
+            showQuantity={true}
+            quantity={cancelItemQuantity}
+            onQuantityChange={setCancelItemQuantity}
+            quantityLabel="Quantity to Cancel"
+            maxQuantity={purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.quantity - (purchaseRequest.details?.find(item => item.rid === cancelItemRid)?.qtyCancel || 0)}
+          />
+        );
+      })()}
 
       {/* Print Modal */}
       <PurchaseRequestPrintModal

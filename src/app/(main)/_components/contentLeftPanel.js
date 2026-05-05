@@ -176,7 +176,7 @@ export default function ContentLeftPanel({
                         </svg>
                         <input
                             type="text"
-                            placeholder="Search requests..."
+                            placeholder={filterType === 'accounts' ? 'Search users...' : 'Search requests...'}
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 bg-blue-400 text-white placeholder-blue-200 rounded-lg focus:outline-none focus:bg-blue-300"
@@ -346,12 +346,12 @@ export default function ContentLeftPanel({
                                                 </span>
                                             )}
                                         </div>
-                                        {!userAccount && (
+                                        {!(userAccount || filterType === 'accounts') && (
                                             <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : ''}`}>
                                                 {approval.requester}
                                             </p>
                                         )}
-                                        {userAccount && approval.email && (
+                                        {(userAccount || filterType === 'accounts') && (
                                             <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} mt-2 ${enableReadStatus && approval.isRead === 'NOT READ' ? 'font-bold' : 'font-semibold'}`}>
                                                 {approval.jobTitle}
                                             </p>

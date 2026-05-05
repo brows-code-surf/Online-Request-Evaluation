@@ -472,13 +472,13 @@ class Dashboard {
     // Calculate percent change: (today - past7DaysAverage) / past7DaysAverage * 100
     calculatePercentChange(historicalData) {
         if (!historicalData || historicalData.length === 0) return 0;
-        
+
         const today = historicalData[historicalData.length - 1]?.value || 0;
         const past7Days = historicalData.slice(-7);
-        
+
         // Filter out zero values for a more meaningful average
         const nonZeroDays = past7Days.filter(item => item.value > 0);
-        
+
         // If no non-zero days in past 7, just compare today to yesterday
         if (nonZeroDays.length === 0) {
             if (past7Days.length < 2) return 0;
@@ -487,12 +487,240 @@ class Dashboard {
             if (yesterday === 0) return 100; // New activity today
             return ((today - yesterday) / yesterday) * 100;
         }
-        
+
         // Calculate average of non-zero days
         const average = nonZeroDays.reduce((sum, item) => sum + item.value, 0) / nonZeroDays.length;
-        
+
         if (average === 0) return 0;
         return ((today - average) / average) * 100;
+    }
+
+    // Get procurement performance metrics
+    async getProcurementPerformanceMetrics(user = null, isAdmin = false, days = 30) {
+        let sfcConnection;
+        try {
+            sfcConnection = await connectToDatabase(process.env.DB_SFC);
+
+            // 1. Average time to serve requests (simplified approach)
+            const avgCompletionTimeQuery = `
+                SELECT AVG(processing_days) as avgCompletionDays
+                FROM (
+                    SELECT TOP 1000
+                        DATEDIFF(DAY, prh.DATEREQUESTED, MAX(rh.RECEIVEDATE)) as processing_days
+                    FROM [PURCHASE.REQUESTHEADER.1] prh
+                    INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
+                    INNER JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
+                    INNER JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
+                    WHERE prh.IS_POSTED = 1
+                        AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                        AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                        ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                    GROUP BY prh.REFERENCENO, prh.DATEREQUESTED
+                    HAVING DATEDIFF(DAY, prh.DATEREQUESTED, MAX(rh.RECEIVEDATE)) > 0
+                ) completion_times
+            `;
+
+            // 2. On-time delivery percentage (simplified)
+            const onTimeDeliveryQuery = `
+                SELECT
+                    COUNT(DISTINCT prh.REFERENCENO) as totalCompleted,
+                    COUNT(DISTINCT CASE WHEN rh.RECEIVEDATE <= min_dates.min_needed THEN prh.REFERENCENO END) as onTimeCount
+                FROM [PURCHASE.REQUESTHEADER.1] prh
+                INNER JOIN (
+                    SELECT REFERENCENO, MIN(DATENEEDED) as min_needed
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    GROUP BY REFERENCENO
+                ) min_dates ON prh.REFERENCENO = min_dates.REFERENCENO
+                INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
+                INNER JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
+                INNER JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
+                WHERE prh.IS_POSTED = 1
+                    AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                    AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+            `;
+
+            // 3. Requests received before due date (early requests)
+            const earlyRequestsQuery = `
+                SELECT COUNT(DISTINCT prh.REFERENCENO) as earlyRequestsCount
+                FROM [PURCHASE.REQUESTHEADER.1] prh
+                INNER JOIN [PURCHASE.REQUESTDETAILS.1] prd ON prh.REFERENCENO = prd.REFERENCENO
+                WHERE prh.IS_POSTED = 1
+                    AND prh.DATEREQUESTED < prd.DATENEEDED
+                    AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+            `;
+
+            // 4. Time consumed for requests to be served (simplified)
+            const timeToServeQuery = `
+                SELECT
+                    AVG(processing_days) as avgServeDays,
+                    COUNT(*) as totalRequests,
+                    SUM(CASE WHEN processing_days <= 7 THEN 1 ELSE 0 END) as servedWithinWeek
+                FROM (
+                    SELECT
+                        DATEDIFF(DAY, prh.DATEREQUESTED,
+                            CASE
+                                WHEN prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED') THEN prh.DATERECEIVED
+                                WHEN prh.REQUESTSTATUS IN ('FOR PURCHASING LEAD TIME') THEN prh.DATEAPPROVED
+                                ELSE prh.DATEREQUESTED
+                            END
+                        ) as processing_days
+                    FROM [PURCHASE.REQUESTHEADER.1] prh
+                    WHERE prh.IS_POSTED = 1
+                        AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                        AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED', 'FOR PURCHASING LEAD TIME')
+                        ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                ) processing_data
+            `;
+
+            const request = sfcConnection.request();
+            if (!isAdmin && user) {
+                request.input('userName', user.empName);
+            }
+
+            // Execute all queries in parallel for better performance
+            const [avgCompletionResult, onTimeResult, earlyResult, serveTimeResult] = await Promise.all([
+                request.query(avgCompletionTimeQuery),
+                request.query(onTimeDeliveryQuery),
+                request.query(earlyRequestsQuery),
+                request.query(timeToServeQuery)
+            ]);
+
+            const avgCompletionDays = avgCompletionResult.recordset[0]?.avgCompletionDays || 0;
+            const onTimeData = onTimeResult.recordset[0] || { totalCompleted: 0, onTimeCount: 0 };
+            const earlyRequests = earlyResult.recordset[0]?.earlyRequestsCount || 0;
+            const serveTimeData = serveTimeResult.recordset[0] || { avgServeDays: 0, totalRequests: 0, servedWithinWeek: 0 };
+
+            return {
+                averageCompletionTime: {
+                    days: Math.round(avgCompletionDays * 10) / 10, // Round to 1 decimal
+                    formatted: `${Math.round(avgCompletionDays * 10) / 10} days`
+                },
+                onTimeDelivery: {
+                    percentage: onTimeData.totalCompleted > 0
+                        ? Math.round((onTimeData.onTimeCount / onTimeData.totalCompleted) * 100)
+                        : 0,
+                    onTimeCount: onTimeData.onTimeCount,
+                    totalCompleted: onTimeData.totalCompleted
+                },
+                earlyRequests: {
+                    count: earlyRequests,
+                    percentage: this.calculateEarlyRequestsPercentage(earlyRequests, days)
+                },
+                timeToServe: {
+                    averageDays: Math.round(serveTimeData.avgServeDays * 10) / 10,
+                    totalRequests: serveTimeData.totalRequests,
+                    servedWithinWeek: serveTimeData.servedWithinWeek,
+                    weekEfficiency: serveTimeData.totalRequests > 0
+                        ? Math.round((serveTimeData.servedWithinWeek / serveTimeData.totalRequests) * 100)
+                        : 0
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching procurement performance metrics:', error);
+            return {
+                averageCompletionTime: { days: 0, formatted: 'N/A' },
+                onTimeDelivery: { percentage: 0, onTimeCount: 0, totalCompleted: 0 },
+                earlyRequests: { count: 0, percentage: 0 },
+                timeToServe: { averageDays: 0, totalRequests: 0, servedWithinWeek: 0, weekEfficiency: 0 }
+            };
+        }
+    }
+
+    // Helper method to calculate early requests percentage
+    calculateEarlyRequestsPercentage(earlyCount, days) {
+        // This is an approximation since we can't easily count total requests in the same query
+        // In a real implementation, you'd want to count total requests in the period
+        // For now, we'll return the count and let the frontend handle the display
+        return earlyCount;
+    }
+
+    // Get procurement efficiency trends over time
+    async getProcurementEfficiencyTrends(user = null, isAdmin = false, months = 6) {
+        let sfcConnection;
+        try {
+            sfcConnection = await connectToDatabase(process.env.DB_SFC);
+
+            // First, get basic monthly aggregations
+            const basicQuery = `
+                SELECT
+                    YEAR(prh.DATEREQUESTED) as year,
+                    MONTH(prh.DATEREQUESTED) as month,
+                    COUNT(*) as totalRequests,
+                    AVG(DATEDIFF(DAY, prh.DATEREQUESTED,
+                        CASE
+                            WHEN prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED') THEN prh.DATERECEIVED
+                            WHEN prh.REQUESTSTATUS IN ('FOR PURCHASING LEAD TIME') THEN prh.DATEAPPROVED
+                            ELSE prh.DATEREQUESTED
+                        END
+                    )) as avgProcessingDays
+                FROM [PURCHASE.REQUESTHEADER.1] prh
+                WHERE prh.IS_POSTED = 1
+                    AND prh.DATEREQUESTED >= DATEADD(MONTH, -${months}, GETDATE())
+                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                GROUP BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
+                ORDER BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
+            `;
+
+            // Second query for on-time deliveries and early requests
+            const performanceQuery = `
+                SELECT
+                    YEAR(prh.DATEREQUESTED) as year,
+                    MONTH(prh.DATEREQUESTED) as month,
+                    COUNT(*) as totalCompleted,
+                    COUNT(DISTINCT CASE WHEN rh.RECEIVEDATE <= min_dates.min_needed THEN prh.REFERENCENO END) as onTimeDeliveries,
+                    COUNT(DISTINCT CASE WHEN prh.DATEREQUESTED < min_dates.min_needed THEN prh.REFERENCENO END) as earlyRequests
+                FROM [PURCHASE.REQUESTHEADER.1] prh
+                INNER JOIN (
+                    SELECT REFERENCENO, MIN(DATENEEDED) as min_needed
+                    FROM [PURCHASE.REQUESTDETAILS.1]
+                    GROUP BY REFERENCENO
+                ) min_dates ON prh.REFERENCENO = min_dates.REFERENCENO
+                LEFT JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
+                LEFT JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
+                LEFT JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
+                WHERE prh.IS_POSTED = 1
+                    AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                    AND prh.DATEREQUESTED >= DATEADD(MONTH, -${months}, GETDATE())
+                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                GROUP BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
+            `;
+
+            const request = sfcConnection.request();
+            if (!isAdmin && user) {
+                request.input('userName', user.empName);
+            }
+
+            const [basicResult, performanceResult] = await Promise.all([
+                request.query(basicQuery),
+                request.query(performanceQuery)
+            ]);
+
+            // Merge the results
+            const mergedResults = basicResult.recordset.map(basic => {
+                const performance = performanceResult.recordset.find(
+                    p => p.year === basic.year && p.month === basic.month
+                ) || { onTimeDeliveries: 0, earlyRequests: 0, totalCompleted: 0 };
+
+                return {
+                    period: `${basic.year}-${String(basic.month).padStart(2, '0')}`,
+                    month: basic.month,
+                    year: basic.year,
+                    totalRequests: basic.totalRequests,
+                    avgProcessingDays: Math.round((basic.avgProcessingDays || 0) * 10) / 10,
+                    onTimeDeliveryRate: basic.totalRequests > 0
+                        ? Math.round((performance.onTimeDeliveries / basic.totalRequests) * 100)
+                        : 0,
+                    earlyRequests: performance.earlyRequests
+                };
+            });
+
+            return mergedResults;
+        } catch (error) {
+            console.error('Error fetching procurement efficiency trends:', error);
+            return [];
+        }
     }
 }
 

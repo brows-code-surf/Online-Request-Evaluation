@@ -162,9 +162,11 @@ class PurchaseRequest {
             // Get details
             const detailsQuery = `
                 SELECT prd.ROWID, prd.REFERENCENO, prd.ITEMNMBR, prd.ITEMDESC, prd.RID, prd.UOFM, prd.QUANTITY, prd.QTYCANCEL, prd.BUDGETCODE, prd.REMARKS, prd.DATENEEDED, prd.ITEMSTATUS, prd.LINETYPE,
-                    CASE WHEN pod.PONUMBER IS NOT NULL THEN 1 ELSE 0 END as hasPO
+                    CASE WHEN pod.PONUMBER IS NOT NULL THEN 1 ELSE 0 END as hasPO,
+                    CASE WHEN qd.PQCODE IS NOT NULL THEN 1 ELSE 0 END as hasCanvass
                 FROM [PURCHASE.REQUESTDETAILS.1] prd
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] pod ON prd.REFERENCENO = pod.PRCODE AND prd.RID = pod.RID
+                LEFT JOIN [PURCHASE.QUOTATIONDETAILS.1] qd ON prd.REFERENCENO = qd.PRCODE AND prd.RID = qd.RID
                 WHERE prd.REFERENCENO = @referenceNo
                 ORDER BY prd.ROWID
             `;
@@ -214,7 +216,8 @@ class PurchaseRequest {
                     dateNeeded: detail.DATENEEDED,
                     itemStatus: detail.ITEMSTATUS,
                     lineType: detail.LINETYPE,
-                    hasPO: detail.hasPO === 1
+                    hasPO: detail.hasPO === 1,
+                    hasCanvass: detail.hasCanvass === 1
                 }))
             };
         } catch (error) {
@@ -765,6 +768,18 @@ class PurchaseRequest {
                 console.log('PO details update result for PO', poNumber, ':', poDetailsResult);
             }
 
+            const deleteHeaderCanvassQuery = `DELETE FROM [PURCHASE.QUOTATIONHEADER.1] WHERE PQCODE IN (SELECT PQCODE FROM [PURCHASE.QUOTATIONDETAILS.1] WHERE PRCODE = @referenceNo)`;
+            const canvassHeaderDeleteResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(deleteHeaderCanvassQuery);
+            console.log('Canvass delete result:', canvassHeaderDeleteResult);
+
+            const deleteDetailsCanvassQuery = `DELETE FROM [PURCHASE.QUOTATIONDETAILS.1] WHERE PRCODE = @referenceNo`;
+            const canvassDetailsDeleteResult = await transaction.request()
+                .input('referenceNo', referenceNo)
+                .query(deleteDetailsCanvassQuery);
+            console.log('Canvass details delete result:', canvassDetailsDeleteResult);
+
             if (headerResult.rowsAffected[0] === 0) {
                 throw new Error('Purchase request not found');
             }
@@ -853,7 +868,7 @@ class PurchaseRequest {
             }
 
             // Update qtyCancel and append remarks
-            const newRemarks = (item.REMARKS || '') + (cancelReason ? ' ' + cancelReason : '');
+            const newRemarks = (item.REMARKS || '') + 'REASON:' + (cancelReason ? ' ' + cancelReason : '') + ` (Cancelled ${quantityToCancel} by ${cancellerName} on ${new Date().toLocaleString()})\n`;
             const updateItemQuery = `UPDATE [PURCHASE.REQUESTDETAILS.1] SET QTYCANCEL = @qtyCancel, REMARKS = @remarks WHERE REFERENCENO = @referenceNo AND RID = @rid`;
             const itemUpdateResult = await transaction.request()
                 .input('referenceNo', referenceNo)
@@ -938,7 +953,20 @@ class PurchaseRequest {
                     }
                 }
             }
-            
+
+
+            const deleteHeaderCanvassQuery = `DELETE FROM [PURCHASE.QUOTATIONHEADER.1] WHERE PQCODE IN (SELECT PQCODE FROM [PURCHASE.QUOTATIONDETAILS.1] WHERE RID = @rid)`;
+            const canvassHeaderDeleteResult = await transaction.request()
+                .input('rid', rid)
+                .query(deleteHeaderCanvassQuery);
+            console.log('Canvass delete result:', canvassHeaderDeleteResult);
+
+            const deleteDetailsCanvassQuery = `DELETE FROM [PURCHASE.QUOTATIONDETAILS.1] WHERE RID = @rid`;
+            const canvassDetailsDeleteResult = await transaction.request()
+                .input('rid', rid)
+                .query(deleteDetailsCanvassQuery);
+            console.log('Canvass details delete result:', canvassDetailsDeleteResult);
+
             // Log activity for cancelled item
             const activityQuery = `
                 INSERT INTO [ACTIVITY.LOGS.1] (ACTIVITY, CREATEDBY, DATECREATED)

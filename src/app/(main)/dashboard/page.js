@@ -1,509 +1,155 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { getDashboardStats, getDashboardTrend, checkWelcomeModalStatus } from './_actions/index.js';
-import { Users, Activity, FileText, TrendingUp, User, Calendar } from 'lucide-react';
-import { StatCard } from "./_components/StatCard.js";
-import { ChartCard } from "./_components/ChartCard.js";
-import { RecentLogins } from "./_components/RecentLogins.js";
-import { RecentActivityLogs } from "./_components/RecentActivityLogs.js";
-import { WelcomeModal } from "./_components/WelcomeModal.js";
-import { SkeletonDashboard } from '@/app/_components/skeletonLoader.js';
+import { useState, useEffect } from 'react';
+import { ShoppingCart, Users, Package, LineChart, Settings } from 'lucide-react';
 import HeaderNavBar from '@/app/_components/headerNavBar.js';
-
-import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import { useAuth } from '@/utils/authContext';
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
-
-// Client-side function to handle live updates
-function simulateLiveUpdate(currentData) {
-    const newData = { ...currentData };
-
-    // Keep stats the same (we'll refetch real data via socket events)
-
-    // Update sparklines by shifting and adding current values
-    Object.keys(newData.stats.sparklines).forEach(key => {
-        if (newData.stats.sparklines[key] && Array.isArray(newData.stats.sparklines[key])) {
-            newData.stats.sparklines[key] = [...newData.stats.sparklines[key]]; // Create a mutable copy
-            newData.stats.sparklines[key].shift(); // Remove oldest value
-            newData.stats.sparklines[key].push(newData.stats[key]); // Add current value
-        }
-    });
-
-    // Percent changes will be recalculated when data is refetched
-    // Keep request evaluations the same (updated via socket events)
-
-    // Keep 30-day trend the same (updated when date range changes)
-
-    return newData;
-}
-
-export default function DashboardClient() {
-    const { darkMode, user, isAdmin } = useAuth();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedDateRange, setSelectedDateRange] = useState(30); // Default to 30 days
-    const [customStartDate, setCustomStartDate] = useState('');
-    const [customEndDate, setCustomEndDate] = useState('');
-    const [useCustomRange, setUseCustomRange] = useState(false);
+export default function Dashboard() {
+    const { darkMode } = useAuth();
     const [mounted, setMounted] = useState(false);
-    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-    const isUserAdmin = user && isAdmin();
-    const theme = mounted ? darkMode : false;
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    // Calculate total for percentage calculations
-    const totalRequests = data ? (data.totalRequests || 0) : 0;
+    const theme = mounted ? darkMode : false;
 
-    // Custom tooltip for pie chart
-    const CustomPieTooltip = useCallback(({ active, payload }) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            const percentage = ((data.count / totalRequests) * 100).toFixed(1);
-            return (
-                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg shadow-lg`}>
-                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.status}</p>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Count: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{data.count}</span>
-                    </p>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Percentage: <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{percentage}%</span>
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    }, [darkMode, totalRequests]);
-
-    // Custom label for pie slices
-    const renderCustomLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-        if (percent < 0.05) return null; // Don't show labels for slices smaller than 5%
-
-        const RADIAN = Math.PI / 180;
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-        return (
-            <text
-                x={x}
-                y={y}
-                fill="white"
-                textAnchor={x > cx ? 'start' : 'end'}
-                dominantBaseline="central"
-                fontSize="12"
-                fontWeight="bold"
-            >
-                {`${(percent * 100).toFixed(0)}%`}
-            </text>
-        );
-    }, []);
-
-    // Helper function to fetch with timeout
-    const fetchWithTimeout = (promise, timeout = 30000) => {
-        return Promise.race([
-            promise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout))
-        ]);
-    };
-
-    useEffect(() => {
-        async function fetchStats() {
-            const isInitialLoad = !data;
-            if (isInitialLoad) setLoading(true);
-            try {
-                const statsData = await fetchWithTimeout(getDashboardStats(user, isUserAdmin, selectedDateRange), 30000);
-                setData(statsData);
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-                if (isInitialLoad) setData(null); // Only set to null on initial load failure
-            }
-            if (isInitialLoad) setLoading(false);
-        }
-        fetchStats();
-    }, [user, isUserAdmin, selectedDateRange]);
-
-    // Check if data is complete to determine loading state
-    const isDataComplete = data &&
-        data.stats &&
-        data.stats.sparklines &&
-        data.stats.sparklines.totalUsers &&
-        data.stats.sparklines.activeUsers &&
-        data.stats.sparklines.pendingRequests &&
-        data.stats.sparklines.requestsLast24h &&
-        data.stats.percentChanges &&
-        data.thirtyDayTrend &&
-        Array.isArray(data.thirtyDayTrend) &&
-        data.thirtyDayTrend.length > 0 &&
-        data.requestEvaluations &&
-        Array.isArray(data.requestEvaluations) &&
-        data.recentActivityLogs &&
-        Array.isArray(data.recentActivityLogs);
-
-    // Update loading state based on data completeness
-    useEffect(() => {
-        if (isDataComplete) {
-            setLoading(false);
-        }
-    }, [isDataComplete]);
-
-    // Check if welcome modal should be shown
-    useEffect(() => {
-        const checkWelcomeModal = async () => {
-            if (!user?.employeeID || !isDataComplete) return;
-
-            try {
-                // Check if modal was already shown today
-                const today = new Date().toISOString().split('T')[0];
-                const lastShown = localStorage.getItem('welcomeModalShown');
-                if (lastShown === today) {
-                    return; // Already shown today
-                }
-
-                // Check server-side if user should see modal
-                const result = await checkWelcomeModalStatus(user.employeeID);
-                if (result.shouldShowModal) {
-                    setShowWelcomeModal(true);
-                    // Mark as shown today
-                    localStorage.setItem('welcomeModalShown', today);
-                }
-            } catch (error) {
-                console.error('Error checking welcome modal status:', error);
-            }
-        };
-
-        checkWelcomeModal();
-    }, [user?.employeeID, isDataComplete]);
-
-    // Socket listeners for real-time updates
-    useSocketMultiple("dashboard-broadcast", {
-        "activity-log-added": (data) => {
-            console.log("Activity log added:", data);
-            setData(prevData => {
-                if (!prevData) return prevData;
-
-                // Add the new activity log to the beginning of the list
-                const newActivityLog = {
-                    id: Date.now(), // Use timestamp as temporary ID
-                    activity: data.activity,
-                    createdBy: data.createdBy,
-                    dateCreated: data.dateCreated
-                };
-
-                const updatedActivityLogs = [newActivityLog, ...prevData.recentActivityLogs.slice(0, 9)]; // Keep only 10 items
-
-                return {
-                    ...prevData,
-                    recentActivityLogs: updatedActivityLogs
-                };
-            });
+    const dashboards = [
+        {
+            title: 'Procurement Dashboard',
+            description: 'Monitor procurement requests, performance metrics, and efficiency trends',
+            icon: ShoppingCart,
+            href: '/dashboard/procurement',
+            color: 'from-blue-500 to-blue-600'
         },
-
-        "stats-updated": async (data) => {
-            console.log("Stats updated:", data);
-            // Refetch dashboard stats when requests are approved/rejected
-            try {
-                const updatedStats = await getDashboardStats(user, isUserAdmin, selectedDateRange);
-                setData(updatedStats);
-            } catch (error) {
-                console.error('Error refetching stats after update:', error);
-            }
+        {
+            title: 'Supplier Dashboard',
+            description: 'Track supplier performance, contracts, and delivery analytics',
+            icon: Users,
+            href: '/dashboard/supplier',
+            color: 'from-green-500 to-green-600'
+        },
+        {
+            title: 'Item Dashboard',
+            description: 'Analyze item usage, inventory levels, and procurement patterns',
+            icon: Package,
+            href: '/dashboard/item',
+            color: 'from-purple-500 to-purple-600'
+        },
+        {
+            title: 'System Dashboard',
+            description: 'System health, user activity, and administrative insights',
+            icon: Settings,
+            href: '/dashboard/system',
+            color: 'from-orange-500 to-orange-600'
         }
-    });
-
-    // Prepare chart data
-    const pieChartData = data ? (data.requestEvaluations.length > 0 ? data.requestEvaluations : [{ status: 'No Data', count: 1 }]) : [{ status: 'Loading', count: 1 }];
-
-    // Filter line chart data based on selected date range
-    const getFilteredLineChartData = () => {
-        if (!data || !data.thirtyDayTrend || data.thirtyDayTrend.length === 0) {
-            return [{ date: new Date().toISOString().split('T')[0], requests: 0 }];
-        }
-
-        let startDate, endDate;
-
-        if (useCustomRange && customStartDate && customEndDate) {
-            startDate = new Date(customStartDate);
-            endDate = new Date(customEndDate);
-        } else {
-            endDate = new Date();
-            startDate = new Date();
-            startDate.setDate(endDate.getDate() - selectedDateRange + 1);
-        }
-
-        return data.thirtyDayTrend
-            .filter(item => {
-                const itemDate = new Date(item.date);
-                return itemDate >= startDate && itemDate <= endDate;
-            })
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-    };
-
-    const lineChartData = getFilteredLineChartData();
-
-    // Get chart title based on selected range
-    const getChartTitle = () => {
-        if (useCustomRange && customStartDate && customEndDate) {
-            return `Custom Range: ${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()}`;
-        }
-        return `${selectedDateRange}-Day Requests Trend`;
-    };
-
-    if (loading || !data) {
-        return (
-            <div className={`min-h-screen mt-15 ${theme ? 'bg-gray-900 dark' : 'bg-white'}`}>
-                <HeaderNavBar />
-                <SkeletonDashboard />
-            </div>
-        );
-    }
+    ];
 
     return (
-        <div className={`min-h-screen mt-15 ${theme ? 'bg-gray-900 dark' : 'bg-white'}`}>
+        <div className={`min-h-screen mt-15 relative overflow-hidden ${theme ? 'bg-gray-900 dark' : 'bg-white'}`}>
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-5">
+                <div className="absolute inset-0" style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}></div>
+            </div>
+
             <HeaderNavBar />
-            {/* Main Content - Scrollable */}
-            <div className="overflow-y-auto">
-                <div className="p-4 sm:p-6">
-                    {/* Stats Row - Responsive grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <StatCard
-                            title={isUserAdmin ? "Total Users" : "My Total Requests"}
-                            value={data.stats.totalUsers}
-                            icon={isUserAdmin ? Users : FileText}
-                            colorClass="from-blue-500 to-blue-600"
-                            delay={0.1}
-                            sparklineData={data.stats.sparklines.totalUsers}
-                            percentChange={data.stats.percentChanges.totalUsers}
-                            darkMode={darkMode}
-                        />
-                        <StatCard
-                            title={isUserAdmin ? "Active Users" : "My Active Requests"}
-                            value={data.stats.activeUsers}
-                            icon={isUserAdmin ? Activity : Activity}
-                            colorClass="from-green-500 to-green-600"
-                            delay={0.2}
-                            sparklineData={data.stats.sparklines.activeUsers}
-                            percentChange={data.stats.percentChanges.activeUsers}
-                            darkMode={darkMode}
-                        />
-                        <StatCard
-                            title="Pending Request Evaluations"
-                            value={data.stats.pendingRequests}
-                            icon={FileText}
-                            colorClass="from-orange-500 to-orange-600"
-                            delay={0.3}
-                            sparklineData={data.stats.sparklines.pendingRequests}
-                            percentChange={data.stats.percentChanges.pendingRequests}
-                            darkMode={darkMode}
-                        />
-                        <StatCard
-                            title={isUserAdmin ? "Requests in the Last 24 Hours" : "My Requests (Last 24h)"}
-                            value={data.stats.requestsLast24h}
-                            icon={TrendingUp}
-                            colorClass="from-purple-500 to-purple-600"
-                            delay={0.4}
-                            sparklineData={data.stats.sparklines.requestsLast24h}
-                            percentChange={data.stats.percentChanges.requestsLast24h}
-                            darkMode={darkMode}
-                        />
+
+            <div className="relative p-4 sm:p-6 lg:p-8">
+                <div className="max-w-7xl mx-auto">
+                    {/* Hero Section */}
+                    <div className="text-center mb-16">
+                        {/* Icon with layered glow effect */}
+                        <div className="relative inline-flex items-center justify-center mb-8">
+                            <div className="absolute w-24 h-24 rounded-full bg-blue-500 opacity-20 blur-xl animate-pulse" />
+                            <div className="absolute w-20 h-20 rounded-full bg-blue-400 opacity-15 blur-md" />
+                            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700 shadow-2xl shadow-blue-500/40 ring-1 ring-white/10">
+                                <LineChart className="w-10 h-10 text-white drop-shadow-md" />
+                            </div>
+                        </div>
+
+                        {/* Title with subtle gradient */}
+                        <h1 className={`text-5xl font-bold mb-4 tracking-tight ${darkMode
+                                ? 'text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-gray-300'
+                                : 'text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-blue-900 to-gray-800'
+                            }`}>
+                            Dashboard Hub
+                        </h1>
+
+                        {/* Decorative divider */}
+                        <div className="flex items-center justify-center gap-3 mb-5">
+                            <div className={`h-px w-16 ${darkMode ? 'bg-gradient-to-r from-transparent to-blue-400' : 'bg-gradient-to-r from-transparent to-blue-300'}`} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <div className={`h-px w-16 ${darkMode ? 'bg-gradient-to-l from-transparent to-blue-400' : 'bg-gradient-to-l from-transparent to-blue-300'}`} />
+                        </div>
+
+                        {/* Subtitle */}
+                        <p className={`text-lg max-w-xl mx-auto leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
+                            Access comprehensive analytics and insights across all system areas
+                            to drive <span className={`font-medium ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>informed decisions</span>
+                        </p>
                     </div>
 
-                    {/* Charts and Recent Logins Row - Responsive layout */}
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        {/* Charts Section - Stacked on mobile, side by side on larger screens */}
-                        <div className="xl:col-span-2 space-y-6 xl:space-y-0">
-                            {/* Request Evaluation Status Breakdown - Donut Chart */}
-                            <div className="xl:hidden">
-                                <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5} darkMode={darkMode}>
-                                    <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
-                                        <PieChart>
-                                            <Pie
-                                                data={pieChartData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={40}
-                                                outerRadius={80}
-                                                paddingAngle={2}
-                                                dataKey="count"
-                                                nameKey="status"
-                                                label={renderCustomLabel}
-                                                labelLine={false}
-                                            >
-                                                {pieChartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip content={CustomPieTooltip} />
-                                            <Legend
-                                                verticalAlign="bottom"
-                                                height={36}
-                                                formatter={(value, entry) => (
-                                                    <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>
-                                                        {value} ({entry.payload.count})
-                                                    </span>
-                                                )}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </ChartCard>
-                            </div>
+                    {/* Dashboard Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                        {dashboards.map((dashboard, index) => {
+                            const Icon = dashboard.icon;
+                            return (
+                                <a
+                                    key={dashboard.href}
+                                    href={dashboard.href}
+                                    className={`group relative overflow-hidden rounded-2xl shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-105 ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm border border-gray-700/50' : 'bg-white/70 backdrop-blur-sm border border-gray-200/50'
+                                        }`}
+                                    style={{ animationDelay: `${index * 100}ms` }}
+                                >
+                                    {/* Gradient Overlay */}
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${dashboard.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
 
-                            {/* Date Range Selector */}
-                            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm mb-6`}>
-                                <div className="flex flex-wrap items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className={`h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                                        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-700'}`}>Time Range:</span>
+                                    {/* Animated Border */}
+                                    <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${dashboard.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 p-[2px]`}>
+                                        <div className={`w-full h-full rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'}`}></div>
                                     </div>
 
-                                    {/* Preset buttons */}
-                                    <div className="flex flex-wrap gap-2">
-                                        {[7, 14, 30, 60, 90].map((days) => (
-                                            <button
-                                                key={days}
-                                                onClick={() => {
-                                                    setSelectedDateRange(days);
-                                                    setUseCustomRange(false);
-                                                }}
-                                                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${!useCustomRange && selectedDateRange === days
-                                                        ? 'bg-blue-600 text-white shadow-sm'
-                                                        : `${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`
-                                                    }`}
-                                            >
-                                                {days === 7 ? '7 Days' : days === 14 ? '14 Days' : days === 30 ? '30 Days' : days === 60 ? '60 Days' : '90 Days'}
-                                            </button>
-                                        ))}
-
-                                        {/* Custom Range Button */}
-                                        <button
-                                            onClick={() => setUseCustomRange(!useCustomRange)}
-                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${useCustomRange
-                                                    ? 'bg-blue-600 text-white shadow-sm'
-                                                    : `${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`
-                                                }`}
-                                        >
-                                            Custom
-                                        </button>
-                                    </div>
-
-                                    {/* Custom Date Inputs */}
-                                    {useCustomRange && (
-                                        <div className="flex items-center gap-2 ml-4">
-                                            <label className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-600'}`}>From:</label>
-                                            <input
-                                                type="date"
-                                                value={customStartDate}
-                                                onChange={(e) => setCustomStartDate(e.target.value)}
-                                                className={`px-2 py-1 ${darkMode ? 'text-white' : 'text-black'} text-xs border ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                            />
-                                            <label className={`text-xs font-medium ${darkMode ? 'text-white' : 'text-gray-600'}`}>To:</label>
-                                            <input
-                                                type="date"
-                                                value={customEndDate}
-                                                onChange={(e) => setCustomEndDate(e.target.value)}
-                                                className={`px-2 py-1 ${darkMode ? 'text-white' : 'text-black'} text-xs border ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                            />
+                                    <div className="relative p-8 h-full flex flex-col">
+                                        {/* Icon */}
+                                        <div className={`inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br ${dashboard.color} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                                            <Icon className="w-8 h-8 text-white" />
                                         </div>
-                                    )}
-                                </div>
-                            </div>
 
-                            {/* 30-Day Requests Trend - Line Chart */}
-                            <ChartCard title={getChartTitle()} delay={0.6} darkMode={darkMode}>
-                                <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
-                                    <LineChart data={lineChartData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                        <XAxis
-                                            dataKey="date"
-                                            tick={{ fontSize: 10 }}
-                                            tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                        />
-                                        <YAxis tick={{ fontSize: 10 }} />
-                                        <Tooltip
-                                            labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                                            contentStyle={{
-                                                backgroundColor: "white",
-                                                border: "1px solid #e5e7eb",
-                                                borderRadius: "0.5rem",
-                                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1"
-                                            }}
-                                            formatter={(value, name) => [value, 'Requests']}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="requests"
-                                            stroke="#3b82f6"
-                                            strokeWidth={2}
-                                            dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                                            activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
+                                        {/* Content */}
+                                        <div className="flex-1">
+                                            <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3 group-hover:bg-gradient-to-r group-hover:bg-clip-text group-hover:${dashboard.color} transition-all duration-300`}>
+                                                {dashboard.title}
+                                            </h3>
+                                            <p className={`text-base ${darkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed mb-6`}>
+                                                {dashboard.description}
+                                            </p>
+                                        </div>
 
-                            {/* Spacer between line chart and pie chart */}
-                            <div className="hidden xl:block h-6"></div>
+                                        {/* CTA */}
+                                        <div className={`flex items-center justify-between ${darkMode ? 'text-blue-400' : 'text-blue-600'} group-hover:translate-x-2 transition-transform duration-300`}>
+                                            <span className="text-sm font-semibold">Explore Dashboard</span>
+                                            <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${dashboard.color} flex items-center justify-center group-hover:w-8 transition-all duration-300`}>
+                                                <span className="text-white text-xs">→</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            );
+                        })}
+                    </div>
 
-                            {/* Pie chart for larger screens - side by side with line chart */}
-                            <div className="hidden xl:block">
-                                <ChartCard title={`Request Evaluation Status Breakdown (Total: ${totalRequests})`} delay={0.5} darkMode={darkMode}>
-                                    <ResponsiveContainer width="100%" height={300} minWidth={300} minHeight={300}>
-                                        <PieChart>
-                                            <Pie
-                                                data={pieChartData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={40}
-                                                outerRadius={80}
-                                                paddingAngle={2}
-                                                dataKey="count"
-                                                nameKey="status"
-                                                label={renderCustomLabel}
-                                                labelLine={false}
-                                            >
-                                                {pieChartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={data.requestEvaluations.length > 0 ? COLORS[index % COLORS.length] : '#e5e7eb'} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip content={CustomPieTooltip} />
-                                            <Legend
-                                                verticalAlign="bottom"
-                                                height={36}
-                                                formatter={(value, entry) => (
-                                                    <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>
-                                                        {value} ({entry.payload.count})
-                                                    </span>
-                                                )}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </ChartCard>
-                            </div>
-                        </div>
-
-                        {/* Recently Logged In Users and Activity Logs Panel */}
-                        <div className="xl:col-span-1 space-y-6">
-                            {isUserAdmin && <RecentLogins users={data.recentLogins} delay={0.7} darkMode={darkMode} />}
-                            <RecentActivityLogs
-                                logs={data.recentActivityLogs}
-                                delay={isUserAdmin ? 0.8 : 0.7}
-                                darkMode={darkMode}
-                            />
-                        </div>
+                    {/* Bottom Section */}
+                    <div className="text-center mt-16">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Choose a dashboard above to dive deep into specific analytics and metrics
+                        </p>
                     </div>
                 </div>
             </div>
-
-            {/* Welcome Modal */}
-            <WelcomeModal
-                isOpen={showWelcomeModal}
-                onClose={() => setShowWelcomeModal(false)}
-            />
         </div>
     );
 }

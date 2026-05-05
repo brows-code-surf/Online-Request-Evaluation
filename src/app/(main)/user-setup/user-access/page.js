@@ -56,22 +56,26 @@ function UserAccessContent() {
         setPageLoading(true);
         try {
             const result = await getAllUsers();
-            if (result.success) {
-                setUsers(result.data);
+            if (result.success && result.data) {
+                setUsers(result.data.map(user => ({ ...user, title: user.requester })));
                 if (result.data.length > 0) {
                     // Set selected user first
                     setSelectedUser(result.data[0]);
-                    
+
                     // Load user access
                     loadUserAccess(result.data[0]);
-                    
+
                     // Fetch confirm by users - this will be called when selectedUser is set
                     // The useEffect below will handle this automatically
                 }
+            } else {
+                setUsers([]);
+                setErrorMessage(result.message || 'Failed to load users');
             }
         } catch (error) {
             console.error('Error fetching users:', error);
             setErrorMessage('Failed to load users');
+            setUsers([]);
         } finally {
             setPageLoading(false);
         }
@@ -667,6 +671,7 @@ function UserAccessContent() {
                     sortBy={sortBy}
                     onSortByChange={setSortBy}
                     approvals={filteredUsers}
+                    allApprovals={users}
                     selectedApprovalId={selectedUser?.id}
                     onApprovalSelect={handleSelectUser}
                     getStatusColor={getStatusColor}
