@@ -97,7 +97,7 @@ export async function loginUser(email, password) {
     console.error('Login action error:', error);
     return {
       success: false,
-      message: 'Login failed: ' + error.message
+      message: 'Login failed. Check Internet Connection and Please try again.'
     };
   }
 }

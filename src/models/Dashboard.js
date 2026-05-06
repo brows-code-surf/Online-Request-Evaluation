@@ -5,9 +5,9 @@ import connectToDatabase from '@/lib/db.js';
 import RequestEvaluation from '@/models/RequestEvaluation.js';
 class Dashboard {
     // Server action to get request evaluation status counts
-    async getRequestEvaluationStats() {
+    async getRequestEvaluationStats(days = null, startDate = null, endDate = null) {
         try {
-            return await RequestEvaluation.getRequestEvaluationStatusBreakdown();
+            return await RequestEvaluation.getRequestEvaluationStatusBreakdown(days, startDate, endDate);
         } catch (error) {
             console.error('Error fetching request evaluation stats:', error);
             return [];
@@ -15,9 +15,9 @@ class Dashboard {
     }
 
     // Server action to get request trend for specified number of days
-    async getThirtyDayTrend(days = 30) {
+    async getThirtyDayTrend(days = 30, startDate = null, endDate = null) {
         try {
-            return await RequestEvaluation.getThirtyDayRequestsTrend(days);
+            return await RequestEvaluation.getThirtyDayRequestsTrend(days, startDate, endDate);
         } catch (error) {
             console.error(`Error fetching ${days}-day trend:`, error);
             return Array.from({ length: days }, (_, i) => ({
@@ -28,21 +28,28 @@ class Dashboard {
     }
 
     // Server action to get total requests count
-    async getTotalRequests(user = null) {
+    async getTotalRequests(user = null, days = null, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` AND DATEREQUESTED >= '${startDate}' AND DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             if (user && user.empName) {
                 // For non-admin users: count requests where REQUESTEDBY = empName
-                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE REQUESTEDBY = @empName`;
+                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE REQUESTEDBY = @empName${dateFilter}`;
                 const result = await connection.request()
                     .input('empName', user.empName)
                     .query(query);
                 return result.recordset[0].count;
             } else {
                 // For admin: count all requests in PURCHASE.REQUESTHEADER.1
-                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1]`;
+                const query = `SELECT COUNT(*) as count FROM [PURCHASE.REQUESTHEADER.1] WHERE 1=1${dateFilter}`;
                 const result = await connection.request().query(query);
                 return result.recordset[0].count;
             }
@@ -52,8 +59,46 @@ class Dashboard {
         }
     }
 
+    // Server action to get total purchase orders count
+    async getTotalPurchaseOrders(user = null, days = null, startDate = null, endDate = null) {
+        console.log('getTotalPurchaseOrders called with user:', user?.empName || 'admin', 'days:', days);
+        let connection;
+        try {
+            connection = await connectToDatabase(process.env.DB_SFC);
+            console.log('Database connection established for getTotalPurchaseOrders');
+
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` AND DATECREATED >= '${startDate}' AND DATECREATED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` AND DATECREATED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
+            if (user && user.empName) {
+                // For non-admin users: count distinct orders where REQUESTEDBY = empName
+                const query = `SELECT COUNT(DISTINCT PONUMBER) as count FROM [PURCHASE.ORDERHEADER.1] WHERE REQUESTEDBY = @empName${dateFilter}`;
+                console.log('Executing user query:', query.replace('@empName', user.empName));
+                const result = await connection.request()
+                    .input('empName', user.empName)
+                    .query(query);
+                console.log('User query result:', result.recordset[0]);
+                return result.recordset[0].count;
+            } else {
+                // For admin: count distinct orders in PURCHASE.ORDERHEADER.1
+                const query = `SELECT COUNT(DISTINCT PONUMBER) as count FROM [PURCHASE.ORDERHEADER.1] WHERE 1=1${dateFilter}`;
+                console.log('Executing admin query:', query);
+                const result = await connection.request().query(query);
+                console.log('Admin query result:', result.recordset[0]);
+                return result.recordset[0].count;
+            }
+        } catch (error) {
+            console.error('Error fetching total purchase orders:', error);
+            return 0;
+        }
+    }
+
     // Server action to get user stats
-    async getUserStats(user = null) {
+    async getUserStats(user = null, days = null, startDate = null, endDate = null) {
         let gdbConnection;
         let sfcConnection;
         try {
@@ -73,10 +118,17 @@ class Dashboard {
 
             // Pending requests (FOR CONFIRMATION, FOR REQUEST APPROVAL, FOR PURCHASING LEAD TIME) from SFC
             // Admin sees all requests, regardless of posted status
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` AND PRH.DATEREQUESTED >= '${startDate}' AND PRH.DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
             const pendingRequestsQuery = `
       SELECT COUNT(DISTINCT PRH.REFERENCENO) as count
       FROM [PURCHASE.REQUESTHEADER.1] PRH
-      WHERE PRH.REQUESTSTATUS IN ('FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+      WHERE PRH.REQUESTSTATUS IN ('FOR P.O. CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+      ${dateFilter}
     `;
             const pendingRequestsResult = await sfcConnection.request().query(pendingRequestsQuery);
             const pendingRequests = pendingRequestsResult.recordset[0].count;
@@ -178,15 +230,22 @@ class Dashboard {
     // User-specific methods for non-admin dashboard
 
     // Get user's request statistics (both created and assigned for evaluation)
-    async getUserRequestStats(createdBy) {
+    async getUserRequestStats(createdBy, days = null, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
 
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` AND DATEREQUESTED >= '${startDate}' AND DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             // Total requests by user (only requests they created) - only posted requests
             const totalRequestsQuery = `
                 SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE IS_POSTED = 1 AND REQUESTEDBY = @createdBy
+                WHERE IS_POSTED = 1 AND REQUESTEDBY = @createdBy${dateFilter}
             `;
             const totalRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
@@ -198,7 +257,7 @@ class Dashboard {
                 SELECT COUNT(DISTINCT REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE IS_POSTED = 1 AND REQUESTEDBY = @createdBy
-                AND REQUESTSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')
+                AND REQUESTSTATUS NOT IN ('COMPLETED', 'CANCELLED', 'APPROVED', 'REJECTED')${dateFilter}
             `;
             const activeRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
@@ -210,14 +269,15 @@ class Dashboard {
                 SELECT COUNT(DISTINCT REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE REQUESTEDBY = @createdBy
-                AND REQUESTSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                AND REQUESTSTATUS IN ('FOR POSTING', 'FOR P.O. CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                ${dateFilter}
             `;
             const pendingRequestsResult = await connection.request()
                 .input('createdBy', createdBy)
                 .query(pendingRequestsQuery);
             const pendingRequests = pendingRequestsResult.recordset[0].count;
 
-            // Requests in last 24 hours (only for requests user created)
+            // Requests in last 24 hours (only for requests user created) - keep as last 24h regardless of days filter
             const requestsLast24hQuery = `
                 SELECT COUNT(DISTINCT REFERENCENO) as count FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE REQUESTEDBY = @createdBy
@@ -246,9 +306,9 @@ class Dashboard {
     }
 
     // Get user's request evaluation statistics
-    async getUserRequestEvaluationStats(createdBy) {
+    async getUserRequestEvaluationStats(createdBy, days = null, startDate = null, endDate = null) {
         try {
-            return await RequestEvaluation.getUserRequestEvaluationStatusBreakdown(createdBy);
+            return await RequestEvaluation.getUserRequestEvaluationStatusBreakdown(createdBy, days, startDate, endDate);
         } catch (error) {
             console.error('Error fetching user request evaluation stats:', error);
             return [];
@@ -256,9 +316,9 @@ class Dashboard {
     }
 
     // Get user's request trend for specified number of days
-    async getUserThirtyDayTrend(createdBy, days = 30) {
+    async getUserThirtyDayTrend(createdBy, days = 30, startDate = null, endDate = null) {
         try {
-            return await RequestEvaluation.getUserThirtyDayRequestsTrend(createdBy, days);
+            return await RequestEvaluation.getUserThirtyDayRequestsTrend(createdBy, days, startDate, endDate);
         } catch (error) {
             console.error(`Error fetching user ${days}-day trend:`, error);
             return Array.from({ length: days }, (_, i) => ({
@@ -301,7 +361,7 @@ class Dashboard {
     }
 
     // Get historical data for sparklines and percent change calculations
-    async getHistoricalData(user = null, isAdmin = false, statType, days = 10) {
+    async getHistoricalData(user = null, isAdmin = false, statType, days = 10, startDate = null, endDate = null) {
         let connection;
         try {
             if (isAdmin) {
@@ -316,6 +376,17 @@ class Dashboard {
                             date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                             value: currentTotalUsers.totalUsers
                         }));
+
+                    case 'totalPurchaseOrders':
+                        // Purchase orders over time
+                        const poQuery = `
+                            SELECT CAST(DATECREATED AS DATE) as date, COUNT(DISTINCT PONUMBER) as count
+                            FROM [PURCHASE.ORDERHEADER.1]
+                            WHERE DATECREATED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATECREATED AS DATE)
+                        `;
+                        const poResult = await connection.request().query(poQuery);
+                        return this._fillMissingDates(poResult.recordset, days, 'count');
 
                     case 'activeUsers':
                         // Active users (logged in within 30 days) over time
@@ -387,6 +458,20 @@ class Dashboard {
                             .input('userName', user.empName)
                             .query(totalQuery);
                         return this._fillMissingDates(totalResult.recordset, days, 'count');
+
+                    case 'totalPurchaseOrders':
+                        // User's total purchase orders created on each day
+                        const userPOQuery = `
+                            SELECT CAST(DATECREATED AS DATE) as date, COUNT(DISTINCT PONUMBER) as count
+                            FROM [PURCHASE.ORDERHEADER.1]
+                            WHERE REQUESTEDBY = @userName
+                            AND DATECREATED >= DATEADD(DAY, -${days}, GETDATE())
+                            GROUP BY CAST(DATECREATED AS DATE)
+                        `;
+                        const userPOResult = await connection.request()
+                            .input('userName', user.empName)
+                            .query(userPOQuery);
+                        return this._fillMissingDates(userPOResult.recordset, days, 'count');
 
                     case 'activeRequests':
                         // User's active requests created on each day
@@ -496,10 +581,17 @@ class Dashboard {
     }
 
     // Get procurement performance metrics
-    async getProcurementPerformanceMetrics(user = null, isAdmin = false, days = 30) {
+    async getProcurementPerformanceMetrics(user = null, isAdmin = false, days = 30, startDate = null, endDate = null) {
         let sfcConnection;
         try {
             sfcConnection = await connectToDatabase(process.env.DB_SFC);
+
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = `AND prh.DATEREQUESTED >= '${startDate}' AND prh.DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = `AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
 
             // 1. Average time to serve requests (simplified approach)
             const avgCompletionTimeQuery = `
@@ -511,9 +603,9 @@ class Dashboard {
                     INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
                     INNER JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
                     INNER JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
-                    WHERE prh.IS_POSTED = 1
-                        AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                        AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                     WHERE prh.IS_POSTED = 1
+                         ${dateFilter}
+                         AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
                         ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
                     GROUP BY prh.REFERENCENO, prh.DATEREQUESTED
                     HAVING DATEDIFF(DAY, prh.DATEREQUESTED, MAX(rh.RECEIVEDATE)) > 0
@@ -534,10 +626,10 @@ class Dashboard {
                 INNER JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
                 INNER JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
                 INNER JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
-                WHERE prh.IS_POSTED = 1
-                    AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
-                    AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                 WHERE prh.IS_POSTED = 1
+                     AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                     ${dateFilter}
+                     ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
             `;
 
             // 3. Requests received before due date (early requests)
@@ -545,10 +637,10 @@ class Dashboard {
                 SELECT COUNT(DISTINCT prh.REFERENCENO) as earlyRequestsCount
                 FROM [PURCHASE.REQUESTHEADER.1] prh
                 INNER JOIN [PURCHASE.REQUESTDETAILS.1] prd ON prh.REFERENCENO = prd.REFERENCENO
-                WHERE prh.IS_POSTED = 1
-                    AND prh.DATEREQUESTED < prd.DATENEEDED
-                    AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                 WHERE prh.IS_POSTED = 1
+                     AND prh.DATEREQUESTED < prd.DATENEEDED
+                     ${dateFilter}
+                     ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
             `;
 
             // 4. Time consumed for requests to be served (simplified)
@@ -567,11 +659,19 @@ class Dashboard {
                             END
                         ) as processing_days
                     FROM [PURCHASE.REQUESTHEADER.1] prh
-                    WHERE prh.IS_POSTED = 1
-                        AND prh.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                        AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED', 'FOR PURCHASING LEAD TIME')
+                     WHERE prh.IS_POSTED = 1
+                         ${dateFilter}
+                         AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED', 'FOR PURCHASING LEAD TIME')
                         ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
                 ) processing_data
+            `;
+
+            // Total spend calculation
+            const totalSpendQuery = `
+                SELECT SUM(OD.QTYSERVED * OD.UNITCOST) AS totalAmount
+                FROM [PURCHASE.ORDERDETAILS.1] OD
+                INNER JOIN [PURCHASE.RECEIVEHEADER.1] RH ON OD.PONUMBER = RH.PONUMBER
+                WHERE OD.QTYSERVED != 0 ${dateFilter} ${!isAdmin && user ? 'AND UPPER(OD.REQUESTEDBY) = UPPER(@userName)' : ''}
             `;
 
             const request = sfcConnection.request();
@@ -580,17 +680,19 @@ class Dashboard {
             }
 
             // Execute all queries in parallel for better performance
-            const [avgCompletionResult, onTimeResult, earlyResult, serveTimeResult] = await Promise.all([
+            const [avgCompletionResult, onTimeResult, earlyResult, serveTimeResult, totalSpendResult] = await Promise.all([
                 request.query(avgCompletionTimeQuery),
                 request.query(onTimeDeliveryQuery),
                 request.query(earlyRequestsQuery),
-                request.query(timeToServeQuery)
+                request.query(timeToServeQuery),
+                request.query(totalSpendQuery)
             ]);
 
             const avgCompletionDays = avgCompletionResult.recordset[0]?.avgCompletionDays || 0;
             const onTimeData = onTimeResult.recordset[0] || { totalCompleted: 0, onTimeCount: 0 };
             const earlyRequests = earlyResult.recordset[0]?.earlyRequestsCount || 0;
             const serveTimeData = serveTimeResult.recordset[0] || { avgServeDays: 0, totalRequests: 0, servedWithinWeek: 0 };
+            const totalSpend = parseFloat(totalSpendResult.recordset[0]?.totalAmount) || 0;
 
             return {
                 averageCompletionTime: {
@@ -615,6 +717,10 @@ class Dashboard {
                     weekEfficiency: serveTimeData.totalRequests > 0
                         ? Math.round((serveTimeData.servedWithinWeek / serveTimeData.totalRequests) * 100)
                         : 0
+                },
+                totalSpend: {
+                    amount: totalSpend,
+                    utilization: 0 // Placeholder for budget utilization percentage
                 }
             };
         } catch (error) {
@@ -637,10 +743,17 @@ class Dashboard {
     }
 
     // Get procurement efficiency trends over time
-    async getProcurementEfficiencyTrends(user = null, isAdmin = false, months = 6) {
+    async getProcurementEfficiencyTrends(user = null, isAdmin = false, months = 6, startDate = null, endDate = null) {
         let sfcConnection;
         try {
             sfcConnection = await connectToDatabase(process.env.DB_SFC);
+
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = `AND prh.DATEREQUESTED >= '${startDate}' AND prh.DATEREQUESTED <= '${endDate}'`;
+            } else if (months) {
+                dateFilter = `AND prh.DATEREQUESTED >= DATEADD(MONTH, -${months}, GETDATE())`;
+            }
 
             // First, get basic monthly aggregations
             const basicQuery = `
@@ -656,9 +769,9 @@ class Dashboard {
                         END
                     )) as avgProcessingDays
                 FROM [PURCHASE.REQUESTHEADER.1] prh
-                WHERE prh.IS_POSTED = 1
-                    AND prh.DATEREQUESTED >= DATEADD(MONTH, -${months}, GETDATE())
-                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                 WHERE prh.IS_POSTED = 1
+                     ${dateFilter}
+                     ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
                 GROUP BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
                 ORDER BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
             `;
@@ -680,10 +793,10 @@ class Dashboard {
                 LEFT JOIN [PURCHASE.ORDERDETAILS.1] od ON prh.REFERENCENO = od.PRCODE
                 LEFT JOIN [PURCHASE.RECEIVEDETAILS.1] rd ON od.RID = rd.RID
                 LEFT JOIN [PURCHASE.RECEIVEHEADER.1] rh ON rd.REFERENCENO = rh.REFERENCENO
-                WHERE prh.IS_POSTED = 1
-                    AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
-                    AND prh.DATEREQUESTED >= DATEADD(MONTH, -${months}, GETDATE())
-                    ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
+                 WHERE prh.IS_POSTED = 1
+                     AND prh.REQUESTSTATUS IN ('SERVED', 'COMPLETED')
+                     ${dateFilter}
+                     ${!isAdmin && user ? 'AND UPPER(prh.REQUESTEDBY) = UPPER(@userName)' : ''}
                 GROUP BY YEAR(prh.DATEREQUESTED), MONTH(prh.DATEREQUESTED)
             `;
 
@@ -719,6 +832,58 @@ class Dashboard {
             return mergedResults;
         } catch (error) {
             console.error('Error fetching procurement efficiency trends:', error);
+            return [];
+        }
+    }
+
+    // Get spend trends over time
+    async getSpendTrends(user = null, isAdmin = false, months = 6, startDate = null, endDate = null) {
+        let sfcConnection;
+        try {
+            sfcConnection = await connectToDatabase(process.env.DB_SFC);
+
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = `AND RH.RECEIVEDATE >= '${startDate}' AND RH.RECEIVEDATE <= '${endDate}'`;
+            } else if (months) {
+                dateFilter = `AND RH.RECEIVEDATE >= DATEADD(MONTH, -${months}, GETDATE())`;
+            }
+
+            let userFilter = '';
+            if (!isAdmin && user) {
+                // Join to get REQUESTEDBY from header via PONUMBER
+                userFilter = `AND UPPER(OD.REQUESTEDBY) = UPPER(@userName)`;
+            }
+
+            const query = `
+                SELECT
+                    YEAR(RH.RECEIVEDATE) as year,
+                    MONTH(RH.RECEIVEDATE) as month,
+                    OD.CURRENCY,
+                    SUM(OD.QTYSERVED * OD.UNITCOST) AS totalSpend
+                FROM [PURCHASE.ORDERDETAILS.1] OD
+                INNER JOIN [PURCHASE.RECEIVEHEADER.1] RH ON OD.PONUMBER = RH.PONUMBER
+                WHERE OD.QTYSERVED != 0 ${dateFilter} ${userFilter}
+                GROUP BY YEAR(RH.RECEIVEDATE), MONTH(RH.RECEIVEDATE), OD.CURRENCY
+                ORDER BY YEAR(RH.RECEIVEDATE), MONTH(RH.RECEIVEDATE), OD.CURRENCY
+            `;
+
+            const request = sfcConnection.request();
+            if (!isAdmin && user) {
+                request.input('userName', user.empName);
+            }
+
+            const result = await request.query(query);
+
+            return result.recordset.map(row => ({
+                period: `${row.year}-${String(row.month).padStart(2, '0')}`,
+                month: row.month,
+                year: row.year,
+                currency: row.CURRENCY,
+                totalSpend: parseFloat(row.totalSpend) || 0
+            }));
+        } catch (error) {
+            console.error('Error fetching spend trends:', error);
             return [];
         }
     }

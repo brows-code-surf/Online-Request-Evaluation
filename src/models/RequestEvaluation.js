@@ -568,7 +568,7 @@ class RequestEvaluation {
     }
 
     // Get request evaluation status breakdown
-    static async getRequestEvaluationStatusBreakdown() {
+    static async getRequestEvaluationStatusBreakdown(days = null, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -580,11 +580,18 @@ class RequestEvaluation {
                 return [];
             }
 
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` WHERE PRH.DATEREQUESTED >= '${startDate}' AND PRH.DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` WHERE PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             const query = `
                 SELECT
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
@@ -595,10 +602,11 @@ class RequestEvaluation {
                     END as status,
                     COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
+                ${dateFilter}
                 GROUP BY
                     CASE
                         WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
-                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
@@ -619,7 +627,7 @@ class RequestEvaluation {
     }
 
     // Get requests trend for specified number of days
-    static async getThirtyDayRequestsTrend(days = 30) {
+    static async getThirtyDayRequestsTrend(days = 30, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -631,24 +639,39 @@ class RequestEvaluation {
                 return [];
             }
 
+            let whereClause = '';
+            if (startDate && endDate) {
+                whereClause = `WHERE DATEREQUESTED >= '${startDate}' AND DATEREQUESTED <= '${endDate}'`;
+            } else {
+                whereClause = `WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             const query = `
                 SELECT
                     CAST(DATEREQUESTED AS DATE) as requestDate,
                     COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
+                ${whereClause}
                 GROUP BY CAST(DATEREQUESTED AS DATE)
                 ORDER BY CAST(DATEREQUESTED AS DATE)
             `;
 
             const result = await connection.request().query(query);
 
-            // Create array for last N days with zero-fill for missing dates
+            // Create array for the date range with zero-fill for missing dates
             const trendDays = [];
-            for (let i = days - 1; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
+            let start, end;
+            if (startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else {
+                end = new Date();
+                start = new Date();
+                start.setDate(end.getDate() - days + 1);
+            }
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
 
                 const existing = result.recordset.find(r => {
                     const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
@@ -662,19 +685,34 @@ class RequestEvaluation {
 
             return trendDays;
         } catch (error) {
-            console.error(`Error fetching ${days}-day requests trend:`, error);
-            // Return array with zeros for all days
-            return Array.from({ length: days }, (_, i) => ({
-                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                requests: 0
-            }));
+            console.error(`Error fetching requests trend:`, error);
+            // Return array with zeros for the date range
+            const trendDays = [];
+            let start, end;
+            if (startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else {
+                end = new Date();
+                start = new Date();
+                start.setDate(end.getDate() - days + 1);
+            }
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                trendDays.push({
+                    date: dateStr,
+                    requests: 0
+                });
+            }
+            return trendDays;
         }
     }
 
     // User-specific methods for non-admin dashboard
 
     // Get user's request evaluation status breakdown (for requests they created)
-    static async getUserRequestEvaluationStatusBreakdown(createdBy) {
+    static async getUserRequestEvaluationStatusBreakdown(createdBy, days = null, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -686,11 +724,18 @@ class RequestEvaluation {
                 return [];
             }
 
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = ` AND PRH.DATEREQUESTED >= '${startDate}' AND PRH.DATEREQUESTED <= '${endDate}'`;
+            } else if (days) {
+                dateFilter = ` AND PRH.DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             const query = `
                 SELECT
                     CASE
                         WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
-                        WHEN PRH.REQUESTSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRH.REQUESTSTATUS = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
                         WHEN PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
@@ -700,11 +745,11 @@ class RequestEvaluation {
                     END as status,
                     COUNT(DISTINCT PRH.REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1] PRH
-                WHERE PRH.REQUESTEDBY = @createdBy
+                WHERE PRH.REQUESTEDBY = @createdBy${dateFilter}
                 GROUP BY
                     CASE
                         WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
-                        WHEN PRH.REQUESTSTATUS = 'FOR CONFIRMATION' THEN 'FOR CONFIRMATION'
+                        WHEN PRH.REQUESTSTATUS = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
                         WHEN PRH.REQUESTSTATUS = 'FOR PURCHASING LEAD TIME' THEN 'FOR PURCHASING LEAD TIME'
@@ -726,7 +771,7 @@ class RequestEvaluation {
     }
 
     // Get user's requests trend for specified number of days (for requests they created)
-    static async getUserThirtyDayRequestsTrend(createdBy, days = 30) {
+    static async getUserThirtyDayRequestsTrend(createdBy, days = 30, startDate = null, endDate = null) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);
@@ -738,13 +783,19 @@ class RequestEvaluation {
                 return [];
             }
 
+            let whereClause = 'AND REQUESTEDBY = @createdBy';
+            if (startDate && endDate) {
+                whereClause += ` AND DATEREQUESTED >= '${startDate}' AND DATEREQUESTED <= '${endDate}'`;
+            } else {
+                whereClause += ` AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())`;
+            }
+
             const query = `
                 SELECT
                     CAST(DATEREQUESTED AS DATE) as requestDate,
                     COUNT(*) as requestCount
                 FROM [PURCHASE.REQUESTHEADER.1]
-                WHERE DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
-                AND REQUESTEDBY = @createdBy
+                WHERE 1=1 ${whereClause}
                 GROUP BY CAST(DATEREQUESTED AS DATE)
                 ORDER BY CAST(DATEREQUESTED AS DATE)
             `;
@@ -753,12 +804,20 @@ class RequestEvaluation {
                 .input('createdBy', createdBy)
                 .query(query);
 
-            // Create array for last N days with zero-fill for missing dates
+            // Create array for the date range with zero-fill for missing dates
             const trendDays = [];
-            for (let i = days - 1; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
+            let start, end;
+            if (startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else {
+                end = new Date();
+                start = new Date();
+                start.setDate(end.getDate() - days + 1);
+            }
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
 
                 const existing = result.recordset.find(r => {
                     const recordDate = r.requestDate instanceof Date ? r.requestDate.toISOString().split('T')[0] : r.requestDate;
@@ -772,12 +831,27 @@ class RequestEvaluation {
 
             return trendDays;
         } catch (error) {
-            console.error(`Error fetching user ${days}-day requests trend:`, error);
-            // Return array with zeros for all days
-            return Array.from({ length: days }, (_, i) => ({
-                date: new Date(Date.now() - ((days - 1) - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                requests: 0
-            }));
+            console.error(`Error fetching user requests trend:`, error);
+            // Return array with zeros for the date range
+            const trendDays = [];
+            let start, end;
+            if (startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else {
+                end = new Date();
+                start = new Date();
+                start.setDate(end.getDate() - days + 1);
+            }
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                trendDays.push({
+                    date: dateStr,
+                    requests: 0
+                });
+            }
+            return trendDays;
         }
     }
     //#endregion

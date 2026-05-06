@@ -1,10 +1,10 @@
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line } from "recharts";
 import { ChartCard } from "./ChartCard.js";
 
-export const ProcurementEfficiencyTrends = ({ darkMode, data }) => {
+export const ProcurementEfficiencyTrends = ({ darkMode, data, loading = false, loadingHeight = 175 }) => {
   return (
-    <ChartCard title="Procurement Efficiency Trends (Last 6 Months)" delay={0.9} darkMode={darkMode}>
-      <ResponsiveContainer width="100%" height={500}>
+    <ChartCard title="Procurement Efficiency Trends (Last 6 Months)" delay={0.9} darkMode={darkMode} loading={loading} loadingHeight={loadingHeight}>
+      <ResponsiveContainer width="100%" height={175}>
         <ComposedChart
           data={data}
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}

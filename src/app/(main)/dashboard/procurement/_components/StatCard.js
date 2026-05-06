@@ -2,9 +2,35 @@ import { motion } from "framer-motion";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklineData, percentChange, darkMode, subtitle }) => {
+export const StatCard = ({ title, value, icon: Icon, colorClass, delay, sparklineData, percentChange, darkMode, subtitle, loading = false }) => {
   const isPositive = percentChange !== undefined && percentChange !== null ? percentChange >= 0 : true;
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay }}
+        className={`relative overflow-hidden rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} backdrop-blur-sm border ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-3 sm:p-4 shadow-sm`}
+      >
+        <div className="animate-pulse">
+          <div className="flex items-start justify-between mb-2 sm:mb-3">
+            <div className="flex-1 min-w-0">
+              <div className={`h-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded mb-2`}></div>
+              <div className={`h-6 sm:h-8 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded mb-1`}></div>
+              <div className={`h-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded w-3/4`}></div>
+            </div>
+            <div className={`w-6 h-6 sm:w-8 sm:h-8 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg`}></div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className={`h-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded w-1/2`}></div>
+            <div className={`w-12 sm:w-16 h-5 sm:h-6 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded`}></div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

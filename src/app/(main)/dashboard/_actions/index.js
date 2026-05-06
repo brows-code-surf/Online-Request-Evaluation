@@ -18,12 +18,14 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
             ? {
                 totalUsers: 'totalUsers',
                 activeUsers: 'activeUsers',
+                totalPurchaseOrders: 'totalPurchaseOrders',
                 pendingRequests: 'pendingRequests',
                 requestsLast24h: 'requestsLast24h'
               }
             : {
                 totalUsers: 'totalRequests',
                 activeUsers: 'activeRequests',
+                totalPurchaseOrders: 'totalPurchaseOrders',
                 pendingRequests: 'pendingRequests',
                 requestsLast24h: 'requestsLast24h'
               };
@@ -31,6 +33,7 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
         // Get historical data for each stat type - pass user object for non-admin
         const historicalTotalUsers = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.totalUsers, 7);
         const historicalActiveUsers = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.activeUsers, 7);
+        const historicalTotalPurchaseOrders = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.totalPurchaseOrders, 7);
         const historicalPendingRequests = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.pendingRequests, 7);
         const historicalRequestsLast24h = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.requestsLast24h, 7);
 
@@ -38,6 +41,7 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
         const percentChanges = {
             totalUsers: dashboard.calculatePercentChange(historicalTotalUsers),
             activeUsers: dashboard.calculatePercentChange(historicalActiveUsers),
+            totalPurchaseOrders: dashboard.calculatePercentChange(historicalTotalPurchaseOrders),
             pendingRequests: dashboard.calculatePercentChange(historicalPendingRequests),
             requestsLast24h: dashboard.calculatePercentChange(historicalRequestsLast24h)
         };
@@ -45,18 +49,24 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
         // Get sparkline data (extended for visualization)
         const sparklineHistoricalTotalUsers = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.totalUsers, 30);
         const sparklineHistoricalActiveUsers = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.activeUsers, 30);
+        const sparklineHistoricalTotalPurchaseOrders = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.totalPurchaseOrders, 30);
         const sparklineHistoricalPendingRequests = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.pendingRequests, 30);
         const sparklineHistoricalRequestsLast24h = await dashboard.getHistoricalData(!isAdmin ? user : null, isAdmin, statTypeMap.requestsLast24h, 30);
 
+        console.log('About to call getTotalPurchaseOrders with user:', !isAdmin ? user : null);
+        const totalPurchaseOrders = await dashboard.getTotalPurchaseOrders(!isAdmin ? user : null);
+        console.log('getTotalPurchaseOrders returned:', totalPurchaseOrders);
         return {
             stats: {
                 totalUsers: stats.totalUsers || 0,
                 activeUsers: stats.activeUsers || 0,
+                totalPurchaseOrders: totalPurchaseOrders || 0,
                 pendingRequests: stats.pendingRequests || 0,
                 requestsLast24h: stats.requestsLast24h || 0,
                 sparklines: {
                     totalUsers: sparklineHistoricalTotalUsers.map(d => d.value),
                     activeUsers: sparklineHistoricalActiveUsers.map(d => d.value),
+                    totalPurchaseOrders: sparklineHistoricalTotalPurchaseOrders.map(d => d.value),
                     pendingRequests: sparklineHistoricalPendingRequests.map(d => d.value),
                     requestsLast24h: sparklineHistoricalRequestsLast24h.map(d => d.value)
                 },
@@ -75,17 +85,20 @@ export async function getDashboardStats(user = null, isAdmin = false, days = 30)
             stats: {
                 totalUsers: 0,
                 activeUsers: 0,
+                totalPurchaseOrders: 0,
                 pendingRequests: 0,
                 requestsLast24h: 0,
                 sparklines: {
                     totalUsers: [],
                     activeUsers: [],
+                    totalPurchaseOrders: [],
                     pendingRequests: [],
                     requestsLast24h: []
                 },
                 percentChanges: {
                     totalUsers: 0,
                     activeUsers: 0,
+                    totalPurchaseOrders: 0,
                     pendingRequests: 0,
                     requestsLast24h: 0
                 }
