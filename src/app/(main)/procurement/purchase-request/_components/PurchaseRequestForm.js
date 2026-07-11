@@ -4,7 +4,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 're
 import { useAuth } from '../../../../../utils/authContext';
 import { getNextReferenceNumber, generateItemNumber, getFilteredUsersForPurchaseRequest } from '../_actions';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
-import BudgetModal from './BudgetModal';
+import BudgetModal from '../../../_components/BudgetModal';
 import ItemSelectionModal from './ItemSelectionModal';
 
 

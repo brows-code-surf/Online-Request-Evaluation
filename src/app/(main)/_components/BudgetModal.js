@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllBudgetAccounts } from '../_actions';
+import { getAllBudgetAccounts } from '../procurement/purchase-request/_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
 export default function BudgetModal({ isOpen, onClose, onSelect, darkMode }) {
