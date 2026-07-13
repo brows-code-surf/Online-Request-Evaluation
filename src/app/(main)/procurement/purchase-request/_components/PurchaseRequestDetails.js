@@ -7,41 +7,7 @@ import RejectRequestModal from '@/app/(main)/_components/rejectRequestModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import { PurchaseRequestPrintModal } from './PurchaseRequestPrintModal';
 import { hasReceivingForPR, cancelPurchaseRequestItem } from '../_actions';
-
-const STATUS_OPTIONS = [
-  { value: 'POSTED', label: 'Posted', color: 'bg-purple-100 text-purple-800' },
-  { value: 'FOR CONFIRMATION', label: 'For Confirmation', color: 'bg-blue-100 text-blue-800' },
-  { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time', color: 'bg-orange-100 text-orange-800' },
-  { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
-  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
-  { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
-  { value: 'PARTIALLY SERVED', label: 'Partially Served', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { value: 'SERVED', label: 'Served', color: 'bg-green-100 text-green-800' },
-  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
-  { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
-  { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
-  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
-];
-
-const ITEM_STATUS_OPTIONS = [
-  { value: 'FOR CONFIRMATION', label: 'For Confirmation', color: 'bg-blue-100 text-blue-800' },
-  { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time', color: 'bg-orange-100 text-orange-800' },
-  { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100 text-green-800' },
-  { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800' },
-  { value: 'FOR CANVASSING', label: 'For Canvassing', color: 'bg-sky-100 text-sky-800' },
-  { value: 'PARTIALLY SERVED', label: 'Partially Served', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { value: 'SERVED', label: 'Served', color: 'bg-green-100 text-green-800' },
-  { value: 'FOR P.O.', label: 'For P.O.', color: 'bg-fuchsia-100 text-fuchsia-800' },
-  { value: 'P.O. PROCESSING', label: 'P.O. Processing', color: 'bg-blue-100 text-blue-800' },
-  { value: 'FOR P.O. CONFIRMATION', label: 'For P.O. Confirmation', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'FOR P.O. APPROVAL', label: 'For P.O. Approval', color: 'bg-yellow-200 text-yellow-900' },
-  { value: 'P.O. APPROVED', label: 'P.O. Approved', color: 'bg-green-100 text-green-800' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
-];
+import getStatusColor from '@/utils/statusColor';
 
 export default function PurchaseRequestDetails({
   purchaseRequest,
@@ -49,7 +15,7 @@ export default function PurchaseRequestDetails({
   onApprove,
   onReceive,
   onReject,
-  onPost,
+  onSubmit,
   onCancel,
   onEdit,
   onDataRefresh,
@@ -201,22 +167,20 @@ export default function PurchaseRequestDetails({
     });
   };
 
-  const getStatusBadge = (status, type = 'request') => {
-    const options = type === 'item' ? ITEM_STATUS_OPTIONS : STATUS_OPTIONS;
-    const statusOption = options.find(s => s.value === status);
-    return statusOption ? statusOption.color : 'bg-gray-100 text-gray-800';
+  const getStatusBadge = (status) => {
+    return getStatusColor(status) || 'bg-gray-100 text-gray-800';
   };
 
-  const canPost = () => {
-    return !purchaseRequest.isPosted &&
+  const canSubmit = () => {
+    return !purchaseRequest.isSubmitted &&
       (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) &&
-      (purchaseRequest.requestStatus === 'FOR CONFIRMATION' || purchaseRequest.requestStatus === 'FOR POSTING');
+      (purchaseRequest.requestStatus === 'FOR CONFIRMATION' || purchaseRequest.requestStatus === 'FOR SUBMISSION');
   };
 
   const handleAction = async (action, reason = '') => {
-    // Show confirmation for post action
-    if (action === 'post') {
-      setPendingAction('post');
+    // Show confirmation for submit action
+    if (action === 'submit') {
+      setPendingAction('submit');
       setShowConfirmModal(true);
       return;
     }
@@ -250,8 +214,8 @@ export default function PurchaseRequestDetails({
     setActionLoading(true);
 
     try {
-      if (pendingAction === 'post' && onPost) {
-        await onPost(purchaseRequest.referenceNo);
+      if (pendingAction === 'submit' && onSubmit) {
+        await onSubmit(purchaseRequest.referenceNo);
       }
     } catch (error) {
       console.error(`Error ${pendingAction}ing purchase request:`, error);
@@ -345,7 +309,7 @@ export default function PurchaseRequestDetails({
                 </svg>
                 Print
               </button>
-              {!purchaseRequest.isPosted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
+              {!purchaseRequest.isSubmitted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                 <button
                   onClick={() => onEdit && onEdit(purchaseRequest)}
                   disabled={loading || actionLoading}
@@ -359,18 +323,18 @@ export default function PurchaseRequestDetails({
                   Edit
                 </button>
               )}
-              {canPost() && (
+              {canSubmit() && (
                 <button
-                  onClick={() => handleAction('post')}
+                  onClick={() => handleAction('submit')}
                   disabled={loading || actionLoading}
                   className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800 rounded-md shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 focus:scale-105 disabled:transform-none disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 min-w-[120px] ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                     }`}
-                  aria-label="Post purchase request"
+                  aria-label="Submit purchase request"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
-                  Post
+                  Submit
                 </button>
               )}
               {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
@@ -434,7 +398,7 @@ export default function PurchaseRequestDetails({
                     </svg>
                     <span className="truncate">Print Request</span>
                   </button>
-                  {!purchaseRequest.isPosted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
+                  {!purchaseRequest.isSubmitted && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && (
                     <button
                       onClick={() => {
                         onEdit && onEdit(purchaseRequest);
@@ -455,10 +419,10 @@ export default function PurchaseRequestDetails({
                       <span className="truncate">Edit Request</span>
                     </button>
                   )}
-                  {canPost() && (
+                  {canSubmit() && (
                     <button
                       onClick={() => {
-                        handleAction('post');
+                        handleAction('submit');
                         setShowActionMenu(false);
                       }}
                       disabled={loading || actionLoading}
@@ -468,12 +432,12 @@ export default function PurchaseRequestDetails({
                         } border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 ${actionLoading ? 'cursor-wait' : 'cursor-pointer'
                         }`}
                       role="menuitem"
-                      aria-label="Post purchase request"
+                      aria-label="Submit purchase request"
                     >
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
-                      <span className="truncate">Post Request</span>
+                      <span className="truncate">Submit Request</span>
                     </button>
                   )}
                   {purchaseRequest.requestStatus !== 'CANCELLED' && (purchaseRequest.requestedBy?.toUpperCase() === user?.empName?.toUpperCase() || isAdmin()) && !hasReceiving && (
@@ -815,9 +779,9 @@ export default function PurchaseRequestDetails({
       {/* Confirm Modal */}
       <ConfirmModal
         isOpen={showConfirmModal}
-        title="Post Purchase Request"
-        message={`Are you sure you want to post this purchase request? This will send notifications to the ${purchaseRequest.reviewer ? 'reviewer' : 'approver'} and start the approval workflow.`}
-        confirmButtonText="Post Request"
+        title="Submit Purchase Request"
+        message={`Are you sure you want to submit this purchase request? This will send notifications to the ${purchaseRequest.reviewer ? 'reviewer' : 'approver'} and start the approval workflow.`}
+        confirmButtonText="Submit Request"
         confirmButtonColor="green"
         onConfirm={handleConfirmAction}
         onCancel={() => setShowConfirmModal(false)}

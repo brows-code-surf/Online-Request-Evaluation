@@ -4,6 +4,7 @@ import { fetchEvaluationLeftPanel } from '../procurement/request-evaluation/_act
 import { getAllCanvassingItems } from '../procurement/canvass-approval/_actions';
 import { useAuth } from '@/utils/authContext';
 import SkeletonLoader from '../../_components/skeletonLoader';
+import getStatusColor from '@/utils/statusColor';
 
 export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type = 'purchase-request' }) {
   const { user, isAdmin } = useAuth();
@@ -103,56 +104,6 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
       return 0;
     });
 
-  const getStatusColor = (status) => {
-    if (type === 'purchase-request') {
-      switch (status) {
-        case 'POSTED':
-          return 'bg-purple-100 text-purple-800 border-purple-300';
-        case 'FOR CONFIRMATION':
-          return 'bg-blue-100 text-blue-800 border-blue-300';
-        case 'FOR REQUEST APPROVAL':
-          return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-        case 'FOR PURCHASING LEAD TIME':
-          return 'bg-orange-100 text-orange-800 border-orange-300';
-        case 'REJECTED':
-          return 'bg-red-100 text-red-800 border-red-300';
-        case 'CANCELLED':
-          return 'bg-red-100 text-red-800 border-red-300';
-        case 'FOR CANVASSING':
-          return 'bg-sky-100 text-sky-800 border-sky-300';
-        case 'PARTIALLY SERVED':
-          return 'bg-orange-100 text-orange-800 border-orange-300';
-        case 'SERVED':
-          return 'bg-green-100 text-green-800 border-green-300';
-        case 'FOR P.O.':
-          return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
-        case 'P.O. PROCESSING':
-          return 'bg-blue-200 text-blue-900 border-blue-400';
-        case 'FOR P.O. CONFIRMATION':
-          return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-        case 'FOR P.O. APPROVAL':
-          return 'bg-yellow-200 text-yellow-900 border-yellow-400';
-        case 'P.O. APPROVED':
-          return 'bg-green-100 text-green-800 border-green-300';
-        default:
-          return 'bg-gray-100 text-gray-800 border-gray-300';
-      }
-    } else {
-      switch (status) {
-        case 'APPROVED':
-          return 'bg-green-100 text-green-800 border-green-300';
-        case 'REJECTED':
-          return 'bg-red-100 text-red-800 border-red-300';
-        case 'FOR REQUEST APPROVAL':
-        case 'FOR CONFIRMATION':
-        case 'FOR PURCHASING LEAD TIME':
-          return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-        default:
-          return 'bg-gray-100 text-gray-800 border-gray-300';
-      }
-    }
-  };
-
   const handleRowDoubleClick = (item) => {
     if (type === 'purchase-request') {
       // Convert to the format expected by purchase request parent component
@@ -161,7 +112,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
         id: item.referenceNo,
         title: `${item.company} - ${item.requestStatus}`,
         requester: item.requestedBy,
-        status: item.isPosted ? 'POSTED' : 'NOT POSTED',
+        status: item.isSubmitted ? 'SUBMITTED' : 'NOT SUBMITTED',
         requestDate: item.dateRequested,
         department: item.company,
         isRead: item.isRead ? 'READ' : 'NOT READ',
@@ -191,7 +142,7 @@ export default function SearchModal({ isOpen, onClose, onSelect, darkMode, type 
     if (type === 'purchase-request') {
       return [
         { value: '', label: 'All Statuses' },
-        { value: 'POSTED', label: 'Posted' },
+        { value: 'SUBMITTED', label: 'Submitted' },
         { value: 'FOR CONFIRMATION', label: 'For Confirmation' },
         { value: 'FOR REQUEST APPROVAL', label: 'For Request Approval' },
         { value: 'FOR PURCHASING LEAD TIME', label: 'For Purchasing Lead Time' },

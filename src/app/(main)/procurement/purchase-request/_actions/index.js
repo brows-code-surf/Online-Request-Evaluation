@@ -89,7 +89,7 @@ export async function getPurchaseRequestByReferenceNo(referenceNo, user = null, 
   }
 }
 
-export async function createPurchaseRequest(headerData, detailsData, creatorName) {
+export async function savePurchaseRequest(headerData, detailsData, creatorName) {
   try {
     // Validate required fields
     if (!headerData.company || !headerData.company.trim()) {
@@ -143,7 +143,7 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
       }
     }
 
-    const result = await PurchaseRequest.createPurchaseRequest(headerData, detailsData, creatorName);
+    const result = await PurchaseRequest.savePurchaseRequest(headerData, detailsData, creatorName);
 
     // Note: Notifications are no longer sent here - they will be sent when the request is posted
 
@@ -160,9 +160,9 @@ export async function createPurchaseRequest(headerData, detailsData, creatorName
   }
 }
 
-export async function postPurchaseRequest(referenceNo, posterName) {
+export async function submitPurchaseRequest(referenceNo, posterName) {
   try {
-    const result = await PurchaseRequest.postPurchaseRequest(referenceNo, posterName);
+    const result = await PurchaseRequest.submitPurchaseRequest(referenceNo, posterName);
 
     if (result.success) {
       // Emit real-time event for request-evaluation page

@@ -870,7 +870,7 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
                 {editData ? 'Updating...' : 'Creating Purchase Request ...'}
               </div>
             ) : (
-              editData ? 'Update Purchase Request' : 'Create Purchase Request'
+              editData ? 'Update Purchase Request' : 'Save Purchase Request'
             )}
           </button>
         </div>
@@ -879,12 +879,12 @@ const PurchaseRequestForm = forwardRef(function PurchaseRequestForm({
       {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={showConfirmModal}
-        title={editData ? "Update Purchase Request" : "Create Purchase Request"}
+        title={editData ? "Update Purchase Request" : "Save Purchase Request"}
         message={editData
           ? `Are you sure you want to update this purchase request? This will save your changes to the existing request.`
-          : `Are you sure you want to create this purchase request? This will save the request as a draft and you can post it later to send notifications to the ${formData.reviewer ? 'reviewer' : 'approver'}.`
+          : `Are you sure you want to save this purchase request? This will save the request as a draft and you can submit it later to send notifications to the ${formData.reviewer ? 'reviewer' : 'approver'}.`
         }
-        confirmButtonText={editData ? "Update Request" : "Create Request"}
+        confirmButtonText={editData ? "Update Request" : "Save Request"}
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowConfirmModal(false)}
         isLoading={loading}

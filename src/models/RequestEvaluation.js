@@ -590,7 +590,7 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CASE
-                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
+                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR SUBMISSION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
@@ -605,7 +605,7 @@ class RequestEvaluation {
                 ${dateFilter}
                 GROUP BY
                     CASE
-                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR POSTING'
+                        WHEN PRH.IS_POSTED = 0 AND PRH.REQUESTSTATUS != 'CANCELLED' THEN 'FOR SUBMISSION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN LTRIM(RTRIM(PRH.REQUESTSTATUS)) = 'FOR CANVASSING' THEN 'FOR CANVASSING'
@@ -734,7 +734,7 @@ class RequestEvaluation {
             const query = `
                 SELECT
                     CASE
-                        WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR SUBMISSION' THEN 'FOR SUBMISSION'
                         WHEN PRH.REQUESTSTATUS = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
@@ -748,7 +748,7 @@ class RequestEvaluation {
                 WHERE PRH.REQUESTEDBY = @createdBy${dateFilter}
                 GROUP BY
                     CASE
-                        WHEN PRH.REQUESTSTATUS = 'FOR POSTING' THEN 'FOR POSTING'
+                        WHEN PRH.REQUESTSTATUS = 'FOR SUBMISSION' THEN 'FOR SUBMISSION'
                         WHEN PRH.REQUESTSTATUS = 'FOR P.O. CONFIRMATION' THEN 'FOR CONFIRMATION'
                         WHEN PRH.REQUESTSTATUS = 'FOR REQUEST APPROVAL' THEN 'FOR REQUEST APPROVAL'
                         WHEN PRH.REQUESTSTATUS = 'FOR CANVASSING' THEN 'FOR CANVASSING'
@@ -1264,7 +1264,7 @@ class RequestEvaluation {
 
                         const allStatuses = checkResult.recordset.map(record => record.itemStatus);
                         console.log(`PR ${prCode} item statuses after update:`, allStatuses);
-                        const advancedStatuses = ['P.O. APPROVED', 'P.O. POSTED'];
+                        const advancedStatuses = ['P.O. APPROVED', 'P.O. SUBMITTED'];
 
                         const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
                         console.log(`PR ${prCode} noneHaveAdvancedStatus:`, noneHaveAdvancedStatus);
@@ -1518,7 +1518,7 @@ class RequestEvaluation {
                     .query(checkAllItemStatusQuery);
 
                 const allStatuses = checkStatus.recordset.map(record => record.itemStatus);
-                const advancedStatuses = ['P.O. POSTED'];
+                const advancedStatuses = ['P.O. SUBMITTED'];
 
                 const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));
                 if (noneHaveAdvancedStatus) {

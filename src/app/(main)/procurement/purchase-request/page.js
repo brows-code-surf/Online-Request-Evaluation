@@ -9,7 +9,7 @@ import ContentLeftPanel from '../../_components/contentLeftPanel';
 import PurchaseRequestForm from './_components/PurchaseRequestForm';
 import PurchaseRequestDetails from './_components/PurchaseRequestDetails';
 import SearchModal from '../../_components/SearchModal';
-
+import getStatusColor from '@/utils/statusColor';
 import SuccessModal from '@/app/(main)/_components/successModal';
 import SideNotchOpenLeftPanel from '../../_components/sideNotchOpenLeftPanel';
 import Loader from '@/app/_components/loader';
@@ -19,9 +19,9 @@ import { useSocketMultiple } from '@/hooks/useSocketMultiple';
 import {
   getAllPurchaseRequests,
   getPurchaseRequestByReferenceNo,
-  createPurchaseRequest,
+  savePurchaseRequest,
   updatePurchaseRequest,
-  postPurchaseRequest,
+  submitPurchaseRequest,
   cancelPurchaseRequest
 } from './_actions';
 
@@ -288,23 +288,23 @@ function PurchaseRequestContent() {
       return 0;
     });
 
-  const handleCreatePurchaseRequest = async (headerData, detailsData) => {
+  const handlesavePurchaseRequest = async (headerData, detailsData) => {
     try {
-      // Set itemStatus to "FOR POSTING" for all items when creating
+      // Set itemStatus to "FOR SUBMISSION" for all items when creating
       const detailsWithStatus = detailsData.map(detail => ({
         ...detail,
-        itemStatus: 'FOR POSTING'
+        itemStatus: 'FOR SUBMISSION'
       }));
 
-      const result = await createPurchaseRequest(headerData, detailsWithStatus, user?.empName);
+      const result = await savePurchaseRequest(headerData, detailsWithStatus, user?.empName);
       if (result.success) {
-        let message = `Purchase request ${result.referenceNo} has been created successfully.`;
+        let message = `Purchase request ${result.referenceNo} has been saved successfully.`;
         if (result.referenceNumberChanged) {
           message += `\n\nNote: The reference number was automatically changed from ${result.originalReferenceNo} to ${result.referenceNo} due to a conflict with another request.`;
         }
 
         setSuccessMessage({
-          title: 'Purchase Request Created',
+          title: 'Purchase Request Saved',
           message: message
         });
         setShowSuccessModal(true);
@@ -325,23 +325,23 @@ function PurchaseRequestContent() {
     }
   };
 
-  const handlePostPurchaseRequest = async (referenceNo) => {
+  const handleSubmitPurchaseRequest = async (referenceNo) => {
     try {
-      const result = await postPurchaseRequest(referenceNo, user?.empName);
+      const result = await submitPurchaseRequest(referenceNo, user?.empName);
       if (result.success) {
         setSuccessMessage({
-          title: 'Purchase Request Posted',
-          message: 'The purchase request has been posted and notifications have been sent.'
+          title: 'Purchase Request Submitted',
+          message: 'The purchase request has been submitted and notifications have been sent.'
         });
         setShowSuccessModal(true);
         setSelectedPurchaseRequest(null);
         await reloadPurchaseRequestsData();
       } else {
-        toast.error('Failed to post purchase request: ' + result.message);
+        toast.error('Failed to submit purchase request: ' + result.message);
       }
     } catch (error) {
-      console.error('Error posting purchase request:', error);
-      toast.error('Failed to post purchase request');
+      console.error('Error submitting purchase request:', error);
+      toast.error('Failed to submit purchase request');
     }
   };
 
@@ -398,40 +398,6 @@ function PurchaseRequestContent() {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'POSTED':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'FOR CONFIRMATION':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'FOR REQUEST APPROVAL':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'FOR PURCHASING LEAD TIME':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'FOR CANVASSING':
-        return 'bg-sky-100 text-sky-800 border-sky-300';
-      case 'PARTIALLY SERVED':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'SERVED':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'FOR P.O.':
-        return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300';
-      case 'P.O. PROCESSING':
-        return 'bg-blue-200 text-blue-900 border-blue-400';
-      case 'FOR P.O. CONFIRMATION':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'FOR P.O. APPROVAL':
-        return 'bg-yellow-200 text-yellow-900 border-yellow-400';
-      case 'P.O. APPROVED':
-        return 'bg-green-100 text-green-800 border-green-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
 
   // Real-time updates from request-evaluation page
   useSocketMultiple("request-evaluation-broadcast", {
@@ -552,7 +518,7 @@ function PurchaseRequestContent() {
               <div className="p-6">
                 <PurchaseRequestForm
                   ref={formRef}
-                  onSubmit={currentView === 'edit' ? handleUpdatePurchaseRequest : handleCreatePurchaseRequest}
+                  onSubmit={currentView === 'edit' ? handleUpdatePurchaseRequest : handlesavePurchaseRequest}
                   onCancel={() => setCurrentView('list')}
                   loading={false}
                   editData={currentView === 'edit' ? selectedPurchaseRequest : null}
@@ -566,7 +532,7 @@ function PurchaseRequestContent() {
                   <PurchaseRequestDetails
                     purchaseRequest={selectedPurchaseRequest}
                     onClose={() => setSelectedPurchaseRequest(null)}
-                    onPost={handlePostPurchaseRequest}
+                    onSubmit={handleSubmitPurchaseRequest}
                     onCancel={handleCancelPurchaseRequest}
                     onEdit={handleEditPurchaseRequest}
                     onDataRefresh={() => {

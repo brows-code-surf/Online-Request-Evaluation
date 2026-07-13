@@ -166,7 +166,7 @@ class CanvassApproval {
                     .query(checkAllItemStatusQuery);
 
                 const allStatuses = checkResult.recordset.map(record => record.itemStatus);
-                const advancedStatuses = ['P.O. PROCESSING','FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. POSTED'];
+                const advancedStatuses = ['P.O. PROCESSING','FOR P.O. CONFIRMATION', 'FOR P.O. APPROVAL', 'P.O. APPROVED', 'P.O. SUBMITTED'];
 
                 // Only update header to 'FOR P.O. PROCESSING' if no items have advanced beyond it
                 const noneHaveAdvancedStatus = !allStatuses.some(status => advancedStatuses.includes(status));

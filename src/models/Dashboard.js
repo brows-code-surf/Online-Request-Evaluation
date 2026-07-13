@@ -269,7 +269,7 @@ class Dashboard {
                 SELECT COUNT(DISTINCT REFERENCENO) as count
                 FROM [PURCHASE.REQUESTHEADER.1]
                 WHERE REQUESTEDBY = @createdBy
-                AND REQUESTSTATUS IN ('FOR POSTING', 'FOR P.O. CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                AND REQUESTSTATUS IN ('FOR SUBMISSION', 'FOR P.O. CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
                 ${dateFilter}
             `;
             const pendingRequestsResult = await connection.request()
@@ -494,7 +494,7 @@ class Dashboard {
                             SELECT CAST(DATEREQUESTED AS DATE) as date, COUNT(DISTINCT REFERENCENO) as count
                             FROM [PURCHASE.REQUESTHEADER.1]
                             WHERE REQUESTEDBY = @userName
-                            AND REQUESTSTATUS IN ('FOR POSTING', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
+                            AND REQUESTSTATUS IN ('FOR SUBMISSION', 'FOR CONFIRMATION', 'FOR REQUEST APPROVAL', 'FOR PURCHASING LEAD TIME')
                             AND DATEREQUESTED >= DATEADD(DAY, -${days}, GETDATE())
                             GROUP BY CAST(DATEREQUESTED AS DATE)
                         `;

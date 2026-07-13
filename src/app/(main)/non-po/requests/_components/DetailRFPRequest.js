@@ -7,6 +7,7 @@ import ConfirmModal from "../../../_components/confirmModal";
 import SuccessModal from "../../../_components/successModal";
 import { useAuth } from "@/utils/authContext";
 import { getAllPaymentTerms, updateRFPDetails } from "../index";
+import getStatusColor from "@/utils/statusColor";
 
 function parseEwtPercent(ewtString) {
     if (!ewtString) return 0;
@@ -23,21 +24,13 @@ const LOCATION_OPTIONS = ["Head Office", "Cebu", "Manila", "Davao"];
 const COST_CENTER_OPTIONS = ["", "HR-OD", "SALES-VIS", "MARKETING"];
 const EXPENSE_CATEGORY_OPTIONS = ["Manpower / training", "Office supplies", "Utilities", "Travel", "Professional fees"];
 
-const STATUS_COLOR = {
-    DRAFT: "bg-gray-100 text-gray-800 border-gray-300",
-    SUBMITTED: "bg-blue-100 text-blue-800 border-blue-300",
-    "FOR APPROVAL": "bg-yellow-100 text-yellow-800 border-yellow-300",
-    APPROVED: "bg-green-100 text-green-800 border-green-300",
-    REJECTED: "bg-red-100 text-red-800 border-red-300"
-};
-
 // Ensure the current stored value is always selectable even if it is not in the preset list.
 function withCurrent(options, current) {
     if (current === null || current === undefined || current === "") return options;
     return options.includes(current) ? options : [current, ...options];
 }
 
-export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onRequestSaved }) {
+export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onRequestSaved, onDirtyChange }) {
     const { user } = useAuth();
     const header = rfp && rfp.length > 0 ? rfp[0] : null;
 
@@ -62,6 +55,13 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
     const [showSuccess, setShowSuccess] = useState(false);
     const [successAction, setSuccessAction] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [edited, setEdited] = useState(false);
+
+    // Report unsaved-changes state up so the parent can guard navigation
+    // (both the sidebar selection and the "New request" action).
+    useEffect(() => {
+        onDirtyChange?.(edited);
+    }, [edited, onDirtyChange]);
 
     // (Re)initialize local editable state whenever the selected request data changes.
     const rfpSignature = JSON.stringify(rfp);
@@ -85,6 +85,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
         })));
         setShowErrors(false);
         setFocusLineId(null);
+        setEdited(false);
     }, [rfpSignature]);
 
     useEffect(() => {
@@ -117,16 +118,19 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
 
     const updateLine = (id, field, value) => {
         setLines(prev => prev.map(l => (l.id === id ? { ...l, [field]: value } : l)));
+        setEdited(true);
     };
 
     const addLine = () => {
         const newId = lines.length ? Math.max(...lines.map(l => l.id)) + 1 : 1;
         setLines(prev => [...prev, { id: newId, description: "", budgetCode: "", acct: "", costCenter: "", location: "", amount: 0, ewt: "" }]);
         setFocusLineId(newId);
+        setEdited(true);
     };
 
     const removeLine = (id) => {
         setLines(prev => prev.filter(l => l.id !== id));
+        setEdited(true);
     };
 
     const handleLineKeyDown = (e) => {
@@ -190,6 +194,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
             if (result.success) {
                 setSuccessAction(action);
                 setShowSuccess(true);
+                setEdited(false);
                 onRequestSaved?.();
             } else {
                 console.error('Update failed:', result.message);
@@ -199,6 +204,11 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleInputChange = (setter) => (e) => {
+        setter(e.target.value);
+        setEdited(true);
     };
 
     if (!header) {
@@ -220,7 +230,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         <CardTitle className={`${darkMode ? 'text-white' : 'text-gray-900'}`}>Request for payment</CardTitle>
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-md border ${STATUS_COLOR[header.rfpStatus] || STATUS_COLOR.DRAFT}`}>
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-md border ${getStatusColor(header.rfpStatus)}`}>
                             {header.rfpStatus || 'DRAFT'}
                         </span>
                         {editable && (
@@ -230,7 +240,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                         )}
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className={`px-4 py-1.5 text-sm font-mono font-bold rounded-md ${darkMode ? 'bg-blue-600 text-white' : 'bg-[#163c66] text-white'} shadow-md`}>
+                        <span className={`px-4 py-1.5 text-l font-mono font-bold rounded-md ${darkMode ? 'bg-blue-600 text-white' : 'bg-[#163c66] text-white'} shadow-md`}>
                             {header.referenceNo}
                         </span>
                         <button
@@ -248,7 +258,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Payee</label>
                         {editable ? (
-                            <input type="text" value={payee} onChange={(e) => setPayee(e.target.value)} className={fieldCls(showErrors && isEmpty(payee))} />
+                            <input type="text" value={payee} onChange={handleInputChange(setPayee)} className={fieldCls(showErrors && isEmpty(payee))} />
                         ) : (
                             <input type="text" value={payee} readOnly className={readOnlyFieldCls} />
                         )}
@@ -256,7 +266,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Expense category</label>
                         {editable ? (
-                            <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} className={fieldCls(showErrors && isEmpty(expenseCategory))}>
+                            <select value={expenseCategory} onChange={handleInputChange(setExpenseCategory)} className={fieldCls(showErrors && isEmpty(expenseCategory))}>
                                 <option value=""></option>
                                 {expenseCategoryOptions.map((opt) => (
                                     <option key={opt} value={opt}>{opt}</option>
@@ -269,7 +279,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Cost center</label>
                         {editable ? (
-                            <select value={costCenter} onChange={(e) => setCostCenter(e.target.value)} className={fieldCls(showErrors && isEmpty(costCenter))}>
+                            <select value={costCenter} onChange={handleInputChange(setCostCenter)} className={fieldCls(showErrors && isEmpty(costCenter))}>
                                 {costCenterOptions.map((opt) => (
                                     <option key={opt || "none"} value={opt}>{opt}</option>
                                 ))}
@@ -281,7 +291,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Location</label>
                         {editable ? (
-                            <select value={location} onChange={(e) => setLocation(e.target.value)} className={fieldCls(showErrors && isEmpty(location))}>
+                            <select value={location} onChange={handleInputChange(setLocation)} className={fieldCls(showErrors && isEmpty(location))}>
                                 <option value=""></option>
                                 {locationOptions.map((opt) => (
                                     <option key={opt} value={opt}>{opt}</option>
@@ -294,7 +304,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Payment terms</label>
                         {editable ? (
-                            <select value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} className={fieldCls(showErrors && paymentTerms.length > 0 && isEmpty(paymentTerm))}>
+                            <select value={paymentTerm} onChange={handleInputChange(setPaymentTerm)} className={fieldCls(showErrors && paymentTerms.length > 0 && isEmpty(paymentTerm))}>
                                 <option value=""></option>
                                 {withCurrent(paymentTerms.map(pt => pt.paymentTermId), paymentTerm).map((ptId) => (
                                     <option key={ptId} value={ptId}>{ptId}</option>
@@ -307,7 +317,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                     <div>
                         <label className={`block text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-muted-foreground'}`}>Payee TIN</label>
                         {editable ? (
-                            <input type="text" value={payeeTIN} onChange={(e) => setPayeeTIN(e.target.value)} className={fieldCls(showErrors && isEmpty(payeeTIN))} />
+                            <input type="text" value={payeeTIN} onChange={handleInputChange(setPayeeTIN)} className={fieldCls(showErrors && isEmpty(payeeTIN))} />
                         ) : (
                             <input type="text" value={payeeTIN} readOnly className={readOnlyFieldCls} />
                         )}
@@ -374,6 +384,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                                                         readOnly
                                                         value={line.budgetCode}
                                                         placeholder="Select"
+                                                        title={line.budgetCode || "Select budget code"}
                                                         onClick={() => setBudgetModalFor(line.id)}
                                                         onKeyDown={handleLineKeyDown}
                                                         className={`${lineCls(showErrors && isEmpty(line.budgetCode))} cursor-pointer font-mono`}
@@ -388,7 +399,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <input type="text" value={line.budgetCode} readOnly className={`${readOnlyLineCls} font-mono`} />
+                                                <input type="text" value={line.budgetCode} readOnly title={line.budgetCode || "No budget code"} className={`${readOnlyLineCls} font-mono`} />
                                             )}
                                         </td>
                                         <td className="p-2 align-middle">
@@ -457,6 +468,18 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                         </tbody>
                     </table>
                 </div>
+
+                {editable && (
+                    <div className="mt-3">
+                        <button
+                            type="button"
+                            onClick={addLine}
+                            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md border cursor-pointer transition-colors ${darkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-400 text-gray-700 hover:bg-gray-100'}`}
+                        >
+                            <span className="text-base leading-none">+</span> Add line
+                        </button>
+                    </div>
+                )}
             </CardContent>
             <CardFooter>
                 <div className="flex items-center justify-between w-full">
@@ -508,6 +531,7 @@ export default function DetailRFPRequest({ darkMode, rfp, onNewRequest, onReques
                         setBudgetModalFor(null);
                     }}
                     darkMode={darkMode}
+                    selectedBudgetCode={lines.find(l => l.id === budgetModalFor)?.budgetCode || ''}
                 />
             )}
 

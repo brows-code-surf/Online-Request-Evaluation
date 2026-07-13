@@ -25,7 +25,6 @@ const DOC_TYPE_OPTIONS = [
 
 function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
-  const [posting, setPosting] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState('');
@@ -67,7 +66,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
   const [showDocTypeDropdown, setShowDocTypeDropdown] = useState(false);
   const [isDeliveryMode, setIsDeliveryMode] = useState(true); // true = Delivery, false = Pick-up
   const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
-  const [showSaveAndPostConfirmModal, setShowSaveAndPostConfirmModal] = useState(false);
+  const [showSaveAndSubmitConfirmModal, setShowSaveAndSubmitConfirmModal] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [docTypeSearch, setDocTypeSearch] = useState('');
   const [reviewBySearch, setReviewBySearch] = useState('');
@@ -326,7 +325,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
     }
   };
 
-  const handleSaveAndPost = async (e) => {
+  const handleSaveAndSubmit = async (e) => {
     e.preventDefault();
 
     if (selectedItems.length === 0) {
@@ -354,7 +353,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
       return;
     }
 
-    setPosting(true);
+    setSubmitting(true);
     try {
       // Prepare header data
       const headerData = {
@@ -446,15 +445,15 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
         toast.error(result.message || 'Failed to create purchase order');
       }
     } catch (error) {
-      console.error('Error saving and posting purchase order:', error);
-      toast.error('Failed to save and post purchase order');
+      console.error('Error saving and submitting purchase order:', error);
+      toast.error('Failed to save and submit purchase order');
     } finally {
-      setPosting(false);
+      setSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    if (!submitting && !posting) {
+    if (!submitting) {
       setSelectedItems([]);
       setSelectedSupplier('');
       setSelectedVendorId('');
@@ -1377,11 +1376,11 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
 
                   <button
                     type="button"
-                    onClick={() => setShowSaveAndPostConfirmModal(true)}
-                    disabled={posting || selectedItems.length === 0 || !selectedSupplier.trim() || !selectedPaymentTerm.trim()}
+                    onClick={() => setShowSaveAndSubmitConfirmModal(true)}
+                    disabled={submitting || selectedItems.length === 0 || !selectedSupplier.trim() || !selectedPaymentTerm.trim()}
                     className="px-4 sm:px-5 py-2.5 sm:py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 w-full sm:w-auto shadow-sm hover:shadow-md"
                   >
-                    {posting ? (
+                    {submitting ? (
                       <span className="flex items-center justify-center gap-2">
                         <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -1389,7 +1388,7 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
                         </svg>
                         Submitting...
                       </span>
-                    ) : 'Save & Post'}
+                    ) : 'Save & Submit'}
                   </button>
                 </div>
               </div>
@@ -1420,15 +1419,15 @@ function CreatePurchaseOrderModal({ isOpen, onClose, darkMode, user, onSuccess }
           confirmButtonColor="green"
         />
 
-        {/* Save and Post Confirmation Modal */}
+        {/* Save and Submit Confirmation Modal */}
         <ConfirmModal
-          isOpen={showSaveAndPostConfirmModal}
+          isOpen={showSaveAndSubmitConfirmModal}
           title="Submit Purchase Order for Processing"
           message="Are you sure you want to submit this purchase order for processing? This will change the status to FOR P.O. CONFIRMATION."
           confirmButtonText="Submit"
-          onConfirm={handleSaveAndPost}
-          onCancel={() => setShowSaveAndPostConfirmModal(false)}
-          isLoading={posting}
+          onConfirm={handleSaveAndSubmit}
+          onCancel={() => setShowSaveAndSubmitConfirmModal(false)}
+          isLoading={submitting}
           confirmButtonColor="blue"
         />
       </div>

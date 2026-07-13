@@ -227,7 +227,7 @@ class PurchaseRequest {
     }
 
     // Create new purchase request with transaction safety
-    static async createPurchaseRequest(headerData, detailsData, creatorName) {
+    static async savePurchaseRequest(headerData, detailsData, creatorName) {
         let connection = null;
         let transaction = null;
 
@@ -323,7 +323,7 @@ class PurchaseRequest {
                     LOCNCODE, DATEREQUESTED, REQUESTEDBY, REVIEWER, APPROVER,
                     ADDRESSEDTO, REMARKS, IS_RUSH, CREATEDBY, DATECREATED, IS_READ
                 ) VALUES (
-                    @company, @requestType, @referenceNum, @referenceNo, 'FOR POSTING',
+                    @company, @requestType, @referenceNum, @referenceNo, 'FOR SUBMISSION',
                     @locationCode, GETDATE(), @requestedBy, @reviewer, @approver,
                     @addressedTo, @remarks, @isRush, @createdBy, GETDATE(), 0
                 )
@@ -423,7 +423,7 @@ class PurchaseRequest {
     }
 
     // Post purchase request (set IS_POSTED = 1 and trigger notifications)
-    static async postPurchaseRequest(referenceNo, posterName) {
+    static async submitPurchaseRequest(referenceNo, posterName) {
         let connection;
         try {
             connection = await connectToDatabase(process.env.DB_SFC);

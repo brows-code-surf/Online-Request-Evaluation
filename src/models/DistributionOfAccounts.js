@@ -200,7 +200,7 @@ class DistributionOfAccounts {
             transaction = new sql.Transaction(connection);
             await transaction.begin();
 
-            console.log('Transaction started for posting distributions');
+            console.log('Transaction started FOR SUBMISSION distributions');
 
             // Update postStatus to 1 for existing distributions
             const updateQuery = `

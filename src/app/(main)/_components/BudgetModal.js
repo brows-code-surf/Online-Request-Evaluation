@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getAllBudgetAccounts } from '../procurement/purchase-request/_actions';
 import SkeletonLoader from '@/app/_components/skeletonLoader';
 
-export default function BudgetModal({ isOpen, onClose, onSelect, darkMode }) {
+export default function BudgetModal({ isOpen, onClose, onSelect, darkMode, selectedBudgetCode }) {
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +152,15 @@ export default function BudgetModal({ isOpen, onClose, onSelect, darkMode }) {
                       <tr
                         key={budget.id}
                         onDoubleClick={() => handleRowDoubleClick(budget)}
-                        className={`text-xs border-b ${darkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} cursor-pointer transition-colors`}
+                        className={`text-xs border-b transition-colors cursor-pointer ${
+                          budget.budgetCode === selectedBudgetCode
+                            ? darkMode
+                              ? 'border-blue-500 bg-blue-900/30'
+                              : 'border-blue-500 bg-blue-100'
+                            : darkMode
+                              ? 'border-gray-700 hover:bg-gray-700'
+                              : 'border-gray-200 hover:bg-gray-50'
+                        }`}
                       >
                         {/* <td className="px-4 py-3 font-medium">{budget.budgetYear}</td> */}
                         {/* <td className="px-4 py-3">{budget.company}</td> */}

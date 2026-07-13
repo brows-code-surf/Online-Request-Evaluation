@@ -611,7 +611,7 @@ class ReceivingEntry {
             transaction = new sql.Transaction(connection);
             await transaction.begin();
 
-            console.log('Transaction started for posting receiving entry');
+            console.log('Transaction started FOR SUBMISSION receiving entry');
 
             const checkQuery = `
                 SELECT POSTSTATUS, ROWID FROM [PURCHASE.RECEIVEHEADER.1]

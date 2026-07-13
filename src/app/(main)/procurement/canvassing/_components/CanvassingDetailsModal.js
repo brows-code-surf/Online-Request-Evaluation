@@ -132,13 +132,8 @@ function CanvassingDetailsModal({ isOpen, onClose, pqCode, darkMode, user }) {
                 {/* Mobile status badge */}
                 <div className="sm:hidden">
                   {canvassingData && (canvassingData.approvalStatus ? (
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.approvalStatus === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      canvassingData.approvalStatus === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        canvassingData.approvalStatus === 'NOT SELECTED' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                          canvassingData.approvalStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-gray-50 text-gray-700 border-gray-200'
-                      }`}>
-                      {canvassingData.approvalStatus}
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''}`}>
+                      {getStatusColor(canvassingData.approvalStatus)}
                     </span>
                   ) : (
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${darkMode ? 'border' : ''} ${canvassingData.postStatus === 1 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'

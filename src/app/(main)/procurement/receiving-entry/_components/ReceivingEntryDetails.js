@@ -9,6 +9,7 @@ import { handlePrintReceivingEntry } from './ReceivingEntryPrintModal';
 import ConfirmModal from '@/app/(main)/_components/confirmModal';
 import EditReceivingEntryModal from './EditReceivingEntryModal';
 import AssignDistributionModal from './AssignDistributionModal';
+import getStatusColor from '@/utils/statusColor';
 
 function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDataRefresh, onRefreshList, darkMode = false, loading = false, isModal = false }) {
   const { user } = useAuth();
@@ -158,20 +159,6 @@ function ReceivingEntryDetails({ receivingEntry, onClose, onDelete, onEdit, onDa
 
     fetchDistributions();
   }, [receivingEntry?.header?.referenceNo, distributionsReloadKey]);
-
-
-
-  const getStatusColor = (status) => {
-    const s = Number(status);
-    switch (s) {
-      case 1:
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 0:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
 
   const getStatusText = (status, isDAPosted = false) => {
     const s = Number(status);

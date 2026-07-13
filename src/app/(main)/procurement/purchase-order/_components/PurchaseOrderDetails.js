@@ -8,6 +8,7 @@ import ConfirmModal from '../../../_components/confirmModal';
 import { submitPurchaseOrderForProcessing } from '../_actions';
 import currencyData from '@/utils/currency.json';
 import { useSocketMultiple } from '@/hooks/useSocketMultiple';
+import getStatusColor from '@/utils/statusColor';
 
 function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, onRefreshList, loading = false }) {
   const { user, darkMode, isAdmin } = useAuth();
@@ -107,39 +108,6 @@ function PurchaseOrderDetails({ purchaseOrder, onDelete, onEdit, onDataRefresh, 
       [onDataRefresh]
     ),
   });
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'P.O. APPROVED':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'FOR P.O. CONFIRMATION':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'FOR P.O. APPROVAL':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'P.O. REJECTED':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'C.O.Q. REJECTED FROM P.O.':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'P.R. REJECTED FROM P.O.':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'DELIVERED':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'P.O. PROCESSING':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'PARTIALLY SERVED':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'SERVED':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 border-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
 
   const getStatusText = (status) => {
     if (!status) return 'PENDING';

@@ -9,9 +9,13 @@ import SideNotchOpenLeftPanel from "../../_components/sideNotchOpenLeftPanel";
 import { getRFPDetails } from './index';
 import CreateRFPRequest from "./_components/CreateRFPRequest";
 import DetailRFPRequest from "./_components/DetailRFPRequest";
+import { EditWarningModal } from "./_components/EditWarningModal";
+import { useRouter } from 'next/navigation';
+import getStatusColor from "@/utils/statusColor";
 
 function NonPoRequestsContent() {
     const { darkMode, user, isAdmin } = useAuth();
+    const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('date');
@@ -20,6 +24,9 @@ function NonPoRequestsContent() {
     const [rfpRequests, setRfpRequests] = useState([]);
     const [requestsLoading, setRequestsLoading] = useState(true);
     const [refreshToken, setRefreshToken] = useState(0);
+    const [isDirty, setIsDirty] = useState(false);
+    const [showEditWarning, setShowEditWarning] = useState(false);
+    const [pendingEditAction, setPendingEditAction] = useState(null);
 
     useEffect(() => {
         const loadRequests = async () => {
@@ -37,6 +44,43 @@ function NonPoRequestsContent() {
         };
         loadRequests();
     }, [user, isAdmin, refreshToken]);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [isDirty]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const handleClick = (e) => {
+            if (!isDirty) return;
+            if (e.button !== 0) return;
+            const target = e.target.closest('a');
+            if (!target) return;
+            const href = target.getAttribute('href');
+            if (!href) return;
+            if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+            if (target.target === '_blank' || target.hasAttribute('download')) return;
+            if (href.startsWith('/')) {
+                e.preventDefault();
+                e.stopPropagation();
+                setPendingEditAction(() => () => {
+                    setIsDirty(false);
+                    setShowEditWarning(false);
+                    router.push(href);
+                });
+                setShowEditWarning(true);
+            }
+        };
+        window.addEventListener('click', handleClick, true);
+        return () => window.removeEventListener('click', handleClick, true);
+    }, [isDirty, router]);
 
     // Build the sidebar list by grouping RFP detail rows into one card per request
     const approvals = (() => {
@@ -82,18 +126,16 @@ function NonPoRequestsContent() {
             });
     }, [approvals, searchQuery, filterStatus, sortBy]);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'FOR APPROVAL':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'DRAFT':
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
-
     const handleSelectRequest = (approval) => {
-        setSelectedRequestId(approval.id);
+        if (isDirty) {
+            setPendingEditAction(() => () => {
+                setSelectedRequestId(approval.id);
+                setIsDirty(false);
+            });
+            setShowEditWarning(true);
+        } else {
+            setSelectedRequestId(approval.id);
+        }
     };
 
     return (
@@ -129,15 +171,37 @@ function NonPoRequestsContent() {
                             <DetailRFPRequest
                                 darkMode={darkMode}
                                 rfp={selectedRfp}
-                                onNewRequest={() => setSelectedRequestId(null)}
+                                onNewRequest={() => {
+                                    if (isDirty) {
+                                        setPendingEditAction(() => () => {
+                                            setSelectedRequestId(null);
+                                            setIsDirty(false);
+                                        });
+                                        setShowEditWarning(true);
+                                    } else {
+                                        setSelectedRequestId(null);
+                                    }
+                                }}
                                 onRequestSaved={() => setRefreshToken(t => t + 1)}
+                                onDirtyChange={setIsDirty}
                             />
                         ) : (
-                            <CreateRFPRequest darkMode={darkMode} onRequestSaved={() => setRefreshToken(t => t + 1)} />
+                            <CreateRFPRequest darkMode={darkMode} onRequestSaved={() => setRefreshToken(t => t + 1)} onDirtyChange={setIsDirty} />
                         )}
                     </div>
                 </div>
             </div>
+            <EditWarningModal
+                isOpen={showEditWarning}
+                onClose={() => setShowEditWarning(false)}
+                onConfirm={() => {
+                    if (pendingEditAction) {
+                        pendingEditAction();
+                        setPendingEditAction(null);
+                    }
+                    setShowEditWarning(false);
+                }}
+            />
         </div>
     );
 }
